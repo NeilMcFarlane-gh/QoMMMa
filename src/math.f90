@@ -60,6 +60,7 @@ contains
 	!
 	! ARGUMENTS:	vec1 : 1D array containing the vector which is to be projected.
 	!				vec2 : 1D array containing the vector which vec1 is projected upon.
+	!               length : integer which represents the size of both vectors (which must of necessity be the same).
 		
 	implicit none
 	integer(i4b), intent(in) :: length
@@ -79,6 +80,7 @@ contains
 	! Here, a vector is taken and is transformed to a unit vector.
 	!
 	! ARGUMENTS:	vec : 1D array containing the vector which is made to a unit vector.
+	!               length : integer which represents the size of the vector.	
 	
 	implicit none
 	integer(i4b), intent(in) :: length
@@ -111,6 +113,10 @@ contains
 	function is_orthog(vecs, length, height) result(orthogonality)
 	! Here, an array of vectors is taken as input and their orthogonality is verified.
 	! This is useful as a check after an orthogonalisation procedure.
+	!
+	! ARGUMENTS:	vecs : 2D array containing the set of vectors whose orthogonality is checked.
+	!               length : integer which represents the length of the vectors.
+    !				height : integer which represents the number of vectors in the set.
 	
 	implicit none
 	integer(i4b) :: i
