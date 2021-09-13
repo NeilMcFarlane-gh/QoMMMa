@@ -1,0 +1,43 @@
+ALL:
+- More comments added to code for the sake of ease of making future change.
+- Indentation has been made more uniform - now uses 4 spaces consistently (NO TABS!).
+- Given each file a more meaningful docstring.
+- Updated to Python 3.
+- The module 'string' was removed entirely, and replaced with base Python as it was causing problems with Python 3.
+
+1. qommma.py
+
+- Error message added for case of defining 0 qm atoms.
+- To mimimise accidental invoking of script when importing, __name__ == "__main__" has been used for non-function wrapped code.
+
+2. qomdoc.py
+
+- The whole script has been changed, really. Now uses __doc__ to grep docstrings instead of reading based on string matching - allows more flexibility.
+- To mimimise accidental invoking of script when importing, __name__ == "__main__" has been used for non-function wrapped code.
+
+3. qomutil.py
+
+- Some code improvement in the function qmread().
+
+4. gauutil.py
+
+- Option for extra_basis in the B state for MECP calculations has been added.
+- Pruned some lines of code in gauout by incorporating more logic statements.
+
+5. jagutil.py
+
+- No particular changes...
+
+6. molutil.py
+
+- Added the total number of atoms into the input file for a normal calculation as it was missing.
+- For MECP calculation, split up the execution of jobs for state A and B so that it is easier to find errors.
+
+7. orcautil.py
+
+- Pruned some lines of code in gauout by incorporating more logic statements.
+- The extra_basis option was missing from morcainp, so it has been added.
+
+8. qomfreq.py
+
+- No particular changes...

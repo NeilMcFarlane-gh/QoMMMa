@@ -1,0 +1,1179 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+    <html>
+     <head>
+      <title>QoMMMa programmers' manual</title>
+      <link rel="stylesheet" type="text/css" href="qommma.css" />
+      <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+    <h1>QoMMMa programmers' manual</h1>
+    <h3>// QoMMMa is currently in version 8.07 and is written in Python 3.7. //<h3>
+    <h3>// The Python based QoMMMa files are designed to couple and run QM, MM, and QoMMMa Fortran codes. //<h3>
+    <h3>// All Python files are written following (largely) PEP 8 style guidelines. //<h3>
+    <h2>gauutil</h2>
+<pre>
+// This is a helper QoMMMa Python file, which contains the functions used in execution of a Gaussian job. //
+</pre>
+<pre>// Within this file, the following functions are defined... //</pre>
+<h3>gauinp(imn, cwd, qmjob_prefix, qmkey, cha_mul, extra_basis, gau_head, extra_guess):</h3>
+<pre>
+    
+    // Function which creates the input file required for a Gaussian job. //
+    // This function is called in the function qmgaumain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul : list
+        The charge and multiplicity given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    gau_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+    extra_guess : string
+        If the guess keyword is used, then it can be input.
+
+    </pre>
+<h3>gauout(fi, l, nqm, nlink, fortf):</h3>
+<pre>
+    
+    // Function which extracts the energy, forces and Mulliken charges from a Gaussian output file. //
+    
+    Arguments
+    ----------
+    fi : string
+        Gaussian job output file name.
+    l : integer
+        If using the nudged elastic band, this is the image number.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    fortf : string
+        Gaussian support file name containing the electric field.
+
+    </pre>
+<h3>qmgaumain(imn, cwd, usrdir, qmjob_prefix, qmgau_job, nqm, nlink, cln, qmkey, cha_mul, extra_basis, gau_head, extra_guess):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of a Gaussian job. //
+    // It will prepare the input file, run the Gaussian job, and then extract the results from the output. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmgau_job : string
+        The path to the Gaussian program.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cln : integer
+        The QoMMMa cycle number.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul : list
+        The charge and multiplicity given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    gau_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+    extra_guess : string
+        If the guess keyword is used, then it can be input.
+
+    </pre>
+<h3>mgauinp(imn, cwd, qmjob_prefix, qmkey, cha_mul1, cha_mul2, extra_basis, gau_head, extra_guess):</h3>
+<pre>
+    
+    // Function which creates the input files required for the Gaussian jobs for MECP calculations. //
+    // This function is called in the function mecp_gaumain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul1 : list
+        The charge and multiplicity for state A given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    cha_mul2 : list
+        The charge and multiplicity for state B given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    gau_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+    extra_guess : string
+        If the guess keyword is used, then it can be input.
+
+    </pre>
+<h3>mecp_gaumain(imn, cwd, usrdir, qmjob_prefix, qmgau_job, nqm, nlink, cln, qmkey, cha_mul1, cha_mul2, extra_basis, gau_head, extra_guess):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of Gaussian jobs for MECP calculations. //
+    // It will prepare the input files, run the Gaussian jobs, and then extract the results from the outputs. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmgau_job : string
+        The path to the Gaussian program.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cln : integer
+        The QoMMMa cycle number.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul1 : list
+        The charge and multiplicity for state A given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    cha_mul2 : list
+        The charge and multiplicity for state B given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    gau_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+    extra_guess : string
+        If the guess keyword is used, then it can be input.
+
+    </pre>
+<h2>jagutil</h2>
+<pre>
+// This is a helper QoMMMa Python file, which contains the functions used in execution of a Jaguar job. //
+</pre>
+<pre>// Within this file, the following functions are defined... //</pre>
+<h3>atomic():</h3>
+<pre>
+    
+    // Function which creates the file atomic_selection required for proper execution of Jaguar jobs. //
+    // This function is called only once in the functiob qminitial found in qommma.py. //
+    
+    Arguments
+    ----------
+    NONE
+
+    </pre>
+<h3>jaginp(imn, cwd, qmjob_prefix):</h3>
+<pre>
+    
+    // Function which creates the input file required for a Jaguar job. //
+    // This function is called in the function qmjagmain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+
+    </pre>
+<h3>jagout(fi, l, nqm, nlink):</h3>
+<pre>
+    
+    // Function which extracts the energy, forces and Mulliken charges from a Molpro output file. //
+    
+    Arguments
+    ----------
+    fi : string
+        Jaguar job output file name.
+    l : integer
+        If using the nudged elastic band, this is the image number.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+
+    </pre>
+<h3>latgrad(f, im, nqm, nlink):</h3>
+<pre>
+    
+    // Function which calculates the gradient from the electrostatic potential obtained from the Jaguar calculation. //
+    
+    Arguments
+    ----------
+    fi : string
+        Jaguar *.resp output file name.
+    l : integer
+        If using the nudged elastic band, this is the image number.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+
+    </pre>
+<h3>orbsread(fi, fs):</h3>
+<pre>
+    
+    // Function which reads orbs from jagjob.01.in to create the file orbs, which will be used in Jaguar input. //
+    
+    Arguments
+    ----------
+    fi : string
+        Input file name.
+    fs : string
+        Output file name.
+
+    </pre>
+<h3>qmjagmain(imn, cwd, usrdir, qmjob_prefix, qmjag_job, nqm, nlink, cln):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of a Jaguar job. //
+    // It will prepare the input file, run the Jaguar job, and then extract the results from the output. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmjag_job : string
+        The path to the Jaguar program.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cln : integer
+        The QoMMMa cycle number.
+
+    </pre>
+<h3>mjag_initial(jag_head, qmkey, cha_mul1, cha_mul2):</h3>
+<pre>
+    
+    // Function which prepares the Jaguar input header for MECP calculations. //
+    
+    Arguments
+    ----------
+    jag_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul1 : list
+        The charge and multiplicity for state A given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    cha_mul2 : list
+        The charge and multiplicity for state B given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+
+    </pre>
+<h3>mjaginp(imn, cwd, qmjob_prefix):</h3>
+<pre>
+    
+    // Function which creates the input files required for the Jaguar jobs for MECP calculations. //
+    // This function is called in the function mecp_jagmain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+
+    </pre>
+<h3>mecp_jagmain(imn, cwd, usrdir, qmjob_prefix,jjob,nqm,nlink,cln):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of Jaguar jobs for MECP calculations. //
+    // It will prepare the input files, run the Jaguar jobs, and then extract the results from the outputs. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    jjob : string
+        The path to the Jaguar program.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cln : integer
+        The QoMMMa cycle number.
+
+    </pre>
+<h2>molutil</h2>
+<pre>
+// This is a helper QoMMMa Python file, which contains the functions used in execution of a Molpro job. //
+</pre>
+<pre>// Within this file, the following functions are defined... //</pre>
+<h3>latdatin(imn):</h3>
+<pre>
+    
+    // Function which creates the lattice point charge input file lat*.dat used in Molpro. //
+    // This function is called in the function qmmolmain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+
+    </pre>
+<h3>molinp(imn, cwd, qmjob_prefix, nqm, nlink):</h3>
+<pre>
+    
+    // Function which creates the input file required for a Molpro job. //
+    // This function is called in the function qmmolmain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+
+    </pre>
+<h3>molout(fi, l, nqm, nlink, cwd):</h3>
+<pre>
+    
+    // Function which extracts the energy, forces and Mulliken charges from a Molpro output file. //
+    
+    Arguments
+    ----------
+    fi : string
+        Molpro job output file name.
+    l : integer
+        If using the nudged elastic band, this is the image number.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cwd : string
+        The current working directory.
+
+    </pre>
+<h3>qmmolmain(imn, cwd, usrdir, qmjob_prefix, qmmol_job, nqm, nlink, cln):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of a Molpro job. //
+    // It will prepare the input file, run the Molpro job, and then extract the results from the output. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmmol_job : string
+        The path to the Molpro program.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cln : integer
+        The QoMMMa cycle number.
+
+    </pre>
+<h3>latgradmerg(imn):</h3>
+<pre>
+    
+    // Function which merges two lattice point charge files calculated for two states when running a MECP calculation. //
+    // This function is called in the function mecp_molmain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+
+    </pre>
+<h3>mecp_molinp(imn, cwd, qmjob_prefix, nqm, nlink):</h3>
+<pre>
+    
+    // Function which creates the inputs file required for the Molpro jobs for MECP calculations. //
+    // This function is called in the function mecp_molmain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+
+    </pre>
+<h3>mecp_molmain(imn, cwd, usrdir, qmjob_prefix, qmmol_job, nqm, nlink, cln):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of Molpro jobs for MECP calculations. //
+    // It will prepare the input files, run the Molpro jobs, and then extract the results from the outputs. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmmol_job : string
+        The path to the Molpro program.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cln : integer
+        The QoMMMa cycle number.
+
+    </pre>
+<h2>orcautil</h2>
+<pre>
+// This is a helper QoMMMa Python file, which contains the functions used in execution of an ORCA job. //
+</pre>
+<pre>// Within this file, the following functions are defined... //</pre>
+<h3>orcainp(imn, cwd, qmjob_prefix, qmkey, cha_mul, extra_basis, orca_head):</h3>
+<pre>
+    
+    // Function which creates the input file required for an ORCA job. //
+    // This function is called in the function qmorcamain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul : list
+        The charge and multiplicity given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    orca_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+
+    </pre>
+<h3>orcaout(fi, l, nqm, nlink, pcg):</h3>
+<pre>
+    
+    // Function which extracts the energy, forces and Mulliken charges from an ORCA output file. //
+    
+    Arguments
+    ----------
+    fi : string
+        ORCA job output file name.
+    l : integer
+        If using the nudged elastic band, this is the image number.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    pcg : string
+        ORCA support file name containing the calculated MM gradients.
+
+    </pre>
+<h3>qmorcamain(imn, cwd, usrdir, qmjob_prefix, nqm, nlink, cln, qmkey, cha_mul, extra_basis, orca_head):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of an ORCA job. //
+    // It will prepare the input file, run the ORCA job, and then extract the results from the output. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cln : integer
+        The QoMMMa cycle number.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul : list
+        The charge and multiplicity given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    orca_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+
+    </pre>
+<h3>morcainp(imn, cwd, qmjob_prefix, qmkey, cha_mul1, cha_mul2, extra_basis, orca_head):</h3>
+<pre>
+    
+    // Function which creates the input files required for the ORCA jobs for MECP calculations. //
+    // This function is called in the function mecp_orcamain at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul1 : list
+        The charge and multiplicity for state A given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    cha_mul2 : list
+        The charge and multiplicity for state B given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    orca_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+
+    </pre>
+<h3>mecp_orcamain(imn, cwd, usrdir, qmjob_prefix, nqm, nlink, cln, qmkey, cha_mul1, cha_mul2, extra_basis, orca_head):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of ORCA jobs for MECP calculations. //
+    // It will prepare the input files, run the ORCA jobs, and then extract the results from the outputs. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    cln : integer
+        The QoMMMa cycle number.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul1 : list
+        The charge and multiplicity for state A given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    cha_mul2 : list
+        The charge and multiplicity for state B given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    orca_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+
+    </pre>
+<h2>qomdoc</h2>
+<pre>
+// This is a standalone QoMMMa Python file, which allows for automatic generation of a documentation file in .txt or .html format. //
+</pre>
+<pre>// Within this file, the following functions are defined... //</pre>
+<h3>all_files(pattern, search_path):</h3>
+<pre>
+    
+    // Function which searches for all available files matching a certain pattern in a given directory. //
+    
+    Arguments
+    ----------
+    pattern : string
+         This is '*.py' as it is representative of all Python files.
+    search_path : string
+        The directory which is to be searched for files matching the defined pattern.
+
+    </pre>
+<h3>docwrite(py_list, mode, fdoc):</h3>
+<pre>
+    
+    // Function which generates documentation for all functions contained within Python files. //
+    
+    Arguments
+    ----------
+    py_list : list
+        A list of all the Python files in the working directory for which documentation is to be written.
+    mode : string
+        If the output file is desired simply as text, then 'text', and for html, it is 'html'.
+    fn string : string
+        The name of the output documentation file.
+
+    </pre>
+<h2>qomfreq</h2>
+<pre>
+// This is a helper QoMMMa Python file, which contains the functions used in execution of a QoMMMa frequency calculation. //
+</pre>
+<pre>// Within this file, the following functions are defined... //</pre>
+<h3>initial(nimg, cwd, qommmadir):</h3>
+<pre>
+    
+    // Function which sets up the intial arrangements for a frequency calculation. //
+    
+    Arguments
+    ----------
+    nimg : integer
+        If using the nudged elastic band, this is the total number of images.
+    cwd : string
+        The current working directory.
+    qommmadir : string
+        The base QoMMMa directory defined in the file qommma.
+
+    </pre>
+<h3>mminpco(im, qmlst, delq):</h3>
+<pre>
+    
+    // Function which generates the 2*3*nqm number of Tinker coordinate files to calculate the MM gradients used for a frequency calculation. //
+    // This function is called in freqmain for each image, if using the nudged elastic band. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    qmlst : list
+        The list of QM atoms.
+    delq : integer
+        Real constant representing the finite difference used when generating coordinates.
+    
+    </pre>
+<h3>analgrad(im, qmlst, qommmadir):</h3>
+<pre>
+    
+    // Function which runs Tinker's analyze_grad for the structures generated by mminpco. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    qmlst : list
+        The list of QM atoms.
+    qommmadir : string
+        The base QoMMMa directory defined in the file qommma.
+    
+    </pre>
+<h3>mmhes(im, qmlst, n, delq):</h3>
+<pre>
+    
+    // Function which calculates the MM hessian from the gradients calculated by Tinker's analyze_grad. //
+    // This function is called in freqmain for each image, if using the nudged elastic band. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    qmlst : list
+        The list of QM atoms.
+    n : integer
+        The total number of atoms.
+    delq : integer
+        Real constant representing the finite difference used when generating coordinates.
+    
+    </pre>
+<h3>freqinp(im, qmlst, cwd):</h3>
+<pre>
+    
+    // Function which creates the input file (hessian_input) required for a frequency calculation. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    qmlst : list
+        The list of QM atoms.
+    cwd : string
+        The current working directory.
+    
+    </pre>
+<h3>hescorrect(qhes, ntotqm, nqm, cwd, im):</h3>
+<pre>
+    
+    // Function which corrects the QM hessian if any link atoms are inlcuded in the QoMMMa frequency calculation. //
+    
+    Arguments
+    ----------
+    qhes : array
+        The QM hessian array.
+    ntotqm : integer
+        Number of QM atoms including link atoms.
+    nqm : integer
+        Number of QM atoms.
+    cwd : string
+        The current working directory.
+    im : integer
+        If using the nudged elastic band, this is the image number.
+
+    </pre>
+<h3>qmjaginp(im, qmkey, cwd, qmjob_prefix):</h3>
+<pre>
+    
+    // Function which creates the input file required for a Jaguar frequency calculation. //
+    // This function is called in the function freqmain for each image. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+
+    </pre>
+<h3>jaghesread(im, ntotqm, nlink, cwd, qmjob_prefix):</h3>
+<pre>
+    
+    // Function which extracts the QM hessian from a Jaguar output file. //
+    // This function is called in the function freqmain for each image. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    ntotqm : integer
+        Number of QM atoms including link atoms.
+    nlink : integer
+        Number of link atoms.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+
+    </pre>
+<h3>qmmolinp(im, qmkey, cwd, ntotqm, qmjob_prefix):</h3>
+<pre>
+    
+    // Function which creates the input file required for a Molpro frequency calculation. //
+    // This function is called in the function freqmain for each image. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cwd : string
+        The current working directory.
+    ntotqm : integer
+        Number of QM atoms including link atoms.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+
+    </pre>
+<h3>molhesread(im, ntotqm, nlink, cwd, qmjob_prefix):</h3>
+<pre>
+    
+    // Function which extracts the QM hessian from a Molpro output file. //
+    // This function is called in the function freqmain for each image. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    ntotqm : integer
+        Number of QM atoms including link atoms.
+    nlink : integer
+        Number of link atoms.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+
+    </pre>
+<h3>qmgauinp(im, qmkey, cwd, cha_mul, extra_basis, gau_head, qmjob_prefix):</h3>
+<pre>
+    
+    // Function which extracts the QM hessian from a Gaussian output file. //
+    // This function is called in the function freqmain for each image. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    cwd : string
+        The current working directory.
+    cha_mul : list
+        The charge and multiplicity given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    gau_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+
+    </pre>
+<h3>gauhesread(im, ntotqm, nlink, cwd, qmjob_prefix):</h3>
+<pre>
+    
+    // Function which extracts the QM hessian from a Gaussian output file. //
+    // This function is called in the function freqmain for each image. //
+    
+    Arguments
+    ----------
+    im : integer
+        If using the nudged elastic band, this is the image number.
+    ntotqm : integer
+        Number of QM atoms including link atoms.
+    nlink : integer
+        Number of link atoms.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+
+    </pre>
+<h3>freqmain(qommmadir, qmkey, qmc_job, usrdir, cha_mul, extra_basis, gau_head, prj_freq, qmjob_prefix, qmcode):</h3>
+<pre>
+    
+    // Function which combines the functions in this file for execution of a frequency calculation. //
+    // It will prepare the input file, run the frequency calculation, and then extract the results from the output. //
+    // This function is called in the main QoMMMa program file qommma.py if the user requests a frequency calculation. //
+    
+    Arguments
+    ----------
+    qommmadir : string
+        The base QoMMMa directory defined in the file qommma.
+    qmkey : string
+        Can either be None or the user input level of theory.
+    qmc_job : string
+        The path to the QM program of the user's choice.
+    usrdir : string
+        The user directory.
+    cha_mul : list
+        The charge and multiplicity given in the format of a list of two numbers (i.e., cha_mul = [0,1]) - used only for Gaussian jobs.
+    extra_basis : string
+        User-specified basis set - used only for Gaussian jobs.  
+    gau_head : string
+        Contains the details for assigning memory and number of processors for a Gaussian job.
+    prj_freq : array
+        Used to requency a projected frequency calculation for a given image.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmcode : string
+        Represents the user selected QM package.
+
+    </pre>
+<h2>qommma</h2>
+<pre>
+// This is the main QoMMMa Python file, which collects the functions defined in other Python files for QoMMMa execution. //
+</pre>
+<pre>// Within this file, the following functions are defined... //</pre>
+<h3>fortinp():</h3>
+<pre>
+    
+    // Function which creates two input files (fortinput and converg.data) required for execution of the QoMMMa Fortran code. //
+    // This function takes no arguments as they have been read in through default and user input files. //
+    
+    Arguments
+    ----------
+    NONE
+
+    </pre>
+<h3>mmjob(mjob):</h3>
+<pre>
+    
+    // Function which performs a series of operations for the first and second Tinker jobs. //
+    // These jobs are performed separately from the main QoMMMa cycle as they do not fit exactly into the framework of a typical cycle. //
+    
+    Arguments
+    ----------
+    mjob : string
+        If mjob is 'initial', then it executes the initial Tinker calculation, and if 'initial2', then it prepares for subsequent QoMMMa cycles.
+
+    </pre>
+<h3>qminitial():</h3>
+<pre>
+    
+    // Function which creates the initial inputs for a QM job. //
+    // This function takes no arguments as they have been read in through default and user input files. //
+    
+    Arguments
+    ----------
+    NONE
+
+    </pre>
+<h3>qmmm():</h3>
+<pre>
+    
+    // Function which performs a QoMMMa cycle. The steps of a QoMMMa cycle are as follows... //
+        1. Execute Tinker's analyze_grad to obtain MM gradient.
+        2. Prepare input for QM program chosen, and subsequently run a QM job and extracts results.
+        3. Using Fortran code, perform a QoMMMa optimisation.
+        4a. Check convergence, and if achieved, move program files to user directory and end the QoMMMa program.
+        4b. Check convergence, and if not achieved, start MM microiterative optimisation will follow, and create/rearrange files and return to 1.
+        5. If the option of a frequency calculation is selected, start the frequency calculation.
+        
+    // This cycle continues until convergence is achieved or the maximum number of cycles has been reached. //
+    // This function takes no arguments as they have been read in through default and user input files. //
+    
+    Arguments
+    ----------
+    NONE
+
+    </pre>
+<h2>qomutil</h2>
+<pre>
+// This is a helper QoMMMa Python file, which contains utility functions used in QoMMMa execution. //
+</pre>
+<pre>// Within this file, the following functions are defined... //</pre>
+<h3>qomlog(s, usrdir):</h3>
+<pre>
+    
+    // Function which writes the progress or error message of the given QoMMMa calculation to the log file QoMMMa8.log. //
+    
+    Arguments
+    ----------
+    s : string
+        The message to be written to the file QoMMMa8.log.
+    usrdir : string
+        The user directory.
+
+    </pre>
+<h3>qomend(s, cwd, usrdir):</h3>
+<pre>
+    
+    // Function which ends the given QoMMMa calculation and writes the error to the log file QoMMMa8.log. //
+    
+    Arguments
+    ----------
+    s : string
+        The message to be written to the file QoMMMa8.log.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+
+    </pre>
+<h3>addatmnum(imn):</h3>
+<pre>
+    
+    // Function which adds atoms numbers to the QM atoms. //
+    // This function is called within the functions rearrange() and setini() found in this file. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+
+    </pre>
+<h3>rearrange(nimg, cwd, qmjob_prefix, cln):</h3>
+<pre>
+    
+    // Function which  rearranges the files generated by QoMMMa and QM output to use in subsequent micro-optimisation and QM jobs. //
+    // This function is called in the function qmmm found in qommmma.py at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    nimg : integer
+        If using the nudged elastic band, this is the total number of images.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    cln : integer
+        The QoMMMa cycle number.        
+    </pre>
+<h3>postrearrange(nimg, cwd):</h3>
+<pre>
+    
+    // Function which rearranges the files after micro-optimisation. //
+    // This function is called in the function qmmm found in qommmma.py at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    nimg : integer
+        If using the nudged elastic band, this is the total number of images.
+    cwd : string
+        The current working directory.
+        
+    </pre>
+<h3>qomreport(nimg, usrdir, cwd, cln, qomout):</h3>
+<pre>
+    
+    // Function which adds to the new report, checks the convergence and, if the convergence is achieved, create a dummy file with name 'convergence_ok'. //
+    // This function is called in the function qmmm found in qommmma.py at each QoMMMa cycle. //
+    
+    Arguments
+    ----------
+    nimg : integer
+        If using the nudged elastic band, this is the total number of images.
+    usrdir : string
+        The user directory.
+    cwd : string
+        The current working directory.
+    cln : integer
+        The QoMMMa cycle number.  
+    qomout : string
+        If 'deep' is used, then QM results, geometries, and gradients will be saved at each cycle. 
+        If 'None' (as is default) is used, then only results from the previous two (or one) cycles will be saved.
+        
+    </pre>
+<h3>setini(cwd, nimg, usrdir):</h3>
+<pre>
+    
+    // Function which creates the file update_geom, and moves the initial files created by the Fortran QoMMMa setup program to the image directories. //
+    // This function is called in qommmma.py only once. //
+    
+    Arguments
+    ----------
+    cwd : string
+        The current working directory.
+    nimg : integer
+        If using the nudged elastic band, this is the total number of images.        
+    usrdir : string
+        The user directory.
+
+    </pre>
+<h3>tinkercharge(qommmadir):</h3>
+<pre>
+    
+    // Function which runs Tinker's analyze_grad, and extracts the intial charges from the output file. //
+    // This function is called in the function mmjob found in qommmma.py. //
+    
+    Arguments
+    ----------
+    qommmadir : string
+        The base QoMMMa directory defined in the file qommma.
+
+    </pre>
+<h3>geom_expl(f, l):</h3>
+<pre>
+    
+    // Function which creates a coordinate file (geom_expl*.xyz) to use as a coordinate file in QoMMMa optimisation and setup program. //
+    // This function is called in the functions mmjob and qmmm found in qommmma.py. //
+    
+    Arguments
+    ----------
+    f : string
+        The file name for the input geometry file.
+    l : integer
+        If using the nudged elastic band, this is the image number.
+
+    </pre>
+<h3>qmread(kk, usrdir):</h3>
+<pre>
+    
+    // Function which generates the QM atom list. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    kk : list/range of integers
+        Represents the QM atoms which have been selected.
+    usrdir : string
+        The user directory.
+
+    </pre>
+<h3>hesopt_write(hesopt, usrdir):</h3>
+<pre>
+    
+    // Function which generates the list of hessian optimised MM atoms. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    hesopt : list/range of integers
+        Represents the MM atoms which have been selected for hessian optimisation.
+    usrdir : string
+        The user directory.
+
+    </pre>
+<h3>link_write(link):</h3>
+<pre>
+    
+    // Function which generates the details for link atoms. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    link : tuple
+        Represents the details for each link atom.
+
+    </pre>
+<h3>cons_write(cons, usrdir):</h3>
+<pre>
+    
+    // Function which generates the constraint details. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    cons : tuple
+        Represents the details for each constraint.
+    usrdir : string
+        The user directory.
+        
+    </pre>
+<h3>newcha_write(newcha):</h3>
+<pre>
+    
+    // Function which generates a list of MM atoms with their newly assigned charge. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    newcha : tuple
+        Represents the details for each new charge for MM atoms.
+
+    </pre>
+<h3>inprange(kk, job, usrdir):</h3>
+<pre>
+    
+    // Function which writes atom labels to the file fortinput. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    kk : list/range of integers
+        Represents the atoms which have been selected.
+    job : string
+        The purpose of this input.
+    usrdir : string
+        The user directory.    
+
+    </pre>
+</body>
+    </html>
+    

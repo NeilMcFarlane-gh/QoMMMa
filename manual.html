@@ -1,0 +1,213 @@
+<!DOCTYPE html 
+PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+  <head>
+    <title>QoMMMa User Manual</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+  </head>
+
+  <body>
+    <h1>QoMMMa User Manual</h1>
+    <h2>Basic input structure</h2>
+    <p>
+    The QoMMMa input file is written in the <a href="http://www.python.org">Python</a> programming language.
+    </p>
+    <h2>Input keys</h2>
+    <h3>Defining the system</h3>
+    <p>
+    The basic input parameters are defined as follows:
+     <dl>
+      <dt><tt>natom</tt></dt>
+        <dd>
+	  Total number of atoms. For example <br /> <code>natom=1700</code>
+        </dd>
+      <dt><tt>nqm</tt></dt>
+        <dd>
+          Number of QM atoms. For example <br /> <code>nqm=17</code>
+	</dd>
+      <dt><tt>nlink</tt></dt>
+	<dd>
+          Number of Link atoms. For example <br /> <code>nlink=2</code> <br />  default, <code> nlink=0 </code>
+	</dd>
+      <dt><tt>nopt</tt></dt>
+	<dd>
+          Number of atoms to be optimized in QoMMMa hessian. This is sum of nqm, nlink and the number of MM atoms to be optimized in QoMMMa (if needed, list of such MM atoms to be given through 'hesoptmm' key). For example <br /> <code>nopt=26</code>
+	</dd>
+      <dt><tt>hesoptmm</tt></dt>
+	<dd>
+          List of MM atoms to be obtimized in QoMMMa Hessian (if needed). This should be given as a Python list. For example to optimize MM atoms 75,76,...,80, 90 in QoMMMa Hessian  <br /> <code>hesoptmm=[75,76,77,78,79,80,90]</code> <br /> This can be given interms of range <br /> <code>hesoptmm=['75-80',90]</code>
+	</dd>
+      <dt><tt>qm_lst</tt></dt>
+	<dd>
+          QM atoms list. This list is given as a list. For example QM atoms 5,6,7,...,15,24,25,26,32,35,36 can be given as  <br /> <code>qm_lst=['5-15','24-26',32,35,36] (see, here also range is used)</code>. <br /> <br /> Still old style will work with key 'qm'. With this 'qm' key we have to give both atom label and name as string. For example  <br /> <code>qm='''<br />
+5  O <br />
+6  H <br />
+7  C <br />
+.. <br />
+.. <br />
+''' <br /> </code> While using this 'qm' key, make sure atom labels are in increasing order if job='Freq' and nlink > 1.
+	</dd>
+      <dt><tt>link_lst</tt></dt>
+	<dd>
+          Link atoms detail given as Python tuple. This should be given in following format, <br /> <br /> <code> link_lst=[(MM atom label, QM atom label, R(QM-MM),R(QM-LINK),'Link atom')]<br /> <code><br />For example, if you have three link atoms, <br /> <code>link_lst=[(12,25,1.343,1.01,'H'),(18,46,1.341,1.01,'H'), (42,75,1.231,101,'H')]</code> <br /> <br /> Still  old style will work with key 'link'. With this 'link' key we can give link atoms detail as follows, <br /> <code> link='''<br />MM atom label  QM atom label  R(QM-MM) R(QM-LINK) Link atom<br />'''<br /></code> For each link atom, details are give in one line, for example if you have three link atoms,<br /><code> link='''<br />
+12  25  1.343  1.01  H <br /> 18  46  1.341  1.01  H <br /> 42  75  1.231  1.01  H<br />'''<br /></code> While using this link key, if there are more than one link atom and job='Freq', the link details should be given as increasing order with respect to QM atom label.
+	</dd>
+      <dt><tt>constrain_lst</tt></dt>
+	<dd>
+          This is to provide bond constrain in QoMMMa calculation (if needed). Constrain detail is given as Python tuple with following format,<br /><code>constrain_lst=[(constrain option,force constant,ideal value,[atom labels])]</code><br />There are four type of bond constrain options are available, 'AB' (for distance between atoms A and B),'AB-CD', AB+CD (for distance between bonds AB and CD) and 'AB+CD-EF' (for bonds AB, CD and EF). In the following example all four constrains are used,<br /> <code>constrain_lst=[('rab',200,1.343,[23,24]),('RAB-RCD',300,0.2,[23,24,24,25]),('RAB+RCD',200,0.1,[23,24,25,56]),('RAB+RCD-REF',300,0.2,[23,24,24,25,45,60])]</code> <br /> <br />
+Still old style will work with key 'constrain'. With this  'constrain' key, for each constrain two lines are used,<br /> <code>constrain='''<br /> constrain_code  force constant ideal value <br />atom labels <br />''' </code><br /> Here constrain_code is 1 (for 'AB'), 2 (for 'AB-CD'), 3 (for 'AB+CD') or 4 (for 'AB+CD-EF'). In the following example two constrains with constrain_code 2 and 1 are used, <br /> <code>constrain='''<br />2  200  0.2<br /> 23 24  24 25<br /> 1  200  1.343<br />23  24<br />'''<br /></code> Number of constrains used in the calculation should be given through key 'ncon' (see below).
+	</dd>
+      <dt><tt>newcha_lst</tt></dt>
+	<dd>
+          This is to assign charges to particular MM atoms (if needed).  MM atom label and new charge will be given as Python tuple with the following format,<br /><code>newcha_lst=[(atom label, charge)] </code><br /> For example, if you want to define charges for four MM atoms,<br /><code>newcha_lst=[(225, 0.025),(239,0.00),(1235,-0.254),(2548,-0.056)] </code><br /> With this key you don't have to give number of MM atoms to which charge is modified.<br /><br />
+Still old style with key 'newcha' will work. With this 'newcha' key, first line is number of such MM atoms and one line for each atom with atom_label and charge, i.e. <br /><code>newcha='''<br />No. of atoms<br />atom_label   charge<br />'''<br /> </code> For example,<br /><code>newcha='''<br />2<br />225  0.025<br />239   0.00<br />'''<br /> </code> <br /> By default, <code>newcha='0'</code> 
+      <dt><tt>ninact</tt></dt>
+	<dd>
+          This key is used to provide inactive atoms details. It is given as string. First line is total number of inactive atoms, and then list of such atoms. This list can be given as range of numbers also. General format is,<br /><code>ninact='''<br />no. of inactive atoms <br />inactive atom label<br />''' </code><br /> For example, if atoms 6,8,9,10,...15,25 are inactive, <br /><code>ninact='''<br />10<br />6<br />8-15<br />25<br />''' </code><br /> (see, range is used in the above example). By default, <code>ninact='0'</code> 
+    </dl>
+    </p>
+    <h2>Parameters/options set as a default</h3>
+    <p>
+     There are many parameters/options set as a default, and are defined in file 'default.in' in lib directory. If needed, particular option or parameter can be modified through user input. Such parameters are,
+     <dl>
+      <dt><tt>inpgeom_prefix='init_geom'</tt></dt>
+        <dd>
+	  Prefix for initial coordinate file(s). With this prefix, initial coordinate files should be named with image number and with extension 'xyz'. For example input coordinate file name may be named as follows<br /> <code>init_geom1.xyz</code>
+        </dd>
+      <dt><tt>nimg=1</tt></dt>
+        <dd>
+	  Number of initial geometries. For normal single image optimization, nimg=1. For NEB calculation user can give any number of images, and corresponding coordinate files should be placed in user directory with correct numbering. For example <br /> <code>nimg=7</code>
+        </dd>
+      <dt><tt>nebtype='none'</tt></dt>
+        <dd>
+          This is to specify QoMMMa calculation type. Default is 'none' (for single image minimization with BFGS algoritham). Available options are <br /> nebtype='neb_bfgs' (Nudged elastic band with BFGS algoritham) <br /> nebtype='cineb_bfgs' (climbing image neb with BFGS algoritham) <br /> nebtype='neb_cg' (neb with conjugate gradient algoritham) <br /> nebtype='cineb_cg' (cineb with conjugate gradient algoritham) <br /> nebtype='none_cg' (single image minimization with conjugate gradient algoritham)
+	</dd>
+      <dt><tt>kspring=100</tt></dt>
+        <dd>
+          Spring Force constant. 
+	</dd>
+      <dt><tt>kcnstype='harmonic'</tt></dt>
+        <dd>
+          Constrain type. Available one more type is <br /> kcnstype='tanh'
+	</dd>
+      <dt><tt>ncon=0</tt></dt>
+        <dd>
+          Number of constrains.  if <code>ncon>0</code>, 'constrain' or 'constrain_lst' key should be used to provide constrain details.  
+	</dd>
+      <h4>Setting Convergence Criteria</h4>     
+        <dd>
+          To set convergence criteria for QoMMMa minimization, we have following options, and values shown here are set as default <br /> <code>dEmax=1.E-4 </code>  (for change in energy)<br />
+<code>dGmax=3.E-3 </code>  (for change in gradient)<br />   <code>dGrms=2.E-3 </code>  (for change in rms gradient)<br />   <code>dXmax=7.E-3 </code>  (for change in displacement)<br />   <code>dXrms=4.E-3 </code>  (for change in rms displacement)<br />   
+<code>dGper=2.E-3 </code>  (for change in perpandicular component of gradient, used only in NEB calculation)<br />   
+	</dd>
+      <dt><tt>maxcyle=200</tt></dt>
+        <dd>
+          Maximum number of QoMMMa cycles.
+	</dd>
+      <dt><tt>qomout='None'</tt></dt>
+        <dd>
+          By default, files generated at last two QoMMMa cycles were stored. If user want files (geometry, QM and MM results) generated in all QoMMMa cycles, user need to set <br /> <code>qomout='deep' </code>
+	</dd>
+      <dt><tt>mmcode='Tinker'</tt></dt>
+        <dd>
+          Code used for MM calculations in QoMMMa. At present we don't have any other alternative code to do MM calculations. 
+	</dd>
+      <dt><tt>acctink=0.1</tt></dt>
+        <dd>
+          This is to set convergence criteria on gradients in Tinker minimization (in kcal/mol).
+	</dd>
+      <dt><tt>job='opt'</tt></dt>
+        <dd>
+          By default, QoMMMa job is optimization. If user want to do frequency calculation, <br /> <code>job='Freq' </code> <br /> Note that at present QoMMMa frequency calculation should be done with 'Gaussian' as a QM code (to set QM code see below).  User can do both optimization and frequency calculation with 'Gaussian' as a QM code in single job, just setting <code>job='Freq' </code> is sufficient for this. QoMMMa will start frequency calculation for optimized geometry.<br /> To request frequency calculation alone, <br /> <code>job='Freq' </code> and <br /> <code>maxcycle=0 (or) 1 </code><br /> Here, <code>maxcycle=0</code> for normal frequecny calculation, and <code>maxcycle=1</code> for projected frequency calculation (see below for projected frequency calculation). Note, when requesting frequency calculation with <code>maxcycle=0 or 1</code>, the input geometry should be QoMMMa optimized. Method and basis set used at optimization and frequency calculation should be same.<br /> The QoMMMa frequency calculation will generate two output files, freqs_results* (containing wave numbers, zero point energy and etc.,) and freqs*.xyz (containing normal mode coordinates with wave number). Here * represents image number. Normal modes in 'freqs*.xyz' file can be viewed and animated by using <a href="http://jmol.sourceforge.net/">JMOL</a> program.
+<br /><br />Now minimum energy crossing ponit (MECP) minimization is also possible in QoMMMa environment. To request MECP calculation in QoMMMa <br /> <code>job='mecp' </code> <br /> To set proper input for two states in MECP calculation there are few keys are used (see the section MECP).
+	</dd>
+      <dt><tt>prj_freq=[]</tt></dt>
+        <dd>
+          This is to request projected frequency calculation for particular point at reaction path. Here image number is given as Python list. For example to do projected frequency calculation for image1, <br /><code>prj_freq=[1]</code><br /> Projected frequency calculation can be also requested for multiple images. For example, <br /><code>prj_freq=[2,4,6,9]</code><br />
+	</dd>
+    </dl>
+    </p>
+    <h3>QM-code specific options</h3>
+    <p>
+     QoMMMa program  will work with QM codes 'Jaguar','Molpro' and 'Gaussian'. There are few common and few specific key words were used to provide input for QM code job in QoMMMa calculation. 
+      <dt><tt>qmcode='Jaguar'</tt></dt>
+        <dd>
+	   This key is used to set QM code used in QoMMMa calculation. 'Jaguar' is set as the default. Available options are,<br /><code>qmcode='Molpro'</code><br /><code>qmcode='Gaussian'</code>
+        <dd>
+      <dt><tt>qmjob_prefix='qomqmjob'</tt></dt>
+        <dd>
+	   This key is used to set file name for QM job files. Default is 'qomqmjob'. This may help to avoid clashes on the nodes having dual processors, and is useful to supply initial guess for Molpro and Guassian jobs (see below).
+        <dd>
+     <dt><tt>qmkey</tt></dt>
+        <dd>
+          This key is used to provide necessary QM options, like method of calculation, basis set and etc.,. Default <code>qmkey='None'</code>. In this case default set in QM code will taken into account. Using 'qmkey' for a particular QM code is described in respective section.  
+        <dd>
+     <dl>
+    <p>
+    <h4>Jaguar</h4>
+    <p>
+     <dl>
+     <dt><tt>qmkey</tt></dt>
+        <dd>
+	 To provide method, basis set and other options needed for jaguar job 'qmkey' is used. For example,
+<br /> <code>qmkey='''<br />dftname=bhandhlyp<br />basis=6-31G*<br />iacc=1<br />'''</code><br />
+        <dd>
+     <dt><tt>atomic_section</tt></dt>
+        <dd>
+	 This key is used to provide atomic details, like specific basis set for particular atom, vdW parameter and etc., see Jaguar manual for more details. Default is set as 'None'. This is also passed as a sting. For example,
+<br /> <code>atomic_section='''<br />&atomic<br />---<br />---<br />&<br />'''</code><br />
+        <dd>
+     <dt><tt>qmjag_header</tt></dt>
+        <dd>
+	 This key is used to provide necessary Jaguar options needed for QoMMMa QM job, and is set as a default. If needed user can change it through user input. Following options are included in 'qmjag_header' as a default,<br /> <code>qmjag_header='''<br />&gen<br />gcharge=-6<br />ip172=2<br />igeopt=-1<br />mulliken=1<br />maxit=100<br />'''</code><br />
+        <dd>
+     <dt><tt>qmjag_job</tt></dt>
+        <dd>
+	 This key is used to provide Jaguar path. Usually this is set in default file. For example,<br /> <code>qmjag_job='$SCHRODINGER/jaguar run -VER 55011 -WAIT'</code><br /><br />
+To provide initial guess to Jaguar job (to be used in first cycle of QoMMMa QM job) save Jaguar initial guess section in a file with the name 'orbs*', and keep that file in user directory. Here '*' represents image number. QoMMMa program will take this file as the initial guess for Jaguar job. For example, 'orbs1' is the right file name for initial guess file of image 1.
+        <dd>
+    <h4>Molpro</h4>
+     <dt><tt>qmkey</tt></dt>
+        <dd>
+	 To provide method, basis set and other options needed for Molpro job 'qmkey' is used. For example, <br /> <code>qmkey='''<br />basis=6-31G*<br />hf<br />mp2<br />'''</code><br /> Note, MP2 calculation in QoMMMa is possible only with Molpro, and for Molpro it is necessary to add 'basis' and 'hf' option in 'qmkey'.<br /> To request 'SCSMP2' (possible only with Molpro 2006.2), 'qmkey' should contain 'SCSGRD=1'. For example,<br /> <code>qmkey='''<br />basis=avdz<br />df-hf,basis=vdz<br />df-lmp2,SCSGRD=1<br />'''</code><br />
+     <dt><tt>qmmol_header</tt></dt>
+        <dd>
+	 This key is used to provide necessary Molpro options needed for QoMMMa QM job, and is set as a default. If needed user can change it through user input. Following options are included in 'qmmol_header' as a default,<br /> <code>qmmol_header='''<br />geomtyp=xyz<br />gthresh,energy=1d-12,zero=1d-18,oneint=0,twoint=0<br />geometry={<br />nosym<br />'''</code><br />
+     <dt><tt>mol_footer</tt></dt>
+        <dd>
+	 This key is used to provide necessary Molpro options at the bottom of the Molpro input, and is set as a default. If needed user can change it through user input. Following options are included in 'mol_footer' as a default,<br /> <code>mol_footer='''<br />force<br />pop<br />'''</code><br />
+     <dt><tt>qmmol_job</tt></dt>
+        <dd>
+	 This key is used to provide Molpro path. Usually this is set in default file. For example,<br /> <code>qmmol_job='/users/local/bin/molpro'</code><br />
+     <dl>
+    <p>
+To provide initial guess to Molpro job (to be used in first cycle of QoMMMa QM job) save Molpro binary file (2100, see Molpro Manual) with the name 'qmjob_prefix*.intg' (see extension 'intg'), and keep that file in user directory. Here * represents image number. QoMMMa program will take file with extension 'intg' as the initial guess for Molpro job. For example, 'qomqmjob1.intg' is the right file name for default qmjob_prefix (which is 'qomqmjob').
+     <h4>Gaussian</h4>
+     <dt><tt>qmkey</tt></dt>
+        <dd>
+	 To provide method, basis set and other options needed for Gaussion job 'qmkey' is used. For example,
+<br /> <code>qmkey='B3LYP/6-31G* SCF=Tight'</code><br />
+     <dt><tt>cha_mul</tt></dt>
+        <dd>
+	This key is used to provide charge and multiplicity, and is passed as a string. Default is set as <br /> <code>cha_mul='0  1'</code><br />
+        <dd>
+     <dt><tt>extra_basis</tt></dt>
+        <dd>
+	This key is used to provide extra or specific basis sets for Gaussian job. While using this option it is necessary to add Gaussian option (see Gaussian Manual) 'GEN' in 'qmkey'. Default is 'None'. extra_basis is passed as a string, for example;<br /> <code>extra_basis='''<br />H  0<br />S  3  1.00<br />---<br />---<br />***<br />C  0<br />S   6  1.00 <br />---<br />--<br />***<br />'''<br /></code><br />
+        <dd>
+     <dt><tt>gau_head</tt></dt>
+        <dd>
+	This key is used to provide options like memory, number of processors for Gaussian job. Default is 'None'. 'gau_head' is passed as a string, for example; <br /> <code>gua_head='''<br />%mem=700MB<br />%NProcShared=2<br />'''<br /></code><br />
+        <dd>
+To provide initial guess to Gaussian job (to be used in first cycle of QoMMMa QM job) save Gaussian chk filewith the name 'qmjob_prefix*.chk', and keep that file in user directory. Here * represents image number. QoMMMa program will take file with extension 'chk' as the initial guess for Gaussian job. For example, 'qomqmjob1.chk' is the right file name for default qmjob_prefix (which is 'qomqmjob').
+        <dd>
+      <h4>To provide MM parameters</h4>
+In QoMMMa default MM parameter file for Tinker job is charmm27.prm (which is kept in QoMMMa lib directory). If user want to provide new parameter file or to provide any extra parameters for Tinker job (like 'vdw', 'bond','angle','atom'...see Tinker Manual), this should be passed through key <code>mmkey</code><br /> for example,<br />  <code>mmkey='''<br />parameters  /user/local/chskk/qom_work/charmm_new.prm<br />vdw  51  1.81  -0.228<br />bond  7  20  336.2   1.050 <br />'''<br /></code><br />
+        <dd>
+    <h3>Options for MECP job</h3>
+For minimum energy crossing point calculation in QoMMMa environment user need to provide charge and multiplicity of two states. The kyes used for this are <code>cha_mul1</code>  and <code>cha_mul2</code>. For example to set charge 1, multiplicity 1 and 3 for states 1 and 2, <br /> For jaguar,<br /><code>cha_mul1='''<br />molchg=1<br />multip=1<br />'''<br /></code><code>cha_mul2='''<br />molchg=1<br />multip=3<br />'''<br /></code><br /> For Gaussian,<br /><code>cha_mul1='1  1'<br /></code><code>cha_mul2='1  3'<br /></code><br />For Molpro<br /><code>cha_mul1='{rhf:wf,N,1,0}'<br /></code>cha_mul2='{rhf:wf,N,1,2}'<br /></code><br /> Here N represents number of electrons, see Molpro manual to set this.<br />
+      <h4>To provide initial guess in MECP calculation </h4>
+To provide initial guess for QoMMMa MECP QM job, the initial guess should be named as 'A' and 'B' for state 1 and 2 respectively. In the case of Jaguar files with initial guess should be named as 'orbsA*' and 'orbsB*'. For Gaussian, the 'chk' files should be named as 'qmjob_prefix'*._A.chk' and 'qmjob_prefix'*._B.chk'. For Molpro, the binary files (2100) should be named as 'qmjob_prefix'*._A.intg' and 'qmjob_prefix'*._B.intg'. Here '*' represents image number.<br /> All other options are same as nomal QoMMMa job. <code>cha_mul1</code>  and <code>cha_mul2</code> can be used to provide any other Jaguar or Molpro options needed specificaly for particular state (but not for Gaussian).    
+  </body>
+</html>

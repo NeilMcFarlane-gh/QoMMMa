@@ -1,0 +1,9 @@
+#!/bin/bash
+
+export g03root=/usr/local
+. /usr/local/g03/bsd/g03.profile
+export GAUSS_SCRDIR=/tmp
+ulimit -c 0
+cd /users/chskk/qommma/chmut/jag/freq/
+qommma qommma.in 
+

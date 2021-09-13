@@ -1,0 +1,10 @@
+[workspace]
+restore_data_on_startup = True
+save_data_on_exit = True
+save_history = True
+save_non_project_files = False
+
+[main]
+version = 0.2.0
+recent_files = ['..\\..\\Growing String Method\\LJ_cluster_python\\main_program.py', '..\\..\\Growing String Method\\LJ_cluster_python\\delocalised.py', '..\\..\\Growing String Method\\LJ_cluster_python\\math_utils.py', '..\\..\\Growing String Method\\LJ_cluster_python\\utils.py', '..\\..\\Growing String Method\\LJ_cluster_python\\optimisers.py', '..\\..\\Growing String Method\\LJ_cluster_python\\cartesian.py']
+

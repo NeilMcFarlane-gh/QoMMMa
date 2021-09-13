@@ -1,0 +1,98 @@
+# Default parameters for QoMMMa 8
+
+# acctink is the required convergence on gradients in Tinker optimization - in kcal/mol/Angstrom
+acctink=0.1
+
+# Maximum number of iterations for QoMMMa.
+maxcycle=200
+
+# output option
+qomout='None'
+
+# Prefix for initial geometry files
+inpgeom_prefix='init_geom'
+
+# QoMMMa Convergence
+dEmax=1.E-4
+dGmax=3.E-3
+dGrms=2.E-3
+dXmax=7.E-3
+dXrms=4.E-3
+#for NEB
+dGper=2.E-3
+
+# for QoMMMa input
+qm_lst='None'
+link_lst='None'
+constrain_lst='None'
+newcha_lst='None'
+newcha='''
+0
+'''
+# above five default variables should be removed when old style input options qm, link, constrain and newcha are removed from QoMMMa, and then fortinp module in qommma main program need modification.
+  
+nlink=0	 	
+ncon=0  	
+kcnstype='harmonic'
+kspring=100
+nimg=1	
+nebtype='none'
+ninact='''
+0
+'''
+
+# QoMMMa job
+job='opt'
+
+# For projected frequency job (image number)
+prj_freq=[]
+
+# QM and MM code
+mmcode='Tinker'
+qmcode='Jaguar'
+
+# prefix for qmjob files - change to avoid clashes on the node
+qmjob_prefix='qomqmjob'
+
+# options for QM job
+qmkey='None'
+
+# Jaguar path
+qmjag_job='$SCHRODINGER/jaguar run -VER 55011 -WAIT'
+
+# Jaguar keys
+qmjag_header='''
+&gen
+gcharge=-6
+ip172=2
+igeopt=-1
+mulken=1
+maxit=100
+'''
+atomic_section='None'
+orbs='None'
+# for mecp
+orbsA='None'
+orbsB='None'
+
+#Molpro path
+qmmol_job='~chfrm/bin/molpros'
+
+#Molpro keys
+qmmol_header='''
+geomtyp=xyz
+gthresh,energy=1d-12,zero=1d-18,oneint=0,twoint=0
+geometry={
+nosym
+'''
+mol_footer='''
+force
+pop
+'''
+
+
+# Gaussian path and keys
+qmgau_job='g03'
+cha_mul='0 1'
+extra_basis='None'
+gau_head='None'

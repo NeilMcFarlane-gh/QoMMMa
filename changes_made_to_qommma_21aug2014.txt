@@ -1,0 +1,175 @@
+Files, variables, in QoMMMa relating to point charges.
+
+Some variables defined in Qommma.in
+
+natom: total number of atoms in systems e.g. 6110
+nqm: number of qm atoms (excluding link atoms) e.g. 64
+nlink: number of link atoms. e.g. 10
+
+newcha: array of atom numbers and non-default charges assigned to them (quite often, zero - has to include link atoms)
+  no variable number assigned to number of such charges... but there may be e.g. 21 charges on non-link atoms set to zero
+
+Note: some of the MM atoms may have a charge of zero to start with - can be detected in "DefaultCharges". E.g. 38.
+
+ninact: number of 'inactive' atoms e.g. 2574. Some of these inactive atoms may have a zero charge. E.g. 16 of them.
+
+
+
+1. Files written by Fortran part of QoMMMa relating to charges
+
+charges1.xyz (or similar)
+   written by "write_charges.f90" and contains header "&pointch", footer "&", then list of partial charges and coordinates.
+   All non-zero MM charges get written to this file.
+   E.g. with the example given above, 6110 - (64 + 10 + 21 + 38) = 5977 point charges
+   i.e. charges1.xyz will have 5979 lines.
+
+points1.pts (or similar)
+   written by "write_resp.f90" and contains a list of points at which the electrostatic potential must be calculated
+      for the purpose of calculating the electric field, by numerical differentiation. This file ultimately gets read by Jaguar
+      and contains 6N lines, each with the coordinates of a point, and a trailing 0. needed by Jaguar. The factor of six
+      is needed for numerical differentiation. Here N is the number of active MM atoms which do not have a charge of zero.
+      With the examples given above, N will be 6110 - (64 + 10 + 21 + 38 + 2574 - 16) = 3419.
+      So the file would have a length of 20514 lines.
+
+points_chg1.pts (or similar)
+   written by "write_resp.f90" and contains simply a list of the charges on active MM atoms that are non-zero.
+   Gets used by jagutil.py to work out the QM contribution to the gradient on MM atoms:
+   dV_QM/dRi = q_i * E_i  where q_i is the charge on MM atom i, and E_i is the electric field at that point.
+   q_i is read by jagutil from points_chg1.pts; E_i comes from the jaguar resp file.
+   
+   
+2. Files read by Fortran part of QoMMMa
+
+DefaultCharges
+   List of atomic charges on all atoms in the system, as specified by the forcefield, prior to all changes applied in QoMMMa.in
+   Contains natom entries (e.g. 6110 here).
+   Written by qomutil.py, by post-processing some Tinker output generated within the 'tinkercharge' function.
+
+qmlatgrad1.out (or other number)
+   created in python based on the Jaguar or Gaussian Electrostatic potential values (or electric fields). 
+   Contains two leading lines that are discarded.
+   Then contains one line for each active MM atom which does not have a charge of zero.
+   Each line contains a 3-vector of the QM contribution to the gradient on the corresponding MM atom.
+
+* qmlatgrad1.out used to be produced by Molpro in previous versions of QoMMMa - this has
+* now been changed so that latgrad1.out is produced and then manipulated to
+* created qmlatgrad1.out as detailed below.
+
+   
+3. Files read by Jaguar relating to charges.
+
+charges1.xyz
+   See above. Written by Fortran. Gets incorporated in Jaguar input file by function jaginp in jagutil.py
+   
+point1.pts
+   See above. Written by Fortran. Gets pointed to by the Jaguar input file.
+
+   
+4. Files written by Jaguar relating to charges.
+
+qomqmjob1.resp
+   Contains one leading line with the number of atoms in the QM calculation (nqm + nlink) and the number of points
+    where the electrostatic potential is calculated. E.g. in the case above, would be 74, and 20514.
+   Then contains the coordinates of the atoms in the QM calculation, in successive lines.
+   Then contains on successive lines the electrostatic potentials and corresponding coordinates.
+   Gets read by latgrad in jagutil.py
+   
+5. Files read by Gaussian relating to charges.
+
+qomqmjob1.in (or other number)
+   Contains Gaussian instructions but also full list of point charges of all MM atoms with non-zero charges.
+   In the case above, 5977 charges, and their corresponding coordinates.
+   Then contains a card flagging the content of fort.20 - number of points, '2' to flag calculate Efield, '20 21' to flag i/o units.
+   THIS CARD WAS INCORRECT IN VERSIONS OF QoMMMa prior to May 2012 - wrote number of points = number of MM atoms
+   with non-zero charges (e.g. 5977). Should write number of ACTIVE MM atoms with non-zero charge (3419).
+   Written by gauinp in gauutil.
+
+fort.20
+   contains N lines of coordinates of points where electric field will be computed, in format 3F20.6.
+   THIS FILE IS INCORRECTLY WRITTEN IN VERSIONS OF QoMMMa prior to May 2012 - had N = number of MM atoms
+   with non-zero charges (e.g. 5977). Should have N = number of ACTIVE MM atoms with non-zero charge (3419).
+   
+6. Files read by Molpro relating to charges
+
+lat1.dat
+   Contains leading blank line followed by line containing number of points,
+   followed by the point charges of all MM atoms with non-zero charges. Also
+   contains a column instructing Molpro whether to calculate the lattice gradient
+   for this point (final column - 1 to calculate / 0 not to calculate)
+
+
+7. Files written by Gaussian relating to charges.
+
+fort.21
+   Contains 2N lines, with two lines each for each points where electric field was requested.
+   First line: coordinates of that point, followed by Electrostatic potential of that point.
+   Second line: electric field at that point.
+   Gets read by python function 'gauout' in gauutil.py and 'converted' to qmlatgrad, using:
+   dV_QM/dRi = q_i * E_i  where q_i is the charge on MM atom i, and E_i is the electric field at that point.
+   THIS FILE CURRENTLY HAS AN INCORRECT LENGTH, due to errors in qomqmjob1.in and fort.20.
+   Nothing to repair, though, except perhaps gauout.
+   
+8. File written by Molpro relating to charges.
+
+qmlatgrad1.out (in old version)
+   Contains electrostatic potential for all point charges
+
+latgrad1.out (in new version)
+   Contains electrostatic potential for all point charges (now zero for all
+   inactive charges 
+
+REPAIR to QoMMMa/Gaussian on 11 May 2012.
+   1. Create additional file points1gau.pts in write_resp.f90, ready for being used as 'fort.20'.
+   2. Repair gauinp so that it writes the correct number of lines contained in fort.20 to the Gaussian input file,
+      and does not write itself directly to fort.20.
+   3. Add a command in gauinp that copies points1gau.pts to fort.20 at the appropriate time.
+   4. Add housekeeping file copy/remove commands relating to points1gau.pts to qomutil.py
+   
+REPAIR to QoMMMa/Molpro on 14 May 2012
+   1. Create additional file charges1mol.xyz in write_charges.f90, to tell
+      molpro which atoms to calculate electrostatic potential for.
+   2. Modify molinp so that the molpro input file calls charges1mol.xyz
+   3. Repair molout so that it can find the energy in qomqmjob1.out (due to
+      change in case of output in new molpro version.
+   4. Add command to molout to created qmlatgrad1.out from latgrad1.out. The
+      number of atoms is calculated from the number of lines in points1gau.pts and
+      the lines containing non-zero potential are extracted from latgrad1.out.
+
+############
+31 Jan 2013
+############
+
+QoMMMa now uses Tinker version 6.1.01
+
+
+###########
+21 Aug 2014
+###########
+
+REPAIR to qommma_8.04/src/update_conj_opt.f90
+
+error during neb calculation with conjugate gradient algorithm:
+
+At line 19 of file update_conj_opt.f90
+Fortran runtime error: Attempting to allocate already allocated array 'delx'
+
+Answer:
+
+Looking at the code, delx is indeed allocated twice at the start of that
+subroutine (once as 'delx' and once as 'DelX', see line 19 in
+
+/users/ml7684/software/qommma_8.04/src/update_conj_opt.f90
+
+allocate(delx(nimg,noptx),ChgeX(nimg,noptx),DelX(nimg,noptx),DelG(nimg,noptx))
+
+Change this too
+
+allocate(ChgeX(nimg,noptx),DelX(nimg,noptx),DelG(nimg,noptx))
+
+This problems only occurred on grendel not curie (prob due to different
+compilers on the two clusters )
+
+Fix to make qommma_8.05.tgz
+
+New distribution version qommma_8.05.tgz
+

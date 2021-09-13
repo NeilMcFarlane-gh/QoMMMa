@@ -1,0 +1,19 @@
+1. gauutil.py
+
+The order of sections was changed in gauinp: extra_basis was moved to the end of the Gaussian09 input file.
+
+The same problem was fixed in mgauinp.
+
+A new term "extra_guess" was added in gauinp and mgauinp which allows the modification of the 'Guess' keyword in the Gaussian09 input file (useful for open-shell singlet states).
+
+2. qomfreq.py
+
+The order of sections was changed in qmgauinp: extra_basis was moved to the end of the Gaussian09 input file.
+
+Two extra lines needed to be skipped due to the implementation of dispersion correction in freqmain.
+
+3. orcautil.py
+
+ORCA 4.1.2 can be used in QoMMMa 8.06 with qmcode='orca' for optimization and mecp jobs.	 !!The path has to be set accordingly in the submission script!!
+
+

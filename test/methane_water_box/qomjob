@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [ $# -eq 0 ] ; then
+  echo "Usage: qqommma qommma_input_filename [ qsub options ]"
+  exit 1
+fi
+in_file=$1
+shift
+
+qsub -S /bin/bash -N `basename $in_file` -q jaguar -j oe $* <<EOF
+hostname
+export TMPDIR=/tmp/$USER
+if [ ! -d $TMPDIR ] ; then
+  mkdir $TMPDIR
+fi
+ulimit -c 0
+cd \$PBS_O_WORKDIR
+/users/chxrl/SOFTWARE/qommma_8.04/qommma $in_file > ${in_file}.out
+EOF

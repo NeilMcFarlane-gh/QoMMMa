@@ -1,0 +1,39 @@
+To compile the required executables needed for running qommma,
+one needs:
+
+* the full Tinker set of source files.
+* qommma-modified versions of the source files:
+    - readdiffgrad.f
+    - extra.f
+    - extra1.f
+    - analyze.f
+    - prmkey.f
+
+These are called, for convenience, readdiffgrad_qommma.f etc. They do not need
+to be copied to anything else - the makefiles below have been edited to incoprorate these names.
+Note that although the final Tinker program minimize_qommma.x will be different
+from the standard Tinker minimize, the program source file minimize.f itself is not changed!
+
+* The modified file atoms_qommma.i
+This should be copied to atoms.i - it is not possible to change all the calls to 'atoms.i' 
+  in the Tinker source code!!
+
+* modified makefiles:
+    compile.make  library.make  link.make
+    for convenience, these are called:
+    qommma_compile.make, qommma_library.make, qommma_link.make
+
+
+Then one needs to do the compilation:
+a. It may be necessary as usual with Tinker to check sizes.i to define max number of atoms etc.
+b. ./qommma_compile.make (takes some time!)
+c. ./qommma_library.make (quick)
+d. ./qommma_link.make (quick)
+
+This yields two executables: analyze_qommma.x, and minimize_qommma.x
+These need to be copied into the bin directory for qommma, and renamed:
+   For v. 8, this should be something like /usr/local/qommma8/bin
+    and minimize_qommma.x should be minimize,
+        analyze_qommma.x should be analyze_grad
+
+

@@ -1,0 +1,60 @@
+PYTHON
+__________________________
+ALL:
+
+1. qommma.py
+
+- Coordinate system and GSM options added to fortinput as they will be dealt with entirely within Fortran.
+
+2. qomdoc.py
+
+
+3. qomutil.py
+
+
+4. gauutil.py
+
+
+5. jagutil.py
+
+
+6. molutil.py
+
+
+7. orcautil.py
+
+
+8. qomfreq.py
+
+___________________________
+FORTRAN
+___________________________
+ALL:
+- Fixed intendation inconsistency with NEB-based code.
+- Added GSM and coord options to Fortran checkfile.
+
+alloc_coord.f90
+
+- Coordinate system and GSM options are now read into Fortran memory.
+- Allocated DLC arrays
+
+coordinates.f90
+
+- coordtype and gsmtype assigned to integers.
+- Arrays for the dlc have been initialised as allocatable.
+
+write_first_report.f90
+
+- updated the version details in the header.
+
+write_first_checkfile.f90
+
+- Added coordinate and gsm details to this file.
+
+write_checkfile.f90
+
+- Added coordinate and gsm details to this file.
+
+read_checkfile.f90
+
+- Coordinate and gsm details can now be read from this file.

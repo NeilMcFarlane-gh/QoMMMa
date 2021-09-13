@@ -1,0 +1,10 @@
+#!/bin/bash
+
+qsub -S /bin/bash -N qomjob -q jaguar6 -j oe $* <<EOF
+hostname
+export SCHRODINGER=/usr/local/schrodinger
+ulimit -c 0
+cd \$PBS_O_WORKDIR
+qommma qommma.in 
+EOF
+

@@ -1,0 +1,183 @@
+
+     ######################################################################
+   ##########################################################################
+  ###                                                                      ###
+ ###            TINKER  ---  Software Tools for Molecular Design            ###
+ ##                                                                          ##
+ ##                          Version 6.1  June 2012                          ##
+ ##                                                                          ##
+ ##               Copyright (c)  Jay William Ponder  1990-2012               ##
+ ###                           All Rights Reserved                          ###
+  ###                                                                      ###
+   ##########################################################################
+     ######################################################################
+
+
+ Enter Cartesian Coordinate File Name :  
+ Additional Partial Charges for Specific Atoms :
+
+      Atom              Charge
+
+         1              0.0000
+         2              0.0000
+         3              0.0000
+         4              0.0000
+         5              0.0000
+         6              0.0000
+         7              0.0000
+         8              0.0000
+         9              0.0000
+        10              0.0000
+
+ The TINKER Analysis Facility can Provide :
+
+ General System and Force Field Information [G]
+ Force Field Parameters for Interactions [P]
+ Total Potential Energy and its Components [E]
+ Energy Breakdown over Each of the Atoms [A]
+ List of the Large Individual Interactions [L]
+ Details for All Individual Interactions [D]
+ Electrostatic, Inertial & Virial Properties [M]
+ Connectivity Lists for Each of the Atoms [C]
+
+ Enter the Desired Analysis Types [G,P,E,A,L,D,M] :  
+ Total Potential Energy :                  0.0437 Kcal/mole
+
+ Intermolecular Energy :                  -0.0002 Kcal/mole
+
+ Energy Component Breakdown :           Kcal/mole      Interactions
+
+ Bond Stretching                           0.0000              2
+ Angle Bending                             0.0439              1
+ Van der Waals                            -0.0002             10
+JAGUAR 78111 Linux-x86_64 on g-1-6
+Jobname : qomqmjob1
+EXEC    : /share/apps/schrodinger/jaguar-v78111/bin/Linux-x86_64
+OUTPUT  : /tmp/ml7684/qmmm_32356/image1
+LOG     : qomqmjob1.log
+JobId: g-1-6-0-53f47e0e
+Dispersion energy is:    -0.004312714181 Hartree
+QM energy without dispersion=   -81.045962 Hartree
+QM energy with dispersion=   -81.050275 Hartree
+
+     ######################################################################
+   ##########################################################################
+  ###                                                                      ###
+ ###            TINKER  ---  Software Tools for Molecular Design            ###
+ ##                                                                          ##
+ ##                          Version 6.1  June 2012                          ##
+ ##                                                                          ##
+ ##               Copyright (c)  Jay William Ponder  1990-2012               ##
+ ###                           All Rights Reserved                          ###
+  ###                                                                      ###
+   ##########################################################################
+     ######################################################################
+
+
+ Enter Cartesian Coordinate File Name :  
+ Additional Partial Charges for Specific Atoms :
+
+      Atom              Charge
+
+         1              0.0000
+         2              0.0000
+         3              0.0000
+         4              0.0000
+         5              0.0000
+         6              0.0000
+         7              0.0000
+         8              0.0000
+         9              0.0000
+        10              0.0000
+
+ The TINKER Analysis Facility can Provide :
+
+ General System and Force Field Information [G]
+ Force Field Parameters for Interactions [P]
+ Total Potential Energy and its Components [E]
+ Energy Breakdown over Each of the Atoms [A]
+ List of the Large Individual Interactions [L]
+ Details for All Individual Interactions [D]
+ Electrostatic, Inertial & Virial Properties [M]
+ Connectivity Lists for Each of the Atoms [C]
+
+ Enter the Desired Analysis Types [G,P,E,A,L,D,M] :  
+ Total Potential Energy :                  0.0299 Kcal/mole
+
+ Intermolecular Energy :                  -0.0002 Kcal/mole
+
+ Energy Component Breakdown :           Kcal/mole      Interactions
+
+ Bond Stretching                           0.0095              2
+ Angle Bending                             0.0206              1
+ Van der Waals                            -0.0002             10
+JAGUAR 78111 Linux-x86_64 on g-1-6
+Jobname : qomqmjob1
+EXEC    : /share/apps/schrodinger/jaguar-v78111/bin/Linux-x86_64
+OUTPUT  : /tmp/ml7684/qmmm_32356/image1
+LOG     : qomqmjob1.log
+JobId: g-1-6-0-53f47e1d
+Dispersion energy is:    -0.004041894329 Hartree
+QM energy without dispersion=   -81.047367 Hartree
+QM energy with dispersion=   -81.051409 Hartree
+
+     ######################################################################
+   ##########################################################################
+  ###                                                                      ###
+ ###            TINKER  ---  Software Tools for Molecular Design            ###
+ ##                                                                          ##
+ ##                          Version 6.1  June 2012                          ##
+ ##                                                                          ##
+ ##               Copyright (c)  Jay William Ponder  1990-2012               ##
+ ###                           All Rights Reserved                          ###
+  ###                                                                      ###
+   ##########################################################################
+     ######################################################################
+
+
+ Enter Cartesian Coordinate File Name :  
+ Additional Partial Charges for Specific Atoms :
+
+      Atom              Charge
+
+         1              0.0000
+         2              0.0000
+         3              0.0000
+         4              0.0000
+         5              0.0000
+         6              0.0000
+         7              0.0000
+         8              0.0000
+         9              0.0000
+        10              0.0000
+
+ The TINKER Analysis Facility can Provide :
+
+ General System and Force Field Information [G]
+ Force Field Parameters for Interactions [P]
+ Total Potential Energy and its Components [E]
+ Energy Breakdown over Each of the Atoms [A]
+ List of the Large Individual Interactions [L]
+ Details for All Individual Interactions [D]
+ Electrostatic, Inertial & Virial Properties [M]
+ Connectivity Lists for Each of the Atoms [C]
+
+ Enter the Desired Analysis Types [G,P,E,A,L,D,M] :  
+ Total Potential Energy :                  0.0299 Kcal/mole
+
+ Intermolecular Energy :                  -0.0002 Kcal/mole
+
+ Energy Component Breakdown :           Kcal/mole      Interactions
+
+ Bond Stretching                           0.0095              2
+ Angle Bending                             0.0206              1
+ Van der Waals                            -0.0002             10
+JAGUAR 78111 Linux-x86_64 on g-1-6
+Jobname : qomqmjob1
+EXEC    : /share/apps/schrodinger/jaguar-v78111/bin/Linux-x86_64
+OUTPUT  : /tmp/ml7684/qmmm_32356/image1
+LOG     : qomqmjob1.log
+JobId: g-1-6-0-53f47e2a
+Dispersion energy is:    -0.003985718190 Hartree
+QM energy without dispersion=   -81.047461 Hartree
+QM energy with dispersion=   -81.051447 Hartree

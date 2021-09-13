@@ -1,0 +1,4 @@
+#!/bin/sh
+export QOMMMA=/home/neil/software_and_scripts/qommma_8.07/
+$QOMMMA/qommma.py $@
+

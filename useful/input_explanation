@@ -1,0 +1,55 @@
+natom=n	  		# total number of atoms
+nqm=nq	  		# number of atoms in QM region
+nlink=nl	 	# number of link atoms if any
+nopt=nopt		# number of atoms optimized in QoMMMa Hessian,
+                        # this is sum of nqm+nl and (if any) number
+			# of MM atoms to be optimized in QoMMMa
+ncon=ncon		# number of constrains
+			 
+kcnstyp=kcnstyp		# type of constrain; 1=Harmonic, 2=tanh, 					
+nimg=nimg		# number of input geometries given
+nebtype=type		# 0 - normal run, 1 - NEB, 2 - climbing image NEB
+kspring=kspring		# spring force constant
+
+# QM atoms list
+qm='''
+qlabel atom
+''' 			 
+qm_lst=[atom labels]
+
+link='''
+MM atom   QM atom    rQM     rQL  linkatom label
+'''			#  for each link one line 
+
+hesoptmm='atom label'   # atom label corresponding to hessian optimized MM atom(s) (if any)
+ 		
+
+constrain='''
+cnstyp(i)  kcns(i) cnsidl(i)  # constrain type (see below), force constant,ideal value 
+ncnsat(i,j)                  # in next line atom labels to which the constraint
+'''          	             # should apply, here j depends on type, i depends on ncon
+
+newcha='''
+no.atoms                # number of MM atoms to which charge is modified, if need 	
+mclabel, charge         # MM atom label and charge	
+'''
+
+ninact='''
+ninact 			# number of atoms to be frozen
+inact label		# and label of such atoms
+'''  
+	 	        	
+qmkey='''		# Any extra QM keys need for Jaguar/Molpro/Gaussin
+basis=6-31G*
+'''	        
+
+mmkey='''		# Any extra keys for Tinker
+parameters ---
+vdw ----
+bond ----
+'''
+
+job='opt'		# job is either optimization (default) or Frequency ('Freq'), note frequency job will run only after full optimization or with maxcyle=1 (and job='Freq')
+
+
+#constrain type [1 = r(A-B), 2 = r(A-B) - r(C-D),3 = r(A-B) + r(C-D), 4 = r(A-B) + r(C-D) - r(E-F)]
