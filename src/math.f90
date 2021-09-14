@@ -54,18 +54,18 @@ contains
 	end function atom_distance_grad
 	
 	
-	function vector_project(vec1, vec2, length) result(proj_vec)
+	function vector_project(vec1, vec2, cols) result(proj_vec)
 	! Here, the first vector taken is projected onto the second vector taken.
 	! In this case, the vectors must be of the same dimensions.
 	!
 	! ARGUMENTS:	vec1 : 1D array containing the vector which is to be projected.
 	!				vec2 : 1D array containing the vector which vec1 is projected upon.
-	!               length : integer which represents the size of both vectors (which must of necessity be the same).
+	!               cols : integer which represents the number of elements in both vectors (which must of necessity be the same).
 		
 	implicit none
-	integer(i4b), intent(in) :: length
-	real(sp) :: proj_vec(length), unit_vec(length)
-	real(sp), intent(in) :: vec1(length), vec2(length)
+	integer(i4b), intent(in) :: cols
+	real(sp) :: proj_vec(cols), unit_vec(cols)
+	real(sp), intent(in) :: vec1(cols), vec2(cols)
 	
 	! The projection space is normalised.
     unit_vec = unit_vector(vec2, SIZE(vec2))
@@ -76,16 +76,16 @@ contains
 	end function vector_project
 	
 	
-	function unit_vector(vec, length) result(unit_vec)
+	function unit_vector(vec, cols) result(unit_vec)
 	! Here, a vector is taken and is transformed to a unit vector.
 	!
-	! ARGUMENTS:	vec : 1D array containing the vector which is made to a unit vector.
-	!               length : integer which represents the size of the vector.	
+	! ARGUMENTS:	vec  : 1D array containing the vector which is made to a unit vector.
+	!               cols : integer which represents the number of elements in the vector.	
 	
 	implicit none
-	integer(i4b), intent(in) :: length
-	real(sp), intent(in) :: vec(length)
-	real(sp) :: unit_vec(length)
+	integer(i4b), intent(in) :: cols
+	real(sp), intent(in) :: vec(cols)
+	real(sp) :: unit_vec(cols)
 
 	! The unit vector is obtained by the usual formula.
 	unit_vec = vec / NORM2(vec)
@@ -102,12 +102,21 @@ contains
 	!end function Gram_Schmidt
 	
 	
-	!function SVD_inverse(arr) result(res)
+	function SVD_inverse(A, cols, rows) result(inv_arr)
 	! Here, a matrix is taken as input and the generalised inverse is calculated using single value decomposition.
+	!
+	! ARGUMENTS:	A    : 2D array containing the array which is to be inverted by single value decomposition.
+	!               cols : integer which represents the number of columns.
+    !				rows : integer which represents the number of rows.
+	
+	implicit none
+	integer(i4b), intent(in) :: cols, rows
+	real(sp), intent(in) :: A(cols, rows)
+	real(sp) :: A_AT(rows, rows), AT_A(cols, cols), U(rows, rows), V(cols, cols), S(cols, rows)
 	
 	
 	
-	!end function SVD_inverse
+	end function SVD_inverse
 	
 	
 	function is_orthog(vecs, length, height) result(orthogonality)

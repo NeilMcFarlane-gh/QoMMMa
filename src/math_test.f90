@@ -2,13 +2,12 @@ program math_test
 use math ; use nrtype
 
 real(sp) :: distance
-real(sp), allocatable ::  coords_1(:), coords_2(:), grad(:,:), unit_vec(:), proj_vec(:)
-real(sp) :: vectors(3,3)
+real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:)
+real(sp) :: vectors(3,3), coords_1(3), coords_2(3)
 logical :: orthogonality
 
-allocate(coords_1(3))
-allocate(coords_2(3))
 
+! Random coordinate set...
 coords_1(1) = 2
 coords_2(1) = 4
 coords_1(2) = 6
@@ -16,6 +15,8 @@ coords_2(2) = 1
 coords_1(3) = 5
 coords_2(3) = 2
 
+
+! Set of orthogonal vectors...
 !Vector 1
 vectors(1,1) = 1
 vectors(2,1) = 0
@@ -28,6 +29,7 @@ vectors(3,2) = 1
 vectors(1,3) = 1
 vectors(2,3) = SQRT(2.0) * (-1)
 vectors(3,3) = 1
+
 
 orthogonality = is_orthog(vectors, SIZE(vectors, 1), SIZE(vectors, 2))
 
