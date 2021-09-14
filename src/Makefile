@@ -1,7 +1,7 @@
 FF=gfortran-6
 LD=gfortran-6
 FFLAGS=
-LIBS=
+LIBS=/usr/local/lapack-3.10.0-gcc6/libblas.a /usr/local/lapack-3.10.0-gcc6/liblapack.a
 LFLAGS=
 RM=rm -f
 ECHO=echo
