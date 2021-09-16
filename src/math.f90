@@ -54,18 +54,18 @@ contains
 	end function atom_distance_grad
 	
 	
-	function vector_project(vec1, vec2, cols) result(proj_vec)
+	function vector_project(vec1, vec2, length) result(proj_vec)
 	! Here, the first vector taken is projected onto the second vector taken.
 	! In this case, the vectors must be of the same dimensions.
 	!
 	! ARGUMENTS:	vec1 : 1D array containing the vector which is to be projected.
 	!				vec2 : 1D array containing the vector which vec1 is projected upon.
-	!               cols : integer which represents the number of elements in both vectors (which must of necessity be the same).
+	!               length : integer which represents the number of elements in both vectors (which must of necessity be the same).
 		
 	implicit none
-	integer(i4b), intent(in) :: cols
-	real(sp) :: proj_vec(cols), unit_vec(cols)
-	real(sp), intent(in) :: vec1(cols), vec2(cols)
+	integer(i4b), intent(in) :: length
+	real(sp) :: proj_vec(length), unit_vec(length)
+	real(sp), intent(in) :: vec1(length), vec2(length)
 	
 	! The projection space is normalised.
     unit_vec = unit_vector(vec2, SIZE(vec2))
@@ -76,16 +76,16 @@ contains
 	end function vector_project
 	
 	
-	function unit_vector(vec, cols) result(unit_vec)
+	function unit_vector(vec, length) result(unit_vec)
 	! Here, a vector is taken and is transformed to a unit vector.
 	!
 	! ARGUMENTS:	vec  : 1D array containing the vector which is made to a unit vector.
-	!               cols : integer which represents the number of elements in the vector.	
+	!               length : integer which represents the number of elements in the vector.	
 	
 	implicit none
-	integer(i4b), intent(in) :: cols
-	real(sp), intent(in) :: vec(cols)
-	real(sp) :: unit_vec(cols)
+	integer(i4b), intent(in) :: length
+	real(sp), intent(in) :: vec(length)
+	real(sp) :: unit_vec(length)
 
 	! The unit vector is obtained by the usual formula.
 	unit_vec = vec / NORM2(vec)
@@ -102,32 +102,49 @@ contains
 	!end function Gram_Schmidt
 	
 	
-	function SVD_inverse(A, cols, rows) result(inv_arr)
+	function SVD_inverse(A, rows, cols) result(A_inv)
 	! Here, a matrix is taken as input and the generalised inverse is calculated using single value decomposition.
 	!
 	! ARGUMENTS:	A    : 2D array containing the array which is to be inverted by single value decomposition.
-	!               cols : integer which represents the number of columns.
-    !				rows : integer which represents the number of rows.
+	!               rows : integer which represents the number of rows.
+    !				cols : integer which represents the number of columns.
 	
 	implicit none
-	integer(i4b), intent(in) :: cols, rows
-	integer(i4b) :: LDA, LDU, LWORK, LDVT, INFO
-	character :: JOBU, JOBVT
-	real(sp), intent(in) :: A(cols, rows)
-	real(sp) :: U(cols, cols), V(rows, rows), S(rows), inv_arr(rows, cols)
-	real(sp), allocatable :: WORK(:)
+	integer(i4b), intent(in) :: rows, cols
+	integer(i4b) :: LDA, LDU, LWORK, LDVT, INFO, i, j
+	real(sp), intent(in) :: A(rows, cols)
+	real(sp) :: U(rows, rows), VT(cols, cols), S(cols), S_full(rows, cols)
+	real(sp), allocatable :: WORK(:), A_inv(:,:)
+
+	! Initialising the leading dimensions for the SVD arrays.
+	LDA = rows
+	LDU = rows
+	LDVT = cols
 	
-	JOBU = 'A'
-	JOBVT = 'A'
-	LDA = cols
-	LDU = cols
-	LDVT = rows
-	
-	LWORK = MAX(1, (3 * MIN(cols, rows) + MAX(cols, rows)), (5 * min(cols, rows)))
-	
+	! A working array is created for use in calculation of SVD.
+	LWORK = MAX(1, (3 * MIN(rows, cols) + MAX(rows, cols)), (5 * min(rows, cols)))
 	allocate(WORK(LWORK))
 	
-	call DGESVD(JOBU, JOBVT, rows, cols, A, LDA, S, U, LDU, V, LDVT, WORK, LWORK, INFO)
+	! SVD defined in LAPACK is performed to obtain matrices S, U and VT.
+	call DGESVD('A', 'A', rows, cols, A, LDA, S, U, LDU, VT, LDVT, WORK, LWORK, INFO)
+	
+	! To calculate the inverse of matrix A, the vector S must first be inverted.
+	do i=1, SIZE(S, 1)
+		if (S(i) .ne. 0) then
+			S(i) = 1 / S(i)
+		end if
+	end do
+
+	! Next, the vector S must be converted to a diagonal matrix.
+	S_full(:,:) = 0.0
+	do j=1, SIZE(S_full, 1)
+		S_full(j,j) = S(j)
+	end do
+	
+	! Lastly, the inverse is calculated by the usual formula.
+	! NOTE: This only works for square matrices, which is likely all that will be necessary.
+	! NOTE: If non-square matrices are to be used, the code will have to be updated.
+	A_inv = MATMUL(MATMUL(TRANSPOSE(VT), S_full), TRANSPOSE(U))
 	
 	end function SVD_inverse
 	

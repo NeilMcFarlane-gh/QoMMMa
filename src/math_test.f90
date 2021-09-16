@@ -2,8 +2,8 @@ program math_test
 use math ; use nrtype
 
 real(sp) :: distance
-real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:)
-real(sp) :: vectors(3,3), coords_1(3), coords_2(3)
+real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:), inv_arr(:,:)
+real(sp) :: vectors(3,3), coords_1(3), coords_2(3), arr(3,3)
 logical :: orthogonality
 
 
@@ -30,6 +30,17 @@ vectors(1,3) = 1
 vectors(2,3) = SQRT(2.0) * (-1)
 vectors(3,3) = 1
 
+
+! Array for testing SVD...
+arr(:,:) = 0
+arr(1,1) = 2
+arr(2,1) = 2
+arr(2,2) = 1
+arr(3,2) = -2
+
+inv_arr = SVD_inverse(arr, SIZE(arr, 1), SIZE(arr, 2))
+
+!print *, "(pseudo)inverse: ", inv_arr
 
 orthogonality = is_orthog(vectors, SIZE(vectors, 1), SIZE(vectors, 2))
 
