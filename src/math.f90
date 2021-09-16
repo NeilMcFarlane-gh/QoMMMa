@@ -111,10 +111,23 @@ contains
 	
 	implicit none
 	integer(i4b), intent(in) :: cols, rows
+	integer(i4b) :: LDA, LDU, LWORK, LDVT, INFO
+	character :: JOBU, JOBVT
 	real(sp), intent(in) :: A(cols, rows)
-	real(sp) :: A_AT(rows, rows), AT_A(cols, cols), U(rows, rows), V(cols, cols), S(cols, rows)
+	real(sp) :: U(cols, cols), V(rows, rows), S(rows), inv_arr(rows, cols)
+	real(sp), allocatable :: WORK(:)
 	
+	JOBU = 'A'
+	JOBVT = 'A'
+	LDA = cols
+	LDU = cols
+	LDVT = rows
 	
+	LWORK = MAX(1, (3 * MIN(cols, rows) + MAX(cols, rows)), (5 * min(cols, rows)))
+	
+	allocate(WORK(LWORK))
+	
+	call DGESVD(JOBU, JOBVT, rows, cols, A, LDA, S, U, LDU, V, LDVT, WORK, LWORK, INFO)
 	
 	end function SVD_inverse
 	
