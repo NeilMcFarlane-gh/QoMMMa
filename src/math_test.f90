@@ -3,7 +3,7 @@ use math ; use nrtype
 
 real(sp) :: distance
 real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:), inv_arr(:,:)
-real(sp) :: vectors(3,3), coords_1(3), coords_2(3), arr(3,3)
+real(sp) :: vectors(3,3), coords_1(3), coords_2(3), arr(2,2), det
 logical :: orthogonality
 
 
@@ -33,10 +33,15 @@ vectors(3,3) = 1
 
 ! Array for testing SVD...
 arr(:,:) = 0
-arr(1,1) = 2
-arr(2,1) = 2
-arr(2,2) = 1
-arr(3,2) = -2
+arr(1,1) = 1
+arr(1,2) = 2
+arr(2,1) = 3
+arr(2,2) = 4
+
+
+det = DETERMINANT(arr, SIZE(arr, 1))
+
+print *, det
 
 inv_arr = SVD_inverse(arr, SIZE(arr, 1), SIZE(arr, 2))
 

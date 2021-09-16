@@ -2,8 +2,6 @@ MODULE DLC
 use nrtype ; use coordinates ; use optimdata
 implicit none
 
-! Maybe have some declarations here...
-
 contains
 
 
@@ -31,22 +29,22 @@ contains
 	end subroutine gen_DLC
 	
 	
-	subroutine gen_grad_cartDLC
+	subroutine gen_grad_cart_to_DLC
 	! Here, the gradient array in cartesian subspace is updated to DLC subspace.
 	
-	end subroutine gen_grad_cartDLC
+	end subroutine gen_grad_cart_to_DLC
 	
 	
-	subroutine gen_hess_cartDLC
+	subroutine gen_hess_cart_to_DLC
 	! Here, the cartesian hessian matrix is updated to DLC subspace.
 	
-	end subroutine gen_hess_cartDLC
+	end subroutine gen_hess_cart_to_DLC
 	
 	
-	subroutine gen_hess_primDLC
+	subroutine gen_hess_prim_to_DLC
 	! Here, the primitive internal coordinate hessian matrix is updated to DLC subspace.
 	
-	end subroutine gen_hess_primDLC
+	end subroutine gen_hess_prim_to_DLC
 	
 	
 	subroutine DLC_to_cart

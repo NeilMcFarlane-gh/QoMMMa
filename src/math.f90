@@ -2,12 +2,10 @@ MODULE math
 use nrtype ; use coordinates ; use optimdata
 implicit none
 
-! Maybe have some declarations here...
-
 contains
 	
 	
-	function atom_distance(coords_i, coords_j) result(r)
+	function ATOM_DISTANCE(coords_i, coords_j) result(r)
 	! Here, two sets of cartesian coordinates are taken, and the distance between the points is calculated.
 	!
 	! ARGUMENTS:	coords_i : 1D array containing the x,y,z coordinates of atom i.
@@ -25,10 +23,10 @@ contains
 	end do
 	r = SQRT(r)
 	
-	end function atom_distance
+	end function ATOM_DISTANCE
 	
 	
-	function atom_distance_grad(coords_i, coords_j) result(grad)
+	function ATOM_DISTANCE_GRAD(coords_i, coords_j) result(grad)
 	! Here, two sets of cartesian coordinates are taken, and the first derivatives for the distance between the points are calculated.
 	! This is used to fill the Wilson B matrix in generation of a primitive internal coordinate space.
 	!
@@ -51,10 +49,10 @@ contains
 	grad(1,:) = unit_vec
 	grad(2,:) = -1 * unit_vec
 	
-	end function atom_distance_grad
+	end function ATOM_DISTANCE_GRAD
 	
 	
-	function vector_project(vec1, vec2, length) result(proj_vec)
+	function VECTOR_PROJECT(vec1, vec2, length) result(proj_vec)
 	! Here, the first vector taken is projected onto the second vector taken.
 	! In this case, the vectors must be of the same dimensions.
 	!
@@ -73,10 +71,10 @@ contains
     ! The vector is projected by the usual formula.
     proj_vec = DOT_PRODUCT(vec1, unit_vec) * unit_vec
 
-	end function vector_project
+	end function VECTOR_PROJECT
 	
 	
-	function unit_vector(vec, length) result(unit_vec)
+	function UNIT_VECTOR(vec, length) result(unit_vec)
 	! Here, a vector is taken and is transformed to a unit vector.
 	!
 	! ARGUMENTS:	vec  : 1D array containing the vector which is made to a unit vector.
@@ -90,19 +88,19 @@ contains
 	! The unit vector is obtained by the usual formula.
 	unit_vec = vec / NORM2(vec)
 
-	end function unit_vector
+	end function UNIT_VECTOR
 	
 	
-	!function Gram_Schmidt(vecs) result(res)
+	!function GRAM_SCHMIDT(vecs) result(res)
 	! Here, an array of vectors is orthonormalised by the Gram Schmidt methodology.
 	! The first vector in the array is taken as the first, and thus it will not change, and the last vector will drop out.
 	
-	! TO-DO : Will write later when it comes to constrained optimisation process.
+	! TO-DO : Will write later when it comes to programming the constrained optimisation process.
 	
-	!end function Gram_Schmidt
+	!end function GRAM_SCHMIDT
 	
 	
-	function SVD_inverse(A, rows, cols) result(A_inv)
+	function SVD_INVERSE(A, rows, cols) result(A_inv)
 	! Here, a matrix is taken as input and the generalised inverse is calculated using single value decomposition.
 	!
 	! ARGUMENTS:	A    : 2D array containing the array which is to be inverted by single value decomposition.
@@ -146,10 +144,10 @@ contains
 	! NOTE: If non-square matrices are to be used, the code will have to be updated.
 	A_inv = MATMUL(MATMUL(TRANSPOSE(VT), S_full), TRANSPOSE(U))
 	
-	end function SVD_inverse
+	end function SVD_INVERSE
 	
 	
-	function is_orthog(vecs, length, height) result(orthogonality)
+	function IS_ORTHOG(vecs, length, height) result(orthogonality)
 	! Here, an array of vectors is taken as input and their orthogonality is verified.
 	! This is useful as a check after an orthogonalisation procedure.
 	!
@@ -180,7 +178,62 @@ contains
 	! The set of vectors is found to be orthogonal if the exit condition in the above loop is not satisfied.
 	orthogonality = .TRUE.
 	
-	end function is_orthog
+	end function IS_ORTHOG
+	
+	
+	function DETERMINANT(matrix, n) result(det)
+	! Here, the determinant of a square matrix is calculated. 
+	!
+	! ARGUMENTS:	matrix    : 2D array containing the matrix which the determinant of will be calculated.
+	!               n : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
+    
+	implicit none
+    real(sp) :: matrix(n,n)
+    integer(i4b), intent(in) :: n
+    real(sp) :: m, temp, det
+    integer(i4b) :: i, j, k, l
+    logical :: DetExists
+	
+	! Initialising some values.
+	DetExists = .TRUE.
+    l = 1
+	
+    ! The matrix is converted to upper diagonal form.
+    do k=1, (n - 1)
+        if (matrix(k,k) == 0) then
+            DetExists = .FALSE.
+            do i=k+1, n
+                if (matrix(i,k) .ne. 0) then
+                    do j=1, n
+                        temp = matrix(i,j)
+                        matrix(i,j) = matrix(k,j)
+                        matrix(k,j) = temp
+                    end do
+                    DetExists = .TRUE.
+                    l = -l
+                    exit
+                end if
+            end do
+            if (DetExists .EQV. .FALSE.) then
+                det = 0
+                return
+            end if
+        end if
+        do j=k+1, n
+            m = matrix(j,k) / matrix(k,k)
+            do i=k+1, n
+                matrix(j,i) = matrix(j,i) - m*matrix(k,i)
+            end do
+        end do
+    end do
+   
+    ! The determinant is calculated by finding the product of diagonal elements.
+    det = l
+    do i = 1, n
+        det = det * matrix(i,i)
+    end do
+   
+	end function DETERMINANT
 	
 	
 END MODULE math

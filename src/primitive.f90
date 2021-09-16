@@ -2,14 +2,11 @@ MODULE primitive
 use nrtype ; use coordinates ; use optimdata
 implicit none
 
-! Maybe have some declarations here...
-
 contains
 
 
 	subroutine gen_prims
 	! Here, the primitive internal coordinates are generated for a given cartesian coordinate set using a total connectivity scheme with a distance cutoff.
-	! TO-DO : Investigate Tinker's program files to grep covalent radii.
 	
 	end subroutine gen_prims
 	
@@ -20,16 +17,16 @@ contains
 	end subroutine gen_Bmat_prims
 
 	
-	subroutine gen_grad_cartprims
+	subroutine gen_grad_cart_to_prims
 	! Here, the gradient array in cartesian subspace is updated to primitive internal coordinate subspace.
 	
-	end subroutine gen_grad_cartprims
+	end subroutine gen_grad_cart_to_prims
 	
 	
-	subroutine gen_hess_cartprims
+	subroutine gen_hess_cart_to_prims
 	! Here, the cartesian hessian matrix is updated to primitive internal coordinate subspace.
 	
-	end subroutine gen_hess_cartprims
+	end subroutine gen_hess_cart_to_prims
 	
 	
 	subroutine prims_to_cart
