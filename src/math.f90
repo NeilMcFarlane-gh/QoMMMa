@@ -2,11 +2,15 @@ MODULE math
 use nrtype ; use coordinates ; use optimdata
 implicit none
 
+! In this module, a collection of maths functions are found.
+! These functions are useful in general, but specifically designed for the generation of delocalised internal coordinates.
+
 contains
 	
 	
 	function ATOM_DISTANCE(coords_i, coords_j) result(r)
 	! Here, two sets of cartesian coordinates are taken, and the distance between the points is calculated.
+	! This is used to obtain an internal coordinate set.
 	!
 	! ARGUMENTS:	coords_i : 1D array containing the x,y,z coordinates of atom i.
 	!				coords_j : 1D array containing the x,y,z coordinates of atom j.
@@ -44,7 +48,7 @@ contains
 		vec(i) = coords_i(i) - coords_j(i)
 	end do
 	
-	! Calculating analytical for first derivatives.
+	! Calculating analytical first derivatives.
 	unit_vec = unit_vector(vec, SIZE(vec))
 	grad(1,:) = unit_vec
 	grad(2,:) = -1 * unit_vec
@@ -54,16 +58,16 @@ contains
 	
 	function VECTOR_PROJECT(vec1, vec2, length) result(proj_vec)
 	! Here, the first vector taken is projected onto the second vector taken.
-	! In this case, the vectors must be of the same dimensions.
+	! In this case, the vectors must of necessity be of the same dimensions.
 	!
-	! ARGUMENTS:	vec1 : 1D array containing the vector which is to be projected.
-	!				vec2 : 1D array containing the vector which vec1 is projected upon.
-	!               length : integer which represents the number of elements in both vectors (which must of necessity be the same).
+	! ARGUMENTS:	vec1   : 1D array containing the vector which is to be projected.
+	!				vec2   : 1D array containing the vector which vec1 is projected upon.
+	!               length : integer which represents the number of elements in both vectors.
 		
 	implicit none
 	integer(i4b), intent(in) :: length
-	real(sp) :: proj_vec(length), unit_vec(length)
 	real(sp), intent(in) :: vec1(length), vec2(length)
+	real(sp) :: proj_vec(length), unit_vec(length)
 	
 	! The projection space is normalised.
     unit_vec = unit_vector(vec2, SIZE(vec2))
@@ -77,7 +81,7 @@ contains
 	function UNIT_VECTOR(vec, length) result(unit_vec)
 	! Here, a vector is taken and is transformed to a unit vector.
 	!
-	! ARGUMENTS:	vec  : 1D array containing the vector which is made to a unit vector.
+	! ARGUMENTS:	vec    : 1D array containing the vector which is made to a unit vector.
 	!               length : integer which represents the number of elements in the vector.	
 	
 	implicit none
@@ -85,7 +89,7 @@ contains
 	real(sp), intent(in) :: vec(length)
 	real(sp) :: unit_vec(length)
 
-	! The unit vector is obtained by the usual formula.
+	! The unit vector is calculated by the usual formula.
 	unit_vec = vec / NORM2(vec)
 
 	end function UNIT_VECTOR
@@ -101,9 +105,9 @@ contains
 	
 	
 	function SVD_INVERSE(A, rows, cols) result(A_inv)
-	! Here, a matrix is taken as input and the generalised inverse is calculated using single value decomposition.
+	! Here, a matrix is taken as input and the generalised inverse is calculated by using singlular value decomposition (SVD).
 	!
-	! ARGUMENTS:	A    : 2D array containing the array which is to be inverted by single value decomposition.
+	! ARGUMENTS:	A    : 2D array containing the array which is to be inverted by SVD.
 	!               rows : integer which represents the number of rows.
     !				cols : integer which represents the number of columns.
 	
@@ -111,8 +115,8 @@ contains
 	integer(i4b), intent(in) :: rows, cols
 	integer(i4b) :: LDA, LDU, LWORK, LDVT, INFO, i, j
 	real(sp), intent(in) :: A(rows, cols)
-	real(sp) :: U(rows, rows), VT(cols, cols), S(cols), S_full(rows, cols)
 	real(sp), allocatable :: WORK(:), A_inv(:,:)
+	real(sp) :: U(rows, rows), VT(cols, cols), S(cols), S_inv(rows, cols)
 
 	! Initialising the leading dimensions for the SVD arrays.
 	LDA = rows
@@ -134,36 +138,38 @@ contains
 	end do
 
 	! Next, the vector S must be converted to a diagonal matrix.
-	S_full(:,:) = 0.0
-	do j=1, SIZE(S_full, 1)
-		S_full(j,j) = S(j)
+	S_inv(:,:) = 0.0
+	do j=1, SIZE(S_inv, 1)
+		S_inv(j,j) = S(j)
 	end do
 	
 	! Lastly, the inverse is calculated by the usual formula.
 	! NOTE: This only works for square matrices, which is likely all that will be necessary.
-	! NOTE: If non-square matrices are to be used, the code will have to be updated.
-	A_inv = MATMUL(MATMUL(TRANSPOSE(VT), S_full), TRANSPOSE(U))
+	!       If non-square matrices are to be used, the code will have to be updated.
+	A_inv = MATMUL(MATMUL(TRANSPOSE(VT), S_inv), TRANSPOSE(U))
 	
 	end function SVD_INVERSE
 	
 	
-	function IS_ORTHOG(vecs, length, height) result(orthogonality)
-	! Here, an array of vectors is taken as input and their orthogonality is verified.
+	function IS_ORTHOG(vecs, length, n) result(orthogonality)
+	! Here, an array of vectors is taken, and their orthogonality is verified.
 	! This is useful as a check after an orthogonalisation procedure.
 	!
-	! ARGUMENTS:	vecs : 2D array containing the set of vectors whose orthogonality is checked.
+	! ARGUMENTS:	vecs   : 2D array containing the set of vectors whose orthogonality is checked.
 	!               length : integer which represents the length of the vectors.
-    !				height : integer which represents the number of vectors in the set.
+    !				n      : integer which represents the number of vectors in the set.
+	
+	! NOTE: The integers length and n may be the wrong way around - needs to be checked when it comes to utilisation...
 	
 	implicit none
 	integer(i4b) :: i
-	integer(i4b), intent(in) :: length, height
-	logical :: orthogonality
-	real(sp), intent(in) :: vecs(length, height)
+	integer(i4b), intent(in) :: length, n
+	real(sp), intent(in) :: vecs(length, n)
 	real(sp) :: temp_dot
+	logical :: orthogonality
 	
 	! Takes the dot product of each vector pair, and if the result is close to zero, then the two vectors are orthogonal.
-	do i = 1, (height - 1)
+	do i = 1, (n - 1)
 		temp_dot = 0.0
 		
 		! The dot product always has some numerical precision remainder, so a margin of 1E-5 is used.
@@ -171,7 +177,7 @@ contains
 		temp_dot = DOT_PRODUCT(vecs(:,i), vecs(:, i+1))
 		if (ABS(temp_dot) > (1E-05)) then
 			orthogonality = .FALSE.
-			RETURN
+			return
 		end if
 	end do
 	
@@ -184,14 +190,14 @@ contains
 	function DETERMINANT(matrix, n) result(det)
 	! Here, the determinant of a square matrix is calculated. 
 	!
-	! ARGUMENTS:	matrix    : 2D array containing the matrix which the determinant of will be calculated.
-	!               n : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
+	! ARGUMENTS:	matrix : 2D array containing the matrix which the determinant of will be calculated.
+	!               n      : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
     
 	implicit none
-    real(sp) :: matrix(n,n)
-    integer(i4b), intent(in) :: n
+	integer(i4b), intent(in) :: n
+	integer(i4b) :: i, j, k, l
+    real(sp), intent(in) :: matrix(n,n)
     real(sp) :: m, temp, det
-    integer(i4b) :: i, j, k, l
     logical :: DetExists
 	
 	! Initialising some values.
@@ -240,26 +246,27 @@ contains
 	! Here, the eigenvalues from a square, symmetric, real matrix are calculated.
 	! The eigenvectors associated with said eigenvalues are not given as a result, but can be obtained with the function EVEVS.
 	!
-	! ARGUMENTS:	matrix    : 2D array containing the matrix which the eigenvalues of will be calculated.
-	!               n : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
+	! ARGUMENTS:	matrix : 2D array containing the matrix which the eigenvalues of will be calculated.
+	!               n      : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
     	
 	implicit none
 	integer(i4b), intent(in) :: n
+	integer(i4b) :: LDA, LWORK, INFO
 	real(sp), intent(in) :: matrix(n, n)
 	real(sp), allocatable :: WORK(:)
 	real(sp) :: eigenvals(n)
 	character :: JOBZ, UPLO
-	integer(i4b) :: LDA, LWORK, INFO
 	
-	! NOTE: The below initialisation and working array allocation will be changed when only the eigenvalues/vectors are evaluated in separate functions.
 	! Initialising some values....
-	JOBZ = 'V'
+	JOBZ = 'N'
 	UPLO = 'U'
 	LDA = n
 	
+	! Allocating working array...
 	LWORK = MAX(1, (3 * n) -1)
 	allocate(WORK(LWORK))
 
+	! Obtaining eigenvalues...
 	call DSYEV(JOBZ, UPLO, n, matrix, LDA, eigenvals, WORK, LWORK, INFO)
 
 	end function EVALS
@@ -269,16 +276,17 @@ contains
 	! Here, the eigenvectors of a square, symmetric, real matrix are calculated.
 	! The eigenvalues associated with said eigenvectors are not given as a result, but can be obtained with the function EVALS.
 	!
-	! ARGUMENTS:	matrix    : 2D array containing the matrix which the eigenvalues of will be calculated.
-	!               n : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
+	! ARGUMENTS:	matrix : 2D array containing the matrix which the eigenvalues of will be calculated.
+	!               n      : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
 	   	
 	implicit none
 	integer(i4b), intent(in) :: n
-	real(sp), intent(in) :: matrix(n, n)
-	real(sp) :: eigenvecs(n, n), eigenvals(n)
-	real(sp), allocatable :: WORK(:)
-	character :: JOBZ, UPLO
 	integer(i4b) :: LDA, LWORK, INFO
+	real(sp), intent(in) :: matrix(n, n)
+	real(sp), allocatable :: WORK(:)
+	real(sp) :: eigenvecs(n, n), eigenvals(n)
+	character :: JOBZ, UPLO
+
 	
 	! Initialising some values....
 	JOBZ = 'V'
@@ -289,8 +297,8 @@ contains
 	LWORK = MAX(1, (3 * n) -1)
 	allocate(WORK(LWORK))
 
+	! Obtaining eigenvectors...
 	call DSYEV(JOBZ, UPLO, n, matrix, LDA, eigenvals, WORK, LWORK, INFO)
-
 	eigenvecs = matrix
 	
 	end function EVECS
