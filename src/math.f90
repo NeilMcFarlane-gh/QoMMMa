@@ -236,4 +236,64 @@ contains
 	end function DETERMINANT
 	
 	
+	function EVALS(matrix, n) result(eigenvals)
+	! Here, the eigenvalues from a square, symmetric, real matrix are calculated.
+	! The eigenvectors associated with said eigenvalues are not given as a result, but can be obtained with the function EVEVS.
+	!
+	! ARGUMENTS:	matrix    : 2D array containing the matrix which the eigenvalues of will be calculated.
+	!               n : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
+    	
+	implicit none
+	integer(i4b), intent(in) :: n
+	real(sp), intent(in) :: matrix(n, n)
+	real(sp), allocatable :: WORK(:)
+	real(sp) :: eigenvals(n)
+	character :: JOBZ, UPLO
+	integer(i4b) :: LDA, LWORK, INFO
+	
+	! NOTE: The below initialisation and working array allocation will be changed when only the eigenvalues/vectors are evaluated in separate functions.
+	! Initialising some values....
+	JOBZ = 'V'
+	UPLO = 'U'
+	LDA = n
+	
+	LWORK = MAX(1, (3 * n) -1)
+	allocate(WORK(LWORK))
+
+	call DSYEV(JOBZ, UPLO, n, matrix, LDA, eigenvals, WORK, LWORK, INFO)
+
+	end function EVALS
+	
+	
+	function EVECS(matrix, n) result(eigenvecs)
+	! Here, the eigenvectors of a square, symmetric, real matrix are calculated.
+	! The eigenvalues associated with said eigenvectors are not given as a result, but can be obtained with the function EVALS.
+	!
+	! ARGUMENTS:	matrix    : 2D array containing the matrix which the eigenvalues of will be calculated.
+	!               n : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
+	   	
+	implicit none
+	integer(i4b), intent(in) :: n
+	real(sp), intent(in) :: matrix(n, n)
+	real(sp) :: eigenvecs(n, n), eigenvals(n)
+	real(sp), allocatable :: WORK(:)
+	character :: JOBZ, UPLO
+	integer(i4b) :: LDA, LWORK, INFO
+	
+	! Initialising some values....
+	JOBZ = 'V'
+	UPLO = 'U'
+	LDA = n
+	
+	! Allocating working array....
+	LWORK = MAX(1, (3 * n) -1)
+	allocate(WORK(LWORK))
+
+	call DSYEV(JOBZ, UPLO, n, matrix, LDA, eigenvals, WORK, LWORK, INFO)
+
+	eigenvecs = matrix
+	
+	end function EVECS
+	
+	
 END MODULE math

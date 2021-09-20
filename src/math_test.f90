@@ -3,7 +3,7 @@ use math ; use nrtype
 
 real(sp) :: distance
 real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:), inv_arr(:,:)
-real(sp) :: vectors(3,3), coords_1(3), coords_2(3), arr(2,2), det
+real(sp) :: vectors(3,3), eigens(3,3), coords_1(3), coords_2(3), arr(2,2), det, eigenvals(3), eigenvecs(3,3)
 logical :: orthogonality
 
 
@@ -31,6 +31,18 @@ vectors(2,3) = SQRT(2.0) * (-1)
 vectors(3,3) = 1
 
 
+! Array for testing eigenvalues...
+eigens(1,1) = 3
+eigens(2,1) = 2
+eigens(3,1) = 4
+eigens(1,2) = 2
+eigens(2,2) = 0
+eigens(3,2) = 2
+eigens(1,3) = 4
+eigens(2,3) = 2
+eigens(3,3) = 3
+
+
 ! Array for testing SVD...
 arr(:,:) = 0
 arr(1,1) = 1
@@ -39,9 +51,17 @@ arr(2,1) = 3
 arr(2,2) = 4
 
 
+eigenvecs = EVECS(eigens, SIZE(eigens, 1))
+
+!print *, "eigenvectors: ", eigenvecs
+
+!eigenvals = EVALS(eigens, SIZE(eigens, 1))
+
+!print *, "eigenvalues: ", eigenvals
+
 det = DETERMINANT(arr, SIZE(arr, 1))
 
-print *, det
+!print *, "determinant: ", det
 
 inv_arr = SVD_inverse(arr, SIZE(arr, 1), SIZE(arr, 2))
 
