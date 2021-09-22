@@ -196,7 +196,7 @@ contains
 	implicit none
 	integer(i4b), intent(in) :: n
 	integer(i4b) :: i, j, k, l
-    real(sp), intent(in) :: matrix(n,n)
+    real(sp), intent(inout) :: matrix(n,n)
     real(sp) :: m, temp, det
     logical :: DetExists
 	

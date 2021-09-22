@@ -1,5 +1,5 @@
 MODULE DLC
-use nrtype ; use coordinates ; use optimdata
+use nrtype ; use coordinates ; use optimdata ; use math
 implicit none
 
 contains

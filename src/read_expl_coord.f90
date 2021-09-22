@@ -1,13 +1,14 @@
 SUBROUTINE read_expl_coord()
-use nrtype ; use coordinates
+use nrtype ; use coordinates; use primitive
 implicit none
 
 ! This subroutine reads the "geom_expl.xyz" augmented tinker coordinates file
 ! It can only work after "alloc_coord" - so one needs to check that the arrays are allocated.
 
 ! Variable pointing on a specific image
-integer(i4b) :: img_num
-
+integer(i4b) :: img_num, to_generate(6)
+integer(i4b), allocatable :: prim_list(:,:)
+real(sp), allocatable :: prims(:), Bmat_p(:,:)
 integer(i4b) :: rstat
 integer(i4b) :: i, j, k, ii
 
@@ -60,6 +61,10 @@ do img_num=1,nimg
 		 end if
 	end do
 
+	to_generate = (/ 1, 7, 10, 15, 67, 89 /) !random atom indice list....
+	call gen_prims(bonds, SIZE(bonds,1), to_generate, SIZE(to_generate), x, prims, prim_list)
+	call gen_Bmat_prims(SIZE(bonds,1), x, prim_list, SIZE(prim_list, 1), Bmat_p)
+	
 	close(8)
 
 	! Copies coorindates of the image into the main array of coordinates
