@@ -287,7 +287,6 @@ contains
 	real(sp) :: eigenvecs(n, n), eigenvals(n)
 	character :: JOBZ, UPLO
 
-	
 	! Initialising some values....
 	JOBZ = 'V'
 	UPLO = 'U'
