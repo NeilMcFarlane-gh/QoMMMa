@@ -303,4 +303,72 @@ contains
 	end function EVECS
 	
 	
+	function IS_EVEN(integerr) result(even)
+	! Here, an integer is taken as input and it is checked if it is even or odd.
+	! This is useful for Heap's algorithm for generating combinations.
+	!
+	! ARGUMENTS:      integerr : integer which is either even or odd.
+	
+	implicit none
+	integer(i4b) :: integerr
+	logical :: even
+	
+	! If the logical output is TRUE, then the number is even.
+	! If the logical output is FALSE, then the number is odd.
+	if (MOD(integerr, 2) == 0) then
+		even = .TRUE.
+	else
+		even = .FALSE.
+	end if
+	
+	end function IS_EVEN
+
+	
+	function COMBINATIONS_2(integers, n) result(combos_2)
+	! Here, a series of integers is taken, and outputs all possible 2-number combinations of these integers is generated.
+	! Critically, the algorithm does not produce duplicates, so is useful is interal coordinate generation.
+	!
+	! ARGUMENTS:      integers : 1D array of integers for which the possible combinations of are to be generated.
+	!                 n        : integer which represents the length of the array integers.
+	
+	implicit none
+	integer(i4b), intent(in) :: n
+	integer(i4b), allocatable :: combos_2(:,:)
+	integer(i4b) :: i, j, k, l, combo_alloc, combos_counter, integers_save(n), integers(n)
+	
+	! Saving the integers for future use...
+	integers_save(:) = integers(:)
+	
+	! Firstly, the output array, combos, must be allocated.
+	combo_alloc = 0
+	j = SIZE(integers) - 1
+	do i=1, SIZE(integers)
+		combo_alloc = combo_alloc + j
+		j = j - 1
+	end do
+	allocate(combos_2(combo_alloc, 2))
+	
+	! The 2-integer combinations are generated.
+	combos_counter = 1
+	do i=1, SIZE(integers_save)
+		k = integers_save(i)
+		do j=1, SIZE(integers)
+			l = integers(j)
+			
+			! If the integer is 0 (which is set below) or the integers are the same, then the cycle is skipped.
+			if ((l == 0) .or. (l == k)) then
+			    cycle
+			end if
+			
+			! Populating the output array...
+			combos_2(combos_counter,1) = k
+			combos_2(combos_counter,2) = l
+			combos_counter = combos_counter + 1
+		end do
+		integers(i) = 0
+	end do
+
+	end function COMBINATIONS_2
+	
+	
 END MODULE math

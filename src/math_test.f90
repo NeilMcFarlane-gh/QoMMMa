@@ -3,9 +3,13 @@ use math ; use nrtype
 
 real(sp) :: distance
 real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:), inv_arr(:,:)
+integer(i4b) :: to_generate(5), i
+integer(i4b), allocatable :: combinations(:,:)
 real(sp) :: vectors(3,3), eigens(3,3), coords_1(3), coords_2(3), arr(2,2), det, eigenvals(3), eigenvecs(3,3)
 logical :: orthogonality
 
+! List of integers for which Heap's algorithm is to be tested...
+to_generate = (/1, 5, 7, 12, 15/)
 
 ! Random coordinate set...
 coords_1(1) = 2
@@ -50,12 +54,15 @@ arr(1,2) = 2
 arr(2,1) = 3
 arr(2,2) = 4
 
+combinations = COMBINATIONS_2(to_generate, SIZE(to_generate))
+
+print *, combinations
 
 eigenvecs = EVECS(eigens, SIZE(eigens, 1))
 
 !print *, "eigenvectors: ", eigenvecs
 
-!eigenvals = EVALS(eigens, SIZE(eigens, 1))
+eigenvals = EVALS(eigens, SIZE(eigens, 1))
 
 !print *, "eigenvalues: ", eigenvals
 
