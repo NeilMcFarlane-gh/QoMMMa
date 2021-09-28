@@ -22,7 +22,7 @@ contains
 	allocate(Gmat(n_prims, n_prims))
 	
 	! The G matrix is calculated simply as the B matrix multiplied by its transpose.
-	Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
+	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
 
 	! By definition, the G matrix is singular and so has a determinant of zero.
 	! This criteria is checked to minimise errors down the line.
@@ -57,7 +57,7 @@ contains
 	allocate(Umat(n_prims, ((3 * atom_num) - 6)))
 	allocate(Rmat(n_prims, (n_prims - ((3 * atom_num) - 6))))
 	print *, "total U and R", ((3 * atom_num) - 6), (n_prims - ((3 * atom_num) - 6))
-	
+
 	! Extracting eigenvalues and eigenvectors...
 	eigenvals = EVALS(Gmat, SIZE(Gmat,1))
 	eigenvecs = EVECS(Gmat, SIZE(Gmat,1))
@@ -66,17 +66,17 @@ contains
 	R_vector_counter = 1
 	do j=1, SIZE(eigenvals)
 	    temp_eval = eigenvals(j)
-		if (temp_eval .gt. 0.00) then
-			!print *, "non-redundant...", ABS(temp_eval), U_vector_counter
-		    Umat(:,U_vector_counter) = eigenvecs(:,j)
-			U_vector_counter = U_vector_counter + 1
-		else
-			!print *, "redundant...", ABS(temp_eval), R_vector_counter
+		if (ABS(temp_eval) .lt. 1E-01) then
+			print *, "redundant...", ABS(temp_eval), R_vector_counter
 		    Rmat(:,R_vector_counter) = eigenvecs(:,j)
 			R_vector_counter = R_vector_counter + 1
+		else
+			print *, "non-redundant...", ABS(temp_eval), U_vector_counter
+		    Umat(:,U_vector_counter) = eigenvecs(:,j)
+			U_vector_counter = U_vector_counter + 1
 		end if
 	end do
-	!print *, "done!"
+	print *, "done!"
 	!print *, "Umat...", Umat
 	!print *, "Rmat...", Rmat	
 	

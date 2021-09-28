@@ -63,10 +63,10 @@ do img_num=1,nimg
 
 	! NOTE FOR IMPLEMENTATION : to_generate MUST BE IN NUMERICAL ORDER!!
 	to_generate = (/(i, i=1,21, 1)/) ! List of atoms to delocalise - for testing purposes...
-	call gen_prims2(bonds, SIZE(bonds,1), to_generate, SIZE(to_generate), x, prims, prim_list)
-	call gen_Bmat_prims(SIZE(to_generate,1), x, prim_list, SIZE(prim_list, 1), Bmat_p)
-	call gen_Gmat(SIZE(to_generate,1), SIZE(prim_list,1), Bmat_p, Gmat)
-	call diag_Gmat(SIZE(to_generate,1), SIZE(prim_list,1), Gmat, Umat, Rmat)
+	call gen_prims(SIZE(bonds,1), to_generate, SIZE(to_generate), x, prims, prim_list)
+	call gen_Bmat_prims(SIZE(to_generate), x, prim_list, SIZE(prim_list, 1), Bmat_p)
+	call gen_Gmat(SIZE(to_generate), SIZE(prim_list,1), Bmat_p, Gmat)
+	call diag_Gmat(SIZE(to_generate), SIZE(prim_list,1), Gmat, Umat, Rmat)
 	
 	close(8)
 
