@@ -20,7 +20,7 @@ contains
 	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:)
 	real(sp) :: coords_1(3), coords_2(3), x(3,atom_num), r, temp_prim
 	real(sp), allocatable :: prims(:), prims_temp(:)
-	real(sp), parameter :: cut_off = 2.8 !Angstroms
+	real(sp), parameter :: cut_off = 50 !Angstroms
 	
 	! The list of primitive internal coordinates is simple to define when every atom is connected to every atom.
 	prim_list_temp = COMBINATIONS_2(to_generate, SIZE(to_generate))
@@ -61,7 +61,7 @@ contains
 		end if
 	end do
 	
-	end subroutine gen_prims3
+	end subroutine gen_prims
 	
 	
 	subroutine gen_Bmat_prims(atom_num, x, prim_list, n_prims, Bmat_p)
@@ -75,11 +75,11 @@ contains
 	
 	implicit none
 	integer(i4b) :: i, j, k, number_reset, atom_num, n_prims, prim_list(n_prims, 2)
-	real(sp) :: x(3, atom_num), grad(2,3), coords_1(3), coords_2(3)
+	real(sp) :: x(3, atom_num), grad(3,2), coords_1(3), coords_2(3)
 	real(sp), allocatable :: Bmat_p(:,:)
 	
 	! The Wilson B matrix is allocated. By definition, its dimensions are (number of prims) x (3N), where N is the number of atoms.
-	allocate(Bmat_p(n_prims, (3 * atom_num)))
+	allocate(Bmat_p((3 * atom_num), n_prims))
 	
 	! The Wilson B matrix is populated with the relevant second derivative terms.
 	number_reset = prim_list(1,1)
@@ -91,9 +91,11 @@ contains
 			if ((prim_list(j,i) - number_reset) == 0) then
 			    k = 1
 			else
-				k = (3 * (prim_list(j,i) - number_reset))
+				k = (3 * (prim_list(j,i) - number_reset)) + 1
 			end if
-			Bmat_p(j,k:) = grad(i,:)
+			Bmat_p(k,j) = grad(1,i)
+			Bmat_p(k+1,j) = grad(2,i)
+			Bmat_p(k+2,j) = grad(3,i)
 		end do
 	end do
 

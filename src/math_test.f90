@@ -2,7 +2,7 @@ program math_test
 use math ; use nrtype
 
 real(sp) :: distance
-real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:), inv_arr(:,:)
+real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:), inv_arr(:,:), output_mat(:,:)
 integer(i4b) :: to_generate(5), i
 integer(i4b), allocatable :: combinations(:,:)
 real(sp) :: vectors(3,3), eigens(3,3), coords_1(3), coords_2(3), arr(2,2), det, eigenvals(3), eigenvecs(3,3)
@@ -54,9 +54,13 @@ arr(1,2) = 2
 arr(2,1) = 3
 arr(2,2) = 4
 
+output_mat = MATRIX_MULTIPLY(vectors, eigens, SIZE(vectors,1), SIZE(vectors,2), SIZE(eigens,1), SIZE(eigens,2))
+
+!print *, output_mat
+
 combinations = COMBINATIONS_2(to_generate, SIZE(to_generate))
 
-print *, combinations
+!print *, combinations
 
 eigenvecs = EVECS(eigens, SIZE(eigens, 1))
 

@@ -38,10 +38,10 @@ contains
 	!				coords_j : 1D array containing the x,y,z coordinates of atom j.
 	
 	implicit none
-	integer(i4b) :: i
+	integer(i4b) :: i, j
 	real(sp) :: unit_vec(3), vec(3)
 	real(sp), intent(in) :: coords_i(3), coords_j(3)
-	real(sp) :: grad(2,3)
+	real(sp) :: grad(3,2)
 	
 	! Calculating vector between both coordinates.
 	do i = 1, 3
@@ -50,8 +50,8 @@ contains
 	
 	! Calculating analytical first derivatives.
 	unit_vec = unit_vector(vec, SIZE(vec))
-	grad(1,:) = unit_vec
-	grad(2,:) = -1 * unit_vec
+	grad(:,1) = -1 * unit_vec
+	grad(:,2) = unit_vec
 	
 	end function ATOM_DISTANCE_GRAD
 	
@@ -192,13 +192,17 @@ contains
 	!
 	! ARGUMENTS:	matrix : 2D array containing the matrix which the determinant of will be calculated.
 	!               n      : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
-    
+    ! TO-DO: NEEDS SOME WORK...
+	
 	implicit none
 	integer(i4b), intent(in) :: n
 	integer(i4b) :: i, j, k, l
-    real(sp), intent(inout) :: matrix(n,n)
-    real(sp) :: m, temp, det
+    real(sp), intent(in) :: matrix(n,n)
+    real(sp) :: m, temp, det, work_mat(n,n)
     logical :: DetExists
+	
+	! Copying the input matrix to the working matrix...
+	work_mat(:,:) = matrix(:,:)
 	
 	! Initialising some values.
 	DetExists = .TRUE.
@@ -206,14 +210,14 @@ contains
 	
     ! The matrix is converted to upper diagonal form.
     do k=1, (n - 1)
-        if (matrix(k,k) == 0) then
+        if (work_mat(k,k) == 0) then
             DetExists = .FALSE.
             do i=k+1, n
-                if (matrix(i,k) .ne. 0) then
+                if (work_mat(i,k) .ne. 0) then
                     do j=1, n
-                        temp = matrix(i,j)
-                        matrix(i,j) = matrix(k,j)
-                        matrix(k,j) = temp
+                        temp = work_mat(i,j)
+                        work_mat(i,j) = work_mat(k,j)
+                        work_mat(k,j) = temp
                     end do
                     DetExists = .TRUE.
                     l = -l
@@ -226,9 +230,9 @@ contains
             end if
         end if
         do j=k+1, n
-            m = matrix(j,k) / matrix(k,k)
+            m = work_mat(j,k) / work_mat(k,k)
             do i=k+1, n
-                matrix(j,i) = matrix(j,i) - m*matrix(k,i)
+                work_mat(j,i) = work_mat(j,i) - m*work_mat(k,i)
             end do
         end do
     end do
@@ -301,27 +305,6 @@ contains
 	eigenvecs = matrix
 	
 	end function EVECS
-	
-	
-	function IS_EVEN(integerr) result(even)
-	! Here, an integer is taken as input and it is checked if it is even or odd.
-	! This is useful for Heap's algorithm for generating combinations.
-	!
-	! ARGUMENTS:      integerr : integer which is either even or odd.
-	
-	implicit none
-	integer(i4b) :: integerr
-	logical :: even
-	
-	! If the logical output is TRUE, then the number is even.
-	! If the logical output is FALSE, then the number is odd.
-	if (MOD(integerr, 2) == 0) then
-		even = .TRUE.
-	else
-		even = .FALSE.
-	end if
-	
-	end function IS_EVEN
 
 	
 	function COMBINATIONS_2(integers, n) result(combos_2)
@@ -369,6 +352,6 @@ contains
 	end do
 
 	end function COMBINATIONS_2
-	
+
 	
 END MODULE math

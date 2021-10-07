@@ -1,6 +1,6 @@
 FF=gfortran-6
 LD=gfortran-6
-FFLAGS=
+FFLAGS=-O1 -C
 LIBS=/usr/local/lapack-3.10.0-gcc6/libblas.a /usr/local/lapack-3.10.0-gcc6/liblapack.a
 LFLAGS=-llapack -lblas
 RM=rm -f
