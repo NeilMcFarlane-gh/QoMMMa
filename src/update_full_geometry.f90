@@ -14,7 +14,7 @@ do img_num=1,nimg
     ! for the remaining parts of the program, update "xopt" to "newx"
     ! Also update the relevant coordinates within "x"
         xopt=newx
-        
+
         do i = 1, nopt
             j = 3*i-2
             k = 3*opt(i)-2

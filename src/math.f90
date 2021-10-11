@@ -352,6 +352,26 @@ contains
 	end do
 
 	end function COMBINATIONS_2
-
+	
+	
+	function RMSD_CALC(dx, x, n) result(RMSD)
+	! Here, a series of values is taken (typically coordinates, gradients, or forces) and the root-mean-square-deviation is calculated.
+	!
+	! ARGUMENTS:     dx : 1D array containing the change in x.
+	!				 x  : 1D array containing the quantity for the change to be calculated against.
+	!                n  : Length of both 1D arrays which must, by definition, be the same.
+	
+	implicit none
+	integer(i4b) :: n
+	real(sp) :: dx(n), x(n), x_n(n), RMSD
+	
+	! The new x is calculated.
+	! Indeed, this expression simply cancels out in the subsequent equations, but it is included for clarity.
+	x_n(:) = x(:) + dx(:)
+	
+	! Now, the RMSD can be calculated.
+	RMSD = SQRT((SUM((x_n - x)**2)) / n)
+	
+	end function RMSD_CALC
 	
 END MODULE math

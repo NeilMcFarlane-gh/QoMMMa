@@ -6,9 +6,9 @@ implicit none
 ! It can only work after "alloc_coord" - so one needs to check that the arrays are allocated.
 
 ! Variable pointing on a specific image
-integer(i4b) :: img_num, to_generate(21)
+integer(i4b) :: img_num
 integer(i4b), allocatable :: prim_list(:,:)
-real(sp), allocatable :: prims(:), Bmat_p(:,:), Gmat(:,:), Umat(:,:), Rmat(:,:)
+real(sp), allocatable :: prims(:), Bmat_p(:,:), Gmat(:,:), Umat(:,:), Rmat(:,:), S(:), Bmat_S(:,:)
 integer(i4b) :: rstat
 integer(i4b) :: i, j, k, ii
 
@@ -60,13 +60,6 @@ do img_num=1,nimg
 			   stop
 		 end if
 	end do
-
-	! NOTE FOR IMPLEMENTATION : to_generate MUST BE IN NUMERICAL ORDER!!
-	to_generate = (/(i, i=1,21, 1)/) ! List of atoms to delocalise - for testing purposes...
-	call gen_prims(SIZE(bonds,1), to_generate, SIZE(to_generate), x, prims, prim_list)
-	call gen_Bmat_prims(SIZE(to_generate), x, prim_list, SIZE(prim_list, 1), Bmat_p)
-	call gen_Gmat(SIZE(to_generate), SIZE(prim_list,1), Bmat_p, Gmat)
-	call diag_Gmat(SIZE(to_generate), SIZE(prim_list,1), Gmat, Umat, Rmat)
 	
 	close(8)
 

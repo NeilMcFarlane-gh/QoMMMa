@@ -1,5 +1,5 @@
 subroUTINE update_opt_geometry()
-use nrtype ; use coordinates ; use optimdata
+use nrtype ; use coordinates ; use optimdata ; use primitive ; use DLC ; use math
 implicit none
 
 
@@ -8,6 +8,8 @@ implicit none
 integer(i4b) :: I,j, img_num
 real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), DelX(noptx), w(noptx)
 real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, maxchgx
+integer(i4b), allocatable :: prim_list(:,:), to_generate(:)
+real(sp), allocatable :: prims(:), Bmat_p(:,:), Gmat(:,:), Umat(:,:), Rmat(:,:), S(:), Bmat_S(:,:)
 real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
 stpmax = STPMX * REAL(noptx,sp)
 
@@ -27,6 +29,31 @@ do img_num=1,nimg
     xopt(:)=fullxopt(img_num,:)
     ox(:)=fullox(img_num,:)
     oh(:,:)=fulloh(img_num,:,:)
+	
+	if (coordtype .eq. 1) then
+		! The list of atom indices to delocalise, to_generate, is created.
+		! The numbers are simply in numerical order as it does not especially matter since the DLC and cartesian coordinates are combined separately.
+		allocate(to_generate(nopt))
+		to_generate = (/(i, i=1,nopt, 1)/)
+		
+		! Generating DLC for the given coordinate set.
+		call gen_prims(nopt, to_generate, ox, prims, prim_list)
+		call gen_Bmat_prims(nopt, ox, prim_list, SIZE(prim_list, 1), Bmat_p)
+		call gen_Gmat(nopt, SIZE(prim_list,1), Bmat_p, Gmat)
+		call diag_Gmat(nopt, SIZE(prim_list,1), Gmat, Umat, Rmat)
+		call gen_DLC(Umat, prims, SIZE(prim_list,1), nopt, S)
+		call gen_Bmat_DLC(nopt, SIZE(prim_list,1), Bmat_p, Umat, Bmat_S)
+		
+		! Now, the BFGS algorithm can be used to generate the change in DLC from the calculated gradient.
+		! UPDATE GRAD AND HESSIAN TO DLC SUBSPACE
+		! BFGS CODE - SEE BELOW
+		
+		! The change in DLC is regulated such it does not violate the max step length.
+		! Maybe implement backtracking line search if until the minimum step length is satisfied.
+		
+		! Now, the coordinates are back-converted to cartesian coordinates for the next gradient evaluation step.
+		
+	end if
 
     if (nebtype.eq.0) then
         IF (Nstep.eq.0) THEN

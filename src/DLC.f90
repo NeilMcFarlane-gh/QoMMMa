@@ -68,17 +68,51 @@ contains
 	end subroutine diag_Gmat
 	
 	
-	subroutine gen_Bmat_DLC
+	subroutine gen_Bmat_DLC(atom_num, n_prims, Bmat_p, Umat, Bmat_S)
 	! Here, the Wilson B matrix in primitive internal coordinate subspace is updated to DLC subspace.
+	!
+	! ARGUMENTS:    atom_num : Integer which represents the total number of atoms in the system.
+	!               n_prims  : Integer which represents the total number of primitive internal coordinates.
+	!               Bmat_p   : 2D array which contains the primitive Wilson B matrix.
+	!				Umat     : 2D array containing the eigenvectors with eigenvalues greater than zero. 
+	!                          This is the DLC transformation vector set. 	
+	!               Bmat_S   : 2D array which contains the DLC Wilson B matrix.
+	
+	implicit none
+	integer(i4b) :: atom_num, n_prims
+	real(sp) :: Bmat_p((3 * atom_num), n_prims), Umat(n_prims, ((3 * atom_num) - 6))
+	real(sp), allocatable :: Bmat_S(:,:)
+	
+	! The calculation of the B matrix in DLC subspace is a straightforward multiplication.
+	allocate(Bmat_S((3 * atom_num), ((3 * atom_num) - 6)))
+	Bmat_S = MATMUL(Umat, TRANSPOSE(Bmat_p))
 	
 	end subroutine gen_Bmat_DLC
 	
 	
-	subroutine gen_DLC
+	subroutine gen_DLC(Umat, prims, n_prims, atom_num, S)
 	! Here, the DLC are actually generated from linear combinations of primitive internal coordinates and the U matrix.
 	!
-	! 
-
+	! ARGUMENTS:  	Umat     : 2D array containing the eigenvectors with eigenvalues greater than zero. 
+	!                          This is the DLC transformation vector set. 
+	!               prims    : 1D array containing all the primitive internal coordinates associated with this input.
+	!               n_prims  : Integer which represents the total number of primitive internal coordinates.	
+	! 				atom_num : Integer which represents the total number of atoms in the system.
+	!				S        : 1D array containing the delocalised internal coordinate set.
+	
+	implicit none
+	integer(i4b) :: n_prims, atom_num, i, j
+	real(sp) :: Umat(n_prims, ((3 * atom_num) - 6)), prims(n_prims)
+	real(sp), allocatable :: S(:)
+	
+	! The number of DLC is equal to the number of eigenvectors in the U matrix.
+	allocate(S(SIZE(Umat,2)))
+	do i=1, SIZE(Umat,2)
+		do j=1, SIZE(prims,1)
+			S(i) = S(i) + (Umat(j,i) * prims(j))
+		end do
+	end do
+	
 	end subroutine gen_DLC
 	
 	
@@ -100,8 +134,56 @@ contains
 	end subroutine gen_hess_prim_to_DLC
 	
 	
-	subroutine DLC_to_cart
-	! Here, the DLC are converted to cartesian coordinates using an iterative procedure.
+	subroutine DLC_to_cart(atom_num, n_prims, dS, S_1, x_1, Bmat_S)
+	! Here, the DLC are converted to cartesian coordinates via an iterative procedure.
+	! This is used at the end of an optimisation cycle to restore the cartesian coordinates for the next gradient evaluation.
+	!
+	! ARGUMENTS:    atom_num : Integer which represents the total number of atoms in the system.
+	!               n_prims  : Integer which represents the total number of primitive internal coordinates.	
+	!           	dS       : 1D array containing the change in DLC.
+	!				S_1      : 1D array containing the delocalised internal coordinate set of the starting point.  
+    !               x_1      : 2D array containing all the cartesian coordinates of the starting point.	
+	!				Bmat_S   : 2D array containing the Wilson B matrix used to convert between cartesian and DLC.
+	
+	implicit none
+	integer(i4b) :: atom_num, n_prims, to_generate(21), i
+	real(sp) :: dS((3 * atom_num) - 6), S_1((3 * atom_num) - 6), x_1(3, atom_num) 
+	real(sp) :: Bmat_S((3 * atom_num), n_prims), BT_Ginv(n_prims, ((3 * atom_num) - 6))
+	real(sp) :: dS_n((3 * atom_num) - 6), S_2((3 * atom_num) - 6), x_2(3, atom_num)
+	real(sp) :: init_dS((3 * atom_num) - 6), target_S((3 * atom_num) - 6), dx(3, atom_num)
+	real(sp) :: xyz_rms_1, xyz_rms_2, iter_counter
+	logical :: convergence
+	
+    ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
+    ! Instead, an iterative transformation procedure must be used.
+    ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
+	BT_Ginv = MATMUL(Bmat_S, SVD_INVERSE(MATMUL(TRANSPOSE(Bmat_S), Bmat_S), SIZE(Bmat_S, 1), SIZE(Bmat_S, 2)))
+	
+	! Stashing some values for convergence criteria.
+	convergence = .FALSE.
+	xyz_rms_1 = 0
+	xyz_rms_2 = 0
+	init_dS(:) = dS(:)
+	target_S(:) = S_1(:) + init_dS(:)
+	
+	do while (convergence .eqv. .FALSE.)
+		! The change in cartesian coordinates associated with the change in DLC is calculated.
+		dx = MATMUL(BT_Ginv, x_1)
+		
+		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
+		!xyz_rms_2 = RMSD_CALC(dx, x_1, SIZE(x_1, 1))
+		
+		! The new cartesian geometry is evaluated, and the new DLC geometry is obtained.
+		x_2 = x_1 + dx
+		to_generate = (/(i, i=1,21, 1)/) ! List of atoms to delocalise - for testing purposes...
+		!call gen_prims(SIZE(x_2,2), to_generate, SIZE(to_generate), x, prims, prim_list)
+		!call gen_Bmat_prims(SIZE(to_generate), x, prim_list, SIZE(prim_list, 1), Bmat_p)
+		!call gen_Gmat(SIZE(to_generate), SIZE(prim_list,1), Bmat_p, Gmat)
+		!call diag_Gmat(SIZE(to_generate), SIZE(prim_list,1), Gmat, Umat, Rmat)
+		!call gen_DLC(Umat, prims, SIZE(prim_list,1), SIZE(to_generate), S)
+		!call gen_Bmat_DLC(SIZE(to_generate), SIZE(prim_list,1), Bmat_p, Umat, Bmat_S)
+	
+	end do
 	
 	end subroutine DLC_to_cart
 	

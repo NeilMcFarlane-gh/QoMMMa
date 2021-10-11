@@ -5,20 +5,19 @@ implicit none
 contains
 
 
-	subroutine gen_prims(atom_num, to_generate, prim_num, x, prims, prim_list) 
+	subroutine gen_prims(atom_num, to_generate, x, prims, prim_list) 
 	! Here, the primitive internal coordinates are generated for a given cartesian coordinate set using a total connectivity scheme with a distance cutoff.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms in the system.
 	!               to_generate : 1D array containing the list of atom indices which primitive internal coordinates are to be generated for.
-	!               prim_num    : Integer which represents the total number of atoms which primitive internal coordinates are to be generated for.
-	!               x           : 2D array containing all the cartesian coordinates of the system.
+	!               x           : 1D array containing all the cartesian coordinates of the system.
 	!               prims       : 1D array containing all the primitive internal coordinates associated with this input.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 	
 	implicit none
-	integer(i4b) :: prim_num, to_generate(prim_num), j, atom_num, prims_counter, alloc_counter
+	integer(i4b) :: to_generate(atom_num), j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2
 	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:)
-	real(sp) :: coords_1(3), coords_2(3), x(3,atom_num), r, temp_prim
+	real(sp) :: coords_1(3), coords_2(3), x(atom_num), r, temp_prim
 	real(sp), allocatable :: prims(:), prims_temp(:)
 	real(sp), parameter :: cut_off = 50 !Angstroms
 	
@@ -29,8 +28,10 @@ contains
 	! If they are greater than the predefined cut-off, then they are set to zero to allow for subsequent removal.
 	allocate(prims_temp(SIZE(prim_list_temp, 1)))
 	do j=1, SIZE(prim_list_temp, 1)
-		coords_1(:) = x(:, prim_list_temp(j,1))
-		coords_2(:) = x(:, prim_list_temp(j,2))
+		coord_counter_1 = prim_list_temp(j,1)
+		coord_counter_2 = prim_list_temp(j,2)
+		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
+		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))
 		r = ATOM_DISTANCE(coords_1, coords_2)
 		if (r .lt. cut_off) then
 			prims_temp(j) = r
@@ -68,14 +69,14 @@ contains
 	! Here, the Wilson B matrix for the conversion between cartesian and primitive internal coordinates is created.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms in the system.
-	!               x           : 2D array containing all the cartesian coordinates of the system.
+	!               x           : 1D array containing all the cartesian coordinates of the system.
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
     !               Bmat_p      : 2D array which contains the primitive Wilson B matrix.	
 	
 	implicit none
-	integer(i4b) :: i, j, k, number_reset, atom_num, n_prims, prim_list(n_prims, 2)
-	real(sp) :: x(3, atom_num), grad(3,2), coords_1(3), coords_2(3)
+	integer(i4b) :: i, j, k, number_reset, atom_num, n_prims, prim_list(n_prims, 2), coord_counter_1, coord_counter_2
+	real(sp) :: x(atom_num), grad(3,2), coords_1(3), coords_2(3)
 	real(sp), allocatable :: Bmat_p(:,:)
 	
 	! The Wilson B matrix is allocated. By definition, its dimensions are (number of prims) x (3N), where N is the number of atoms.
@@ -84,8 +85,10 @@ contains
 	! The Wilson B matrix is populated with the relevant second derivative terms.
 	number_reset = prim_list(1,1)
 	do j=1, SIZE(prim_list, 1)
-		coords_1(:) = x(:, prim_list(j,1))
-		coords_2(:) = x(:, prim_list(j,2))	    
+		coord_counter_1 = prim_list(j,1)
+		coord_counter_2 = prim_list(j,2)
+		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
+		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))    
 	    grad = ATOM_DISTANCE_GRAD(coords_1, coords_2)
 		do i=1, 2
 			if ((prim_list(j,i) - number_reset) == 0) then
