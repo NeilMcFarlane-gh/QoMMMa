@@ -26,7 +26,7 @@ contains
 	
 	! Next, using prim_list_temp, all the primitive coordinates can be generated, and their size can be checked.
 	! If they are greater than the predefined cut-off, then they are set to zero to allow for subsequent removal.
-	allocate(prims_temp(SIZE(prim_list_temp, 1)))
+	if (.not. ALLOCATED(prims_temp)) allocate(prims_temp(SIZE(prim_list_temp, 1)))
 	do j=1, SIZE(prim_list_temp, 1)
 		coord_counter_1 = prim_list_temp(j,1)
 		coord_counter_2 = prim_list_temp(j,2)
@@ -48,8 +48,11 @@ contains
 		    alloc_counter = alloc_counter + 1
 		end if
 	end do
-	allocate(prims(alloc_counter))
-	allocate(prim_list(alloc_counter, 2))
+	if (.not. ALLOCATED(prims)) allocate(prims(alloc_counter))
+	if (.not. ALLOCATED(prim_list)) allocate(prim_list(alloc_counter, 2))
+	
+	! The global integer, nprim, is also initialised here.
+	nprim = alloc_counter
 	
 	! Lastly, the output arrays prims and prim_list can be populated.
 	prims_counter = 1
@@ -80,7 +83,7 @@ contains
 	real(sp), allocatable :: Bmat_p(:,:)
 	
 	! The Wilson B matrix is allocated. By definition, its dimensions are (number of prims) x (3N), where N is the number of atoms.
-	allocate(Bmat_p((3 * atom_num), n_prims))
+	if (.not. ALLOCATED(Bmat_p)) allocate(Bmat_p((3 * atom_num), n_prims))
 	
 	! The Wilson B matrix is populated with the relevant second derivative terms.
 	number_reset = prim_list(1,1)
@@ -104,6 +107,12 @@ contains
 
 	end subroutine gen_Bmat_prims
 
+
+	subroutine update_bfgs_p
+	! Here, the primtive hessian matrix is updated using the BFGS method.
+	
+	end subroutine update_bfgs_p
+	
 	
 	subroutine gen_grad_cart_to_prims
 	! Here, the gradient array in cartesian subspace is updated to primitive internal coordinate subspace.

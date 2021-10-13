@@ -11,8 +11,6 @@ IF (allocated(qg).or.allocated(tg)) THEN
       stop
 END IF
 
-! TO-DO : There may (almost definitely will) be some arrays which need to have a dlc version in the below allocations.
-
 allocate(qg(nx),tg(nx),g(nx),optg(noptx),og(noptx),h(noptx,noptx), &
       & oh(noptx,noptx),ox(noptx),newx(noptx),mull(nq))
 allocate(fulloe(nimg),fullox(nimg,noptx),fullog(nimg,noptx), &

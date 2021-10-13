@@ -45,16 +45,15 @@ nqx=3*nq
 nlx=3*nl
 noptx=3*nopt
 
+! The number of atoms to be delocalised is initialised, if required.
+if (coordtype .eq. 1) then
+	ndlc = nopt
+end if
+
 allocate(qm(nq),nbonds(n),chg(n),bonds(n,maxbond),attyp(n),modchg(n),inact(n),opt(nopt)) 
 allocate(fullx(nimg,nx),fullxq(nimg,nqx),fullxl(nimg,nlx),fullxopt(nimg,noptx))
-
-! If DLC are used (either pure or hybrid), then the appropriate arrays are allocated.
-! The length of a DLC array is (by definition) 3N - 6.
-IF ((coordtype==1).or.(coordtype==2)) THEN
-	allocate(fullx_dlc(nimg,nx-6),fullxq_dlc(nimg,nqx-6),x_dlc(nx-6),xq_dlc(nqx-6))
-END IF
-
 allocate(x(nx),xq(nqx),xl(nlx),xopt(noptx),lratio(nl),llabel(nl),label(n),links(nl,2)) 
+
 allocate(qlabel(nq))
 allocate(img_string(nimg))
 

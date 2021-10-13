@@ -148,6 +148,8 @@ contains
 	!       If non-square matrices are to be used, the code will have to be updated.
 	A_inv = MATMUL(MATMUL(TRANSPOSE(VT), S_inv), TRANSPOSE(U))
 	
+	deallocate(WORK)
+	
 	end function SVD_INVERSE
 	
 	
@@ -272,6 +274,8 @@ contains
 
 	! Obtaining eigenvalues...
 	call DSYEV(JOBZ, UPLO, n, matrix, LDA, eigenvals, WORK, LWORK, INFO)
+	
+	deallocate(WORK)
 
 	end function EVALS
 	
@@ -303,6 +307,8 @@ contains
 	! Obtaining eigenvectors...
 	call DSYEV(JOBZ, UPLO, n, matrix, LDA, eigenvals, WORK, LWORK, INFO)
 	eigenvecs = matrix
+	
+	deallocate(WORK)
 	
 	end function EVECS
 
