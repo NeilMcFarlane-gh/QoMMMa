@@ -202,7 +202,7 @@ else if (coordtype .eq. 1) then
 		call diag_Gmat(ndlc, nprim, Gmat, Umat, Rmat)
 		call gen_DLC(Umat, prims, nprim, ndlc, dlc)
 		call gen_Bmat_DLC(ndlc, nprim, Bmat_p, Umat, Bmat_dlc)
-		
+
 		! Now, the BFGS algorithm can be used to generate the change in DLC from the calculated gradient.
 		! Firstly, the gradients must be updated to DLC subspace.
 		call gen_grad_cart_to_DLC(ndlc, nprim, Bmat_dlc, optg, optg_dlc)
@@ -227,7 +227,7 @@ else if (coordtype .eq. 1) then
 		call gen_hess_prim_to_DLC(ndlc, nprim, Umat, h_p, h_dlc)
 
 		! The change in DLC can now be evaluated using a quasi-Newton methodology.
-		ChgeS = -MATMUL(h_dlc, optg_dlc) ! CAUSING PROCESS ABORT SIGNAL
+		ChgeS = -MATMUL(h_dlc, optg_dlc)
 
 		! The change is DLC is scaled using the maximum step length.
 		stpl = RMSD_CALC(ChgeS, dlc, (ndlc - 6))
@@ -242,7 +242,7 @@ else if (coordtype .eq. 1) then
 		END IF
 
 		! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
-		call DLC_to_cart(ndlc, nprim, ChgeS, dlc, ox, newx, Bmat_dlc) ! This is shit.
+		call DLC_to_cart(ndlc, nprim, ChgeS, dlc, ox, newx, Bmat_dlc)
 
 		! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.
 		!BFGS_PRIMITIVE UPDATE

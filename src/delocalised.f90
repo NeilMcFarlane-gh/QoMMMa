@@ -84,8 +84,8 @@ contains
 	real(sp), allocatable :: Bmat_S(:,:)
 	
 	! The calculation of the B matrix in DLC subspace is a straightforward multiplication.
-	if (.not. ALLOCATED(Bmat_S)) allocate(Bmat_S((3 * atom_num), ((3 * atom_num) - 6)))
-	Bmat_S = MATMUL(Umat, TRANSPOSE(Bmat_p))
+	if (.not. ALLOCATED(Bmat_S)) allocate(Bmat_S(((3 * atom_num) - 6), (3 * atom_num)))
+	Bmat_S = MATMUL(TRANSPOSE(Umat), TRANSPOSE(Bmat_p))
 	
 	end subroutine gen_Bmat_DLC
 	
@@ -116,6 +116,30 @@ contains
 	end subroutine gen_DLC
 	
 	
+	subroutine refresh_DLC(atom_num, x)
+	! Here, the DLC are refreshed or generated for the first time.
+	! All arrays used in the generation are deallocated so that they can be allocated appropriately again.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms in the system.
+	!               x           : 1D array containing all the cartesian coordinates of the system.
+	
+	implicit none
+	integer(i4b) :: atom_num
+	real(sp) :: x(atom_num * 3)
+	
+	! First, deallocate all arrays used in DLC generation.
+	deallocate(prim_list, prims, Bmat_p, Bmat_dlc, Gmat, Umat, Rmat)
+	
+	! Now, all the DLC subroutines can be called to reallocate the arrays.
+	call gen_prims(atom_num, to_generate, x, prims, prim_list)
+	call gen_Bmat_prims(atom_num, x, prim_list, n_prims, Bmat_p)
+	call gen_Gmat(atom_num, n_prims, Bmat_p, Gmat)
+	call diag_Gmat(atom_num, n_prims, Gmat, Umat, Rmat)
+	call gen_DLC(Umat, prims, n_prims, atom_num, S)
+	call gen_Bmat_DLC(atom_num, n_prims, Bmat_p, Umat, Bmat_S)
+	
+	end subroutine refresh_DLC
+	
 	subroutine gen_grad_cart_to_DLC(atom_num, n_prims, Bmat_S, g, g_S)
 	! Here, the gradient array in cartesian subspace is updated to DLC subspace.
 	!
@@ -132,7 +156,7 @@ contains
 	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num))
 
 	if (.not. ALLOCATED(g_S)) allocate(g_S((3 * atom_num) - 6))
-	g_S(:) = 0.0
+
 	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
 	BT_Ginv = MATMUL(TRANSPOSE(Bmat_S), SVD_INVERSE(MATMUL(Bmat_S, TRANSPOSE(Bmat_S)), SIZE(Bmat_S, 1), SIZE(Bmat_S, 1)))
 	g_S = MATMUL(g, TRANSPOSE(BT_Ginv))
@@ -164,7 +188,7 @@ contains
 	end subroutine gen_hess_prim_to_DLC
 	
 	
-	subroutine DLC_to_cart(atom_num, n_prims, dS, S_1, x_1, x_2, Bmat_S)
+	subroutine DLC_to_cart(atom_num, n_prims, dS, S, x_1, x_2, Bmat_S)
 	! Here, the DLC are converted to cartesian coordinates via an iterative procedure.
 	! This is used at the end of an optimisation cycle to restore the cartesian coordinates for the next gradient evaluation.
 	!
@@ -178,58 +202,59 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, i
-	integer(i4b), allocatable :: prim_list(:,:), to_generate(:)
-	real(sp) :: dS((3 * atom_num) - 6), S_1((3 * atom_num) - 6), x_1(3 * atom_num), x_2(3 * atom_num)
-	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num))
+	real(sp) :: dS((3 * atom_num) - 6), S((3 * atom_num) - 6), old_S((3 * atom_num) - 6), x_1(3 * atom_num), x_2(3 * atom_num)
+	real(sp), allocatable :: S_n(:), Bmat_S_n(:,:)
+	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num)), Bmat_S((3 * atom_num), ((3 * atom_num) - 6))
 	real(sp) :: dS_n((3 * atom_num) - 6), check((3 * atom_num) - 6), temp_check
 	real(sp) :: init_dS((3 * atom_num) - 6), target_S((3 * atom_num) - 6), dx(3 * atom_num)
-	real(sp), allocatable :: prims(:), Bmat_p(:,:), Gmat(:,:), Umat(:,:), Rmat(:,:), optg_S(:), og_S(:)
-	real(sp), allocatable :: oh_S(:,:), h_prim(:,:), h_S(:,:), ChgeS(:), newS(:), Bmat_S(:,:), S_2(:)
 	real(sp) :: xyz_rms_1, xyz_rms_2, iter_counter
 	logical :: convergence
+	
+	! Firstly, necessary DLC matrices are allocated.
+	if (.not. ALLOCATED(to_generate)) allocate(to_generate(atom_num))
+	to_generate = (/(i, i=1,atom_num, 1)/)
 	
     ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
     ! Instead, an iterative transformation procedure must be used.
     ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
-	allocate(Bmat_S((3 * atom_num), ((3 * atom_num) - 6)))
 	BT_Ginv = MATMUL(TRANSPOSE(Bmat_S), SVD_INVERSE(MATMUL(Bmat_S, TRANSPOSE(Bmat_S)), SIZE(Bmat_S, 1), SIZE(Bmat_S, 1)))
-	
+
 	! Stashing some values for convergence criteria.
 	convergence = .FALSE.
 	xyz_rms_1 = 0
 	xyz_rms_2 = 0
 	init_dS(:) = dS(:)
-	target_S(:) = S_1(:) + init_dS(:)
-	
-	do while (convergence .eqv. .FALSE.)
-		! The change in cartesian coordinates associated with the change in DLC is calculated.
-		dx = MATMUL(BT_Ginv, dS)
+	target_S(:) = S(:) + init_dS(:)
 
+	do while (convergence .eqv. .FALSE.) 
+		! First, the DLC from the previous iteration is saved.
+		old_S(:) = S(:)
+	
+		! The change in cartesian coordinates associated with the change in DLC is calculated.
+		dx = MATMUL(TRANSPOSE(BT_Ginv), dS)
+		print *, 'Change in x ', dx
+		print *, '______'
+		
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
 		xyz_rms_2 = RMSD_CALC(dx, x_1, SIZE(x_1))
 		
 		! The new cartesian geometry is evaluated, and the new DLC geometry is obtained.
 		x_2 = x_1 + dx
-		allocate(to_generate(atom_num))
-		to_generate = (/(i, i=1,atom_num, 1)/)
-		call gen_prims(atom_num, to_generate, x_2, prims, prim_list)
-		call gen_Bmat_prims(atom_num, x_2, prim_list, SIZE(prim_list,1), Bmat_p)
-		call gen_Gmat(atom_num, SIZE(prim_list,1), Bmat_p, Gmat)
-		call diag_Gmat(atom_num, SIZE(prim_list,1), Gmat, Umat, Rmat)
-		call gen_DLC(Umat, prims, SIZE(prim_list,1), atom_num, S_2)
-		call gen_Bmat_DLC(atom_num, SIZE(prim_list,1), Bmat_p, Umat, Bmat_S)
-		
+		call refresh_DLC(atom_num, x_2)
+
 		! The Moore-Penrose inverse is constructed for the next iteration.
 		BT_Ginv = MATMUL(TRANSPOSE(Bmat_S), SVD_INVERSE(MATMUL(Bmat_S, TRANSPOSE(Bmat_S)), SIZE(Bmat_S, 1), SIZE(Bmat_S, 1)))
 		
 		! The change in DLC for the next iteration is evaluated.
-		dS_n = S_2 - S_1
+		dS = old_S - S_n
+		print *, 'Change in S ', dS
+		print *, '______'
 		
 		! Now, the three exit conditions should be checked...
 		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
         ! The second ending condition for this transformation is when the difference in root-mean-square change in cartesians between iteration i and i+1 is less than 10^-12.
         ! The third ending condition for this transformation is when the difference between the target DIC and the calculated DLC is less than 10^-6.
-		check = target_S - S_2
+		check = target_S - S_n
 		if (ABS(xyz_rms_2) < 1E-06) then
 			convergence = .TRUE.
 		else if (ABS(xyz_rms_2 - xyz_rms_1) < 1E-12) then
@@ -243,8 +268,7 @@ contains
 		end do
 		
 		! Values which are calculated from the iterative procedure are updated to be ith property for the next iteration.
-		S_1(:) = S_2(:)
-		dS(:) = dS_n(:)
+		S(:) = S_n(:)
 		x_1(:) = x_2(:)
 		xyz_rms_1 = xyz_rms_2
 		
