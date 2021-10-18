@@ -190,18 +190,8 @@ else if (coordtype .eq. 1) then
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
 
-		! The list of atom indices to delocalise, to_generate, is created.
-		! The numbers are simply in numerical order as it does not especially matter since the DLC and cartesian coordinates are combined separately.
-		allocate(to_generate(ndlc))
-		to_generate = (/(i, i=1,ndlc, 1)/)
-		
 		! Generating DLC for the given coordinate set.
-		call gen_prims(ndlc, to_generate, ox, prims, prim_list)
-		call gen_Bmat_prims(ndlc, ox, prim_list, nprim, Bmat_p)
-		call gen_Gmat(ndlc, nprim, Bmat_p, Gmat)
-		call diag_Gmat(ndlc, nprim, Gmat, Umat, Rmat)
-		call gen_DLC(Umat, prims, nprim, ndlc, dlc)
-		call gen_Bmat_DLC(ndlc, nprim, Bmat_p, Umat, Bmat_dlc)
+		call refresh_dlc(ndlc, ox)
 
 		! Now, the BFGS algorithm can be used to generate the change in DLC from the calculated gradient.
 		! Firstly, the gradients must be updated to DLC subspace.
@@ -240,7 +230,7 @@ else if (coordtype .eq. 1) then
 			ChgeS = ChgeS / lstep * STPMX
 			write (*,*)"Changing (2) Step Length"
 		END IF
-
+		ChgeS = ChgeS * 0.001
 		! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 		call DLC_to_cart(ndlc, nprim, ChgeS, dlc, ox, newx, Bmat_dlc)
 

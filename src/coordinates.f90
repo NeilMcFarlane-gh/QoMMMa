@@ -21,14 +21,15 @@ real(sp), allocatable :: fullx(:,:), fullxq(:,:), fullxl(:,:), fullxopt(:,:), fu
 real(sp), allocatable :: x(:), xq(:), xl(:), xopt(:), dlc(:), lratio(:), chg(:)
 
 ! matrices used in the generation of DLC.
-integer(i4b), allocatable :: full_prim_list(:,:,:), prim_list(:,:) ! Primitive coordinate indice arrays.
+! these matrices are frequently deallocated and reallocated.
+integer(i4b), allocatable :: prim_list(:,:) ! Primitive coordinate indice array.
 integer(i4b), allocatable :: to_generate(:) ! Used dynamically to assign temporary atom indices.
-real(sp), allocatable :: full_prims(:,:), prims(:) ! Primitive internal coordinate arrays.
-real(sp), allocatable :: full_Bmat_p(:,:,:), Bmat_p(:,:) ! Primitive Wilson B matrix arrays.
-real(sp), allocatable :: full_Bmat_dlc(:,:,:), Bmat_dlc(:,:) ! DLC Wilson B matrix arrays.
-real(sp), allocatable :: full_Gmat(:,:,:), Gmat(:,:) ! G matrix arrays.
-real(sp), allocatable :: full_Umat(:,:,:), Umat(:,:) ! U matrix arrays.
-real(sp), allocatable :: full_Rmat(:,:,:), Rmat(:,:) ! R matrix arrays.
+real(sp), allocatable :: prims(:) ! Primitive internal coordinate array.
+real(sp), allocatable :: Bmat_p(:,:) ! Primitive Wilson B matrix array.
+real(sp), allocatable :: Bmat_dlc(:,:) ! DLC Wilson B matrix array.
+real(sp), allocatable :: Gmat(:,:) ! G matrix array.
+real(sp), allocatable :: Umat(:,:) ! U matrix array.
+real(sp), allocatable :: Rmat(:,:) ! R matrix array.
 
 character(4), allocatable :: img_string(:)
 character(3), allocatable :: label(:)

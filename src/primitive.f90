@@ -8,18 +8,23 @@ contains
 	subroutine gen_prims(atom_num, to_generate, x, prims, prim_list) 
 	! Here, the primitive internal coordinates are generated for a given cartesian coordinate set using a total connectivity scheme with a distance cutoff.
 	!
-	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms in the system.
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               to_generate : 1D array containing the list of atom indices which primitive internal coordinates are to be generated for.
 	!               x           : 1D array containing all the cartesian coordinates of the system.
 	!               prims       : 1D array containing all the primitive internal coordinates associated with this input.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 	
 	implicit none
-	integer(i4b) :: to_generate(atom_num), j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2
-	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:)
+	integer(i4b) :: i, j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2
+	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:), to_generate(:)
 	real(sp) :: coords_1(3), coords_2(3), x(atom_num), r, temp_prim
 	real(sp), allocatable :: prims(:), prims_temp(:)
-	real(sp), parameter :: cut_off = 50 !Angstroms
+	real(sp), parameter :: cut_off = 25 !Angstroms
+	
+	! Firstly, the list of atom indices for which primitive internal coordinates (and subsquently DLC) is allocated and populated.
+	! The numbers are simply in numerical order as it does not especially matter since the DLC and cartesian coordinates are combined separately.
+	if (.not. ALLOCATED(to_generate)) allocate(to_generate(atom_num))
+	to_generate = (/(i, i=1,atom_num, 1)/)
 	
 	! The list of primitive internal coordinates is simple to define when every atom is connected to every atom.
 	prim_list_temp = COMBINATIONS_2(to_generate, SIZE(to_generate))
@@ -55,6 +60,8 @@ contains
 	nprim = alloc_counter
 	
 	! Lastly, the output arrays prims and prim_list can be populated.
+	prims(:) = 0.0
+	prim_list(:,:) = 0
 	prims_counter = 1
 	do j=1, SIZE(prims_temp)
 	    temp_prim = prims_temp(j)
@@ -68,12 +75,12 @@ contains
 	end subroutine gen_prims
 	
 	
-	subroutine gen_Bmat_prims(atom_num, x, prim_list, n_prims, Bmat_p)
+	subroutine gen_Bmat_prims(atom_num, n_prims, x, prim_list, Bmat_p)
 	! Here, the Wilson B matrix for the conversion between cartesian and primitive internal coordinates is created.
 	!
-	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms in the system.
-	!               x           : 1D array containing all the cartesian coordinates of the system.
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               x           : 1D array containing all the cartesian coordinates of the system.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
     !               Bmat_p      : 2D array which contains the primitive Wilson B matrix.	
 	
@@ -84,6 +91,7 @@ contains
 	
 	! The Wilson B matrix is allocated. By definition, its dimensions are (number of prims) x (3N), where N is the number of atoms.
 	if (.not. ALLOCATED(Bmat_p)) allocate(Bmat_p((3 * atom_num), n_prims))
+	Bmat_p(:,:) = 0.0
 	
 	! The Wilson B matrix is populated with the relevant second derivative terms.
 	number_reset = prim_list(1,1)
