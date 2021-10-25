@@ -31,7 +31,7 @@ do img_num=1,nimg
 	end if
 
 	open(unit=8,file=("add_to_report"//trim(img_string(img_num))),status="replace")
-
+	print *, 'addtoreport created'
 	write (unit=8,fmt='(A,I5)') "Situation at step:",nstep
 	if ((nebtype.eq.4).or.(nebtype.eq.3).or.(nebtype.eq.5)) then
 		if (line_search) then

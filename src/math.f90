@@ -129,7 +129,7 @@ contains
 	
 	! SVD defined in LAPACK is performed to obtain matrices S, U and VT.
 	call DGESVD('A', 'A', rows, cols, A, LDA, S, U, LDU, VT, LDVT, WORK, LWORK, INFO)
-	
+
 	! To calculate the inverse of matrix A, the vector S must first be inverted.
 	do i=1, SIZE(S, 1)
 		if (S(i) .ne. 0) then
@@ -379,5 +379,46 @@ contains
 	RMSD = SQRT((SUM((x_n - x)**2)) / n)
 	
 	end function RMSD_CALC
+	
+	
+	function INNER_PRODUCT(vec1, vec2, length) result(inner)
+	! Here, the inner product of two 1D vectors is calculated.
+	!
+	! ARGUMENTS:	vec1   : 1D array containing vector 1.
+	!				vec2   : 1D array containing vector 2.
+	!               length : integer which represents the number of elements in both vectors.
+	
+	implicit none
+	integer(i4b) :: length, i
+	real(sp) :: vec1(length), vec2(length), temp, inner
+	
+	! The inner product is calculated simply as:
+	! [a1, a2, a3] * [b1, b2, b3] = SUM[a1*b1, a2*b2, a3*b3]
+	do i=1, length
+		temp = vec1(i) * vec2(i)
+		inner = inner + temp
+	end do
+	
+	end function INNER_PRODUCT
+	
+	function OUTER_PRODUCT(vec1, vec2, n1, n2) result(outer)
+	! Here, the outer product of two 1D vectors is calculated.
+	!
+	! ARGUMENTS:	vec1   : 1D array containing vector 1.
+	!				vec2   : 1D array containing vector 2.
+	!               n1     : integer which represents the number of elements in vector 1.
+	!               n2     : integer which represents the number of elements in vector 2.	
+	
+	implicit none
+	integer(i4b) :: n1, n2, i, j
+	real(sp) :: vec1(n1), vec2(n2), temp, outer(n1,n2)
+	
+	do i=1, n1
+		do j=1, n2
+			outer(i,j) = vec1(i) * vec2(j)
+		end do
+	end do
+	outer = TRANSPOSE(outer)
+	end function OUTER_PRODUCT
 	
 END MODULE math

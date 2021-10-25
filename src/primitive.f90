@@ -19,7 +19,7 @@ contains
 	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:), to_generate(:)
 	real(sp) :: coords_1(3), coords_2(3), x(atom_num), r, temp_prim
 	real(sp), allocatable :: prims(:), prims_temp(:)
-	real(sp), parameter :: cut_off = 25 !Angstroms
+	real(sp), parameter :: cut_off = 2500 !Angstroms
 	
 	! Firstly, the list of atom indices for which primitive internal coordinates (and subsquently DLC) is allocated and populated.
 	! The numbers are simply in numerical order as it does not especially matter since the DLC and cartesian coordinates are combined separately.
@@ -38,11 +38,11 @@ contains
 		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
 		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))
 		r = ATOM_DISTANCE(coords_1, coords_2)
-		if (r .lt. cut_off) then
-			prims_temp(j) = r
-		else
-			prims_temp(j) = 0.0
-		end if
+		!if (r .lt. cut_off) then
+		prims_temp(j) = r
+		!else
+			!prims_temp(j) = 0.0
+		!end if
 	end do
 	
 	! The output arrays prims and prim_list must be allocated so that they can be populated.
@@ -116,16 +116,65 @@ contains
 	end subroutine gen_Bmat_prims
 
 
-	subroutine update_bfgs_p
+	subroutine update_bfgs_p(atom_num, n_prims, hess, g2_p, g1_p, prims_2, prims_1) 
 	! Here, the primtive hessian matrix is updated using the BFGS method.
+	! In the terminology in this subroutine, state 2 refers to the newly calculated values, and state 1 to the ones from the previous iteration.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
+	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               hess        : 2D array which contains the hessian matrix in primitive subspace.
+	!               g2_p        : 1D array containing the gradient in primitive subspace for state 2.
+    !               g1_p        : 2D array which contains the primitive Wilson B matrix.
+	!               prims_2     : 1D array containing all the primitive internal coordinates associated with state 2.
+	!               prims_1     : 1D array containing all the primitive internal coordinates associated with state 1.
+	
+	implicit none
+	integer(i4b) :: atom_num, n_prims
+	real(sp) :: hess(n_prims, n_prims), g2_p(n_prims), g1_p(n_prims), prims_2(n_prims), prims_1(n_prims)
+	real(sp) :: dg(n_prims), dq(n_prims), dhess(n_prims, n_prims), dgdq, dqHdq
+	
+	! The changes associated with the gradient and coordinates from the current and previous iteration are calculated.
+	dg = g2_p - g1_p
+	dq = prims_2 - prims_1
+
+	! To ensure that values in the BFGS update do not become unreasonably large, some scaling can be required.
+	! First, initialise the values that may be scaled.
+	dgdq = INNER_PRODUCT(dg, dq, n_prims)
+	dqHdq = INNER_PRODUCT(MATMUL(dq, hess), dq, n_prims)
+	if (dgdq < 0.001) dgdq = 0.001
+	if (dqHdq < 0.001) dqHdq = 0.001
+
+	! The change in the hessian can now be calculated.
+	dhess = ((OUTER_PRODUCT(dg, dg, n_prims, n_prims)) / dgdq) &
+	& - ((OUTER_PRODUCT(MATMUL(hess, dq), MATMUL(dq, hess), n_prims, n_prims))  / dqHdq)
+
+	hess = hess + dhess
 	
 	end subroutine update_bfgs_p
+		
+		
+	subroutine gen_grad_cart_to_prim(atom_num, n_prims, Bmat_p, g, g_p)
+	! Here, the gradient array in cartesian subspace is updated to primitive subspace.
+	!
+	! ARGUMENTS:    atom_num : Integer which represents the total number of atoms to be delocalised.
+	!               n_prims  : Integer which represents the total number of primitive internal coordinates.
+	!               Bmat_p   : 2D array which contains the primitive Wilson B matrix.
+	!				g        : 1D array containing the gradient in cartesian subspace.
+	!               g_p      : 1D array containing the gradient in primitive subspace.
 	
+	implicit none
+	integer(i4b) :: atom_num, n_prims
+	real(sp) :: Bmat_p((3 * atom_num), n_prims), g(atom_num * 3)
+	real(sp), allocatable :: g_p(:)
+	real(sp) :: BT_Ginv(n_prims, (3 * atom_num))
+
+	if (.not. ALLOCATED(g_p)) allocate(g_p(n_prims))
+
+	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
+	BT_Ginv = MATMUL(TRANSPOSE(Bmat_p), SVD_INVERSE(MATMUL(Bmat_p, TRANSPOSE(Bmat_p)), SIZE(Bmat_p, 1), SIZE(Bmat_p, 1)))
+	g_p = MATMUL(g, TRANSPOSE(BT_Ginv))
 	
-	subroutine gen_grad_cart_to_prims
-	! Here, the gradient array in cartesian subspace is updated to primitive internal coordinate subspace.
-	
-	end subroutine gen_grad_cart_to_prims
+	end subroutine gen_grad_cart_to_prim
 	
 	
 	subroutine gen_hess_cart_to_prims

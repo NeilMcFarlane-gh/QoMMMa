@@ -17,7 +17,7 @@ contains
 	integer(i4b) :: atom_num, n_prims
 	real(sp) :: Bmat_p((3 * atom_num), n_prims)
 	real(sp), allocatable :: Gmat(:,:)
-
+	
 	! The G matrix is simply the Wilson B matrix multiplied by its transpose.
 	! By definition, it has dimensions of n_prims x n_prims, so it is allocated accordingly.
 	if (.not. ALLOCATED(Gmat)) allocate(Gmat(n_prims, n_prims))
@@ -133,10 +133,10 @@ contains
 	real(sp) :: coords(atom_num * 3)
 	
 	! First, (if necessary) deallocate all arrays used in DLC generation.
-	if (ALLOCATED(prim_list) .or. ALLOCATED(prims) .or. ALLOCATED(Bmat_p) &
+	if (ALLOCATED(prims) .or. ALLOCATED(Bmat_p) &
 	& .or. ALLOCATED(Bmat_dlc) .or. ALLOCATED(Gmat) .or. ALLOCATED(Umat) &
 	& .or. ALLOCATED(Rmat) .or. ALLOCATED(to_generate)) then
-		deallocate(prim_list, prims, Bmat_p, Bmat_dlc, Gmat, Umat, Rmat, to_generate)
+			deallocate(prim_list, prims, Bmat_p, Bmat_dlc, Gmat, Umat, Rmat, to_generate)
 	end if
 
 	! Now, all the DLC subroutines can be called to reallocate the arrays.
@@ -187,13 +187,13 @@ contains
 	integer(i4b) :: atom_num, n_prims
 	real(sp) :: Umat(n_prims, ((3 * atom_num) - 6)), hess(n_prims, n_prims)
 	real(sp), allocatable :: hess_dlc(:,:)
-	
+
 	! First, the hessian matrix is DLC subspace should be allocated.
 	if (.not. ALLOCATED(hess_dlc)) allocate(hess_dlc(((3 * atom_num) - 6), ((3 * atom_num) - 6)))
-	
+
 	! Now, the hessian can be calculated in DLC subspace by a simple multiplication procedure.
 	hess_dlc = MATMUL(TRANSPOSE(Umat), MATMUL(hess, Umat))
-	
+
 	end subroutine gen_hess_prim_to_DLC
 	
 	
@@ -210,13 +210,13 @@ contains
 	!				Bmat_dlc : 2D array containing the Wilson B matrix used to convert between cartesian and DLC.
 	
 	implicit none
-	integer(i4b) :: atom_num, n_prims, i
+	integer(i4b) :: atom_num, n_prims, i, iter_counter
 	real(sp) :: dS((3 * atom_num) - 6), dlc((3 * atom_num) - 6), old_dlc((3 * atom_num) - 6), x_1(3 * atom_num), x_2(3 * atom_num)
-	real(sp), allocatable :: S_n(:), Bmat_dlc_n(:,:)
+	real(sp), allocatable :: S_n(:), Bmat_dlsc_n(:,:)
 	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num)), Bmat_dlc((3 * atom_num), ((3 * atom_num) - 6))
-	real(sp) :: dS_n((3 * atom_num) - 6), check((3 * atom_num) - 6), temp_check
+	real(sp) :: dS_actual((3 * atom_num) - 6), check((3 * atom_num) - 6), temp_check, step_scale, temp_dS
 	real(sp) :: init_dS((3 * atom_num) - 6), target_dlc((3 * atom_num) - 6), dx(3 * atom_num)
-	real(sp) :: xyz_rms_1, xyz_rms_2, iter_counter
+	real(sp) :: xyz_rms_1, xyz_rms_2
 	logical :: convergence
 	
     ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
@@ -225,20 +225,20 @@ contains
 	BT_Ginv = MATMUL(TRANSPOSE(Bmat_dlc), SVD_INVERSE(MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc)), SIZE(Bmat_dlc, 1), SIZE(Bmat_dlc, 1)))
 
 	! Stashing some values for convergence criteria.
+	step_scale = 1.0
 	convergence = .FALSE.
 	xyz_rms_1 = 0
 	xyz_rms_2 = 0
 	init_dS(:) = dS(:)
 	target_dlc(:) = dlc(:) + init_dS(:)
-	do while (convergence .eqv. .FALSE.) 
-	    print *, dlc
+
+100	do while (convergence .eqv. .FALSE.) 
 		! First, the DLC from the previous iteration is saved.
 		old_dlc(:) = dlc(:)
 	
 		! The change in cartesian coordinates associated with the change in DLC is calculated.
+		dx(:) = 0.0
 		dx = MATMUL(TRANSPOSE(BT_Ginv), dS)
-		!print *, 'Change in x ', dx
-		!print *, '______'
 		
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
 		xyz_rms_2 = RMSD_CALC(dx, x_1, SIZE(x_1))
@@ -247,14 +247,20 @@ contains
 		x_2 = x_1 + dx
 		dlc(:) = 0.0
 		call refresh_DLC(atom_num, x_2)
-
+		
 		! The Moore-Penrose inverse is constructed for the next iteration.
+		!BT_Ginv(:,:) = 0.0
 		!BT_Ginv = MATMUL(TRANSPOSE(Bmat_dlc), SVD_INVERSE(MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc)), SIZE(Bmat_dlc, 1), SIZE(Bmat_dlc, 1)))
 
 		! The change in DLC for the next iteration is evaluated.
-		dS = init_dS - (old_dlc - dlc)
-		!print *, 'Change in dlc ', dS
-		!print *, '______'
+		dS(:) = 0.0
+		dS = (target_dlc - dlc) * step_scale
+		do i=1, SIZE(dS)
+			if (ABS(dS(i)) > ABS(init_dS(i))) then
+				step_scale = step_scale * 0.75
+				go to 100
+			end if
+		end do
 		
 		! Now, the three exit conditions should be checked...
 		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
@@ -276,15 +282,15 @@ contains
 		! Values which are calculated from the iterative procedure are updated to be ith property for the next iteration.
 		x_1(:) = x_2(:)
 		xyz_rms_1 = xyz_rms_2
-		
+
 		! In some cases, cartesians cannot be solved, so an exit condition must exist for this case.
 		iter_counter = iter_counter + 1
-		if (iter_counter == 1000000) then
+		if (iter_counter == 1000) then
 			print *, "COULDN'T SOLVE DLC"
 			exit
 		end if
 	end do
-	
+
 	end subroutine DLC_to_cart
 	
 	

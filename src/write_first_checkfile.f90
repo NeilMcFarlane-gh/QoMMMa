@@ -25,10 +25,10 @@ do img_num=1,nimg
 	write(unit=8,fmt='(A)') "This file contains info needed for execution of qmmm.x"
 	write(unit=8,fmt='(A)') "First, the number of steps already taken:"
 	write(unit=8,fmt='(I3)') 0
-	write(unit=8,fmt='(A)') "Then, the total, QM, and Link number of atoms:"
+	write(unit=8,fmt='(A)') "Then, the total, QM, Link, and Hessian-optimized number of atoms:"
 	write(unit=8,fmt='(4I6)') n, nq, nl, nopt
 	write(unit=8,fmt='(A)') "Do we want dispersion energy between QM atoms to be calculated?"
-	write(unit=8,fmt='(I3)') disp
+	write(unit=8,fmt='(I6)') disp
 	write(unit=8,fmt='(A)') "Then the number of images,type of calculation, spring force constant"
 	write(unit=8,fmt='(2I6, F10.2)') nimg, nebtype, kspring
 	write(unit=8,fmt='(A)') "Then the type of growing string method which is to be used"

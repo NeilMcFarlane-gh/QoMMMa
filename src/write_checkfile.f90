@@ -75,6 +75,13 @@ do img_num=1,nimg
 	write(unit=8,fmt='(2I6, F10.2)') gsmtype
 	write(unit=8,fmt='(A)') "Then the coordinate selection for optimisation"
 	write(unit=8,fmt='(2I6, F10.2)') coordtype
+	if (coordtype .eq. 1) then
+		write(unit=8,fmt='(A)') "Then the number of primitive internal coordinates and their definition."
+		write(unit=8,fmt='(2I6, F10.2)') nprim
+		do i = 1, nprim
+			write (unit=8,fmt='(2I6,3X)') (prim_list(i,j),j=1,2)
+		end do
+	end if
 	write(unit=8,fmt='(A)') "Then the number of constraints and the type (1=Harmonic or 2=tanh)"
 	write(unit=8,fmt='(2I6)') ncon, kcnstyp
 	write(unit=8,fmt='(A)') "Then the list of which atoms are QM:"
@@ -131,9 +138,15 @@ do img_num=1,nimg
 	write(unit=8,fmt='(A)') "Gradient at the previous step:"
 	write(unit=8,fmt='(3F12.6)') (optg(i),i=1,noptx)
 	write(unit=8,fmt='(A)') "Approximate Inverse Hessian at the previous step (lower half!):"
-	do i = 1, noptx
-		 write (unit=8,fmt='(5F20.6)') (h(i,j),j=1,i)
-	end do
+	if (coordtype .eq. 0) then
+		do i = 1, noptx
+			write (unit=8,fmt='(5F20.6)') (h(i,j),j=1,i)
+		end do
+	else if (coordtype .eq. 1) then
+		do i = 1, nprim
+			write (unit=8,fmt='(5F20.6)') (h_p(i,j),j=1,i)
+		end do
+	end if
 
 	close(8)
 

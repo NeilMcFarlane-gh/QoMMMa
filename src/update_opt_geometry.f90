@@ -1,5 +1,5 @@
 subroutine update_opt_geometry()
-use nrtype ; use coordinates ; use optimdata ; use primitive ; use delocalised ; use math
+use primitive ; use delocalised ; use math ; use nrtype ; use coordinates ; use optimdata 
 implicit none
 
 
@@ -7,7 +7,7 @@ implicit none
 
 integer(i4b) :: I,j, img_num
 real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS((ndlc * 3) - 6), DelX(noptx), w(noptx)
-real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, maxchgx
+real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, maxchgx, temp_x(noptx)
 real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
 stpmax = STPMX * REAL(noptx,sp)
 
@@ -29,7 +29,7 @@ if (coordtype .eq. 0) then
 		xopt(:)=fullxopt(img_num,:)
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
-
+		print *, 'ENERGY: ', e
 		if (nebtype.eq.0) then
 			IF (Nstep.eq.0) THEN
 				ChgeX = -0.7d0*optg
@@ -180,7 +180,7 @@ if (coordtype .eq. 0) then
 	
 else if (coordtype .eq. 1) then
 	do img_num=1,nimg
-
+	
 		! Copy data first
 		oe=fulloe(img_num)
 		e=fulle(img_num)
@@ -189,32 +189,43 @@ else if (coordtype .eq. 1) then
 		xopt(:)=fullxopt(img_num,:)
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
-
+		print *, 'ENERGY: ', e
+		
 		! Generating DLC for the given coordinate set.
-		call refresh_dlc(ndlc, ox)
+		call refresh_dlc(ndlc, xopt)
+		
+		! The primitive internal coordinates calculated are preserved as they are used in the BFGS update.
+		if (ALLOCATED(old_prims)) deallocate(old_prims)
+		if (.not. ALLOCATED(old_prims)) allocate(old_prims(nprim))
+		old_prims(:) = prims(:)
 
 		! Now, the BFGS algorithm can be used to generate the change in DLC from the calculated gradient.
 		! Firstly, the gradients must be updated to DLC subspace.
+		! In addition, the gradients are updated to primitive subspace as these are used in the updating of the hessian matrix.
 		call gen_grad_cart_to_DLC(ndlc, nprim, Bmat_dlc, optg, optg_dlc)
 		call gen_grad_cart_to_DLC(ndlc, nprim, Bmat_dlc, og, og_dlc)
-		
+		call gen_grad_cart_to_prim(ndlc, nprim, Bmat_p, optg, optg_p)
+		call gen_grad_cart_to_prim(ndlc, nprim, Bmat_p, og, og_p)
+
 		! To avoid the repeated matrix diagonalisation that would be necessary to continually update the hessian matrix in DLC subspace, we update the primitive hessian.
 		! However, on the first optimisation step, the initial matrix is generate simply as a weighted unit matrix.
 		! Subsequent iterations of the optimisation will use the BFGS scheme to update this primitive hessian matrix.
 		! The initial matrix is simply a weighted unit matrix, and the weights are all the same at present.
 		if (Nstep .eq. 0) then
 			allocate(h_p(nprim, nprim))
-			do i=1, SIZE(prim_list,1)
-				do j=1, SIZE(prim_list,1)
+			allocate(oh_p(nprim, nprim))
+			oh_p(:,:) = 0.0
+			do i=1, nprim
+				do j=1, nprim
 					if (i == j) then
-						h_p(i,j) = 1
+						oh_p(i,j) = 1
 					end if
 				end do
 			end do
 		end if
-		
+
 		! The hessian matrix must also be updated to DLC subspace.
-		call gen_hess_prim_to_DLC(ndlc, nprim, Umat, h_p, h_dlc)
+		call gen_hess_prim_to_DLC(ndlc, nprim, Umat, oh_p, h_dlc)
 
 		! The change in DLC can now be evaluated using a quasi-Newton methodology.
 		ChgeS = -MATMUL(h_dlc, optg_dlc)
@@ -230,15 +241,20 @@ else if (coordtype .eq. 1) then
 			ChgeS = ChgeS / lstep * STPMX
 			write (*,*)"Changing (2) Step Length"
 		END IF
+		
+		! BELOW STEP-LENGTH ALTERNATION NEEDS TO BE PUT INTO A PROPER ALGORITHM.
 		ChgeS = ChgeS * 0.001
+		
 		! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
-		call DLC_to_cart(ndlc, nprim, ChgeS, dlc, ox, newx, Bmat_dlc)
+		temp_x(:) = xopt(:)
+		call DLC_to_cart(ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+		ChgeX(:) = newx(:) - temp_x(:)
 
 		! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.
-		!BFGS_PRIMITIVE UPDATE
-
+		call update_bfgs_p(ndlc, nprim, oh_p, optg_p, og_p, prims, old_prims)
+		h_p = oh_p
+		
 		! evaluate convergence tests
-
 		convs = " NO"
 		converged=.false.
 		i=0

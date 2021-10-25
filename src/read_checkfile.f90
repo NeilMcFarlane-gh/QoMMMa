@@ -55,8 +55,17 @@ do img_num=1,nimg
 
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) coordtype
+	
+	! Primitive internal coordinate definitions.
+	if ((coordtype .eq. 1) .and. (nstep .ne. 0)) then
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) nprim
+		do i = 1, nprim
+			read (unit=8,fmt=*) (prim_list(i,j),j=1,2)
+		end do
+	end if
 
-	! Number and overall type of restraints
+	! Number and overall type of constraints
 
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) ncon,kcnstyp
@@ -80,7 +89,6 @@ do img_num=1,nimg
 	end do
 
 	! Now read list of Link atoms and their details.
-
 	read(unit=8,fmt=*) dummy
 	! read links: MM atom; QM atom; rQL/rQM ideal ratio; label.
 	if (nl.gt.0) then
@@ -182,12 +190,14 @@ do img_num=1,nimg
 	! Read list of atomic charges.
 	read(unit=8,fmt=*) dummy
 	modchg=.false.
+	
 	! Clear single-image table of charges first
 	chg(:)=0.d0
 	do i = 1,n
 		 read (unit=8,fmt=*) j,chg(i), ii
 		 if (ii .eq. 1) modchg(i) = .true.
 	end do
+	
 	! Read in the list of MM atoms which are frozen.
 	! Not allowed for QM or MM atoms, of course!
 	read(unit=8,fmt=*) dummy
@@ -230,31 +240,41 @@ do img_num=1,nimg
 	end do
 
 	if (nstep .eq. 0) then
-		 do i = 1, noptx
-			 oh(i,i) = 0.7d0
-		 end do
-		 ox = xopt
+		do i = 1, noptx
+			oh(i,i) = 0.7d0
+		end do
+		ox = xopt
 	else
-		 ! start reading: previous energy; previous geometry; previous gradient; previous inverse Hessian.
-		 ! Only one half of the inverse Hessian is saved & read. Only "opt" atoms are included.
-		 ! Note that the current geometry has already been read in from "geom_expl.xyz".
-		 read (unit=8,fmt=*) dummy
-		 read (unit=8,fmt='(F15.8)') oe
-		 read (unit=8,fmt=*) dummy
-		 read (unit=8,fmt='(3F12.6)') (ox(i),i=1,noptx)
-		 read (unit=8,fmt=*) dummy
-		 read (unit=8,fmt='(3F12.6)') (og(i),i=1,noptx)
-	!     if (nebtype.eq.4) then
-	!        read (unit=8,fmt=*) dummy
-	!        read (unit=8,fmt='(3F12.6)') (dire(i),i=1,noptx)
-	!     end if
-		 read (unit=8,fmt=*) dummy
-		 do i = 1, noptx
-			  read (unit=8,fmt='(5F20.6)') (oh(i,j),j=1,i)
-		 end do
-		 do i = 1, noptx-1
-			  oh(i,i+1:noptx) = oh(i+1:noptx,i)
-		 end do 
+		! start reading: previous energy; previous geometry; previous gradient; previous inverse Hessian.
+		! Only one half of the inverse Hessian is saved & read. Only "opt" atoms are included.
+		! Note that the current geometry has already been read in from "geom_expl.xyz".
+		read (unit=8,fmt=*) dummy
+		read (unit=8,fmt='(F15.8)') oe
+		read (unit=8,fmt=*) dummy
+		read (unit=8,fmt='(3F12.6)') (ox(i),i=1,noptx)
+		read (unit=8,fmt=*) dummy
+		read (unit=8,fmt='(3F12.6)') (og(i),i=1,noptx)
+	!    if (nebtype.eq.4) then
+	!       read (unit=8,fmt=*) dummy
+	!       read (unit=8,fmt='(3F12.6)') (dire(i),i=1,noptx)
+	!    end if
+		read (unit=8,fmt=*) dummy
+		if (coordtype .eq. 0) then
+			do i = 1, noptx
+				read (unit=8,fmt='(5F20.6)') (oh(i,j),j=1,i)
+			end do
+			do i = 1, noptx-1
+				oh(i,i+1:noptx) = oh(i+1:noptx,i)
+			end do 
+		else if (coordtype .eq. 1) then
+			allocate(oh_p(nprim, nprim))
+			do i = 1, nprim
+				read (unit=8,fmt='(5F20.6)') (oh_p(i,j),j=1,i)
+			end do
+			do i = 1, nprim-1
+				oh_p(i,i+1:nprim) = oh_p(i+1:nprim,i)
+			end do
+		end if
 	end if
 	close(8)
 

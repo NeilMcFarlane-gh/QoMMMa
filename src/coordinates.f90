@@ -24,7 +24,7 @@ real(sp), allocatable :: x(:), xq(:), xl(:), xopt(:), dlc(:), lratio(:), chg(:)
 ! these matrices are frequently deallocated and reallocated.
 integer(i4b), allocatable :: prim_list(:,:) ! Primitive coordinate indice array.
 integer(i4b), allocatable :: to_generate(:) ! Used dynamically to assign temporary atom indices.
-real(sp), allocatable :: prims(:) ! Primitive internal coordinate array.
+real(sp), allocatable :: prims(:), old_prims(:) ! Primitive internal coordinate array.
 real(sp), allocatable :: Bmat_p(:,:) ! Primitive Wilson B matrix array.
 real(sp), allocatable :: Bmat_dlc(:,:) ! DLC Wilson B matrix array.
 real(sp), allocatable :: Gmat(:,:) ! G matrix array.

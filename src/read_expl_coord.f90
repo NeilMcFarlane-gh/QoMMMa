@@ -1,5 +1,5 @@
 SUBROUTINE read_expl_coord()
-use nrtype ; use coordinates; use primitive ; use DLC
+use nrtype ; use coordinates
 implicit none
 
 ! This subroutine reads the "geom_expl.xyz" augmented tinker coordinates file
@@ -7,8 +7,6 @@ implicit none
 
 ! Variable pointing on a specific image
 integer(i4b) :: img_num
-integer(i4b), allocatable :: prim_list(:,:)
-real(sp), allocatable :: prims(:), Bmat_p(:,:), Gmat(:,:), Umat(:,:), Rmat(:,:), S(:), Bmat_S(:,:)
 integer(i4b) :: rstat
 integer(i4b) :: i, j, k, ii
 

@@ -21,6 +21,7 @@ real(sp), allocatable :: fullog(:,:), fulloh(:,:,:), fullox(:,:), fulltg(:,:), &
 	 
 ! for DLC
 real(sp), allocatable :: optg_dlc(:), og_dlc(:), h_dlc(:,:), oh_dlc(:,:), new_dlc(:), fullnew_dlc(:,:)
+real(sp), allocatable :: optg_p(:), og_p(:)
 real(sp), allocatable :: fulloptg_dlc(:,:), fullog_dlc(:,:), fullh_dlc(:,:,:), fulloh_dlc(:,:,:)
 real(sp), allocatable :: h_p(:,:), oh_p(:,:), fullh_p(:,:,:), fulloh_p(:,:,:)
 

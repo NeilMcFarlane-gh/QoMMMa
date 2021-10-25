@@ -8,12 +8,12 @@ implicit none
 character(3) :: tmplab
 character(80) :: dummy
 integer(i4b) :: rstat
-integer(i4b) :: i, j, k, ii, jj, img_num
+integer(i4b) :: i, j, k, ii, jj, img_num, q
 real(sp) :: bb
 
 ! Loop over all images
 do img_num=1,nimg
-
+	
 	! First check whether the arrays are in fact already allocated...
 
 	open(unit=8,file=("CheckFile"//trim(img_string(img_num))))
@@ -48,6 +48,15 @@ do img_num=1,nimg
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) coordtype
 	
+	! Primitive internal coordinate definitions.
+	if (coordtype .eq. 1) then
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) nprim
+		do q = 1, nprim
+			read (unit=8,fmt=*) (prim_list(q,j),j=1,2)
+		end do
+	end if
+
 	! Now number & type of constraints
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) ncon, kcnstyp
@@ -96,7 +105,6 @@ do img_num=1,nimg
 			opt(nq+i)=links(i,1)
 	   end do
 	end if
-
 
 	! Now read list of atoms included in Hessian Optimization which are neither QM nor link (if any).
 	read(unit=8,fmt=*) dummy
