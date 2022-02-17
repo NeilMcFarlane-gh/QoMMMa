@@ -5,23 +5,22 @@ implicit none
 contains
 
 
-	subroutine gen_prims(atom_num, to_generate, x, prims, prim_list) 
-	! Here, the primitive internal coordinates are generated for a given cartesian coordinate set using a total connectivity scheme with a distance cutoff.
+	subroutine define_prims(atom_num, to_generate, x, prim_list) 
+	! Here, the primitive internal coordinates are defined for a given cartesian coordinate set using a total connectivity scheme with a distance cutoff.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               to_generate : 1D array containing the list of atom indices which primitive internal coordinates are to be generated for.
 	!               x           : 1D array containing all the cartesian coordinates of the system.
-	!               prims       : 1D array containing all the primitive internal coordinates associated with this input.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 	
 	implicit none
 	integer(i4b) :: i, j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2
 	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:), to_generate(:)
 	real(sp) :: coords_1(3), coords_2(3), x(atom_num), r, temp_prim
-	real(sp), allocatable :: prims(:), prims_temp(:)
-	real(sp), parameter :: cut_off = 2500 !Angstroms
-	
-	! Firstly, the list of atom indices for which primitive internal coordinates (and subsquently DLC) is allocated and populated.
+	real(sp), allocatable :: prims_temp(:)
+	real(sp), parameter :: cut_off = 35 !Angstroms
+
+	! Firstly, the list of atom indices for which primitive internal coordinates is allocated and populated.
 	! The numbers are simply in numerical order as it does not especially matter since the DLC and cartesian coordinates are combined separately.
 	if (.not. ALLOCATED(to_generate)) allocate(to_generate(atom_num))
 	to_generate = (/(i, i=1,atom_num, 1)/)
@@ -30,19 +29,22 @@ contains
 	prim_list_temp = COMBINATIONS_2(to_generate, SIZE(to_generate))
 	
 	! Next, using prim_list_temp, all the primitive coordinates can be generated, and their size can be checked.
+	! Each of these distances are subsquently checked with a distance criteria so that the system makes chemical sense.
 	! If they are greater than the predefined cut-off, then they are set to zero to allow for subsequent removal.
 	if (.not. ALLOCATED(prims_temp)) allocate(prims_temp(SIZE(prim_list_temp, 1)))
 	do j=1, SIZE(prim_list_temp, 1)
-		coord_counter_1 = prim_list_temp(j,1)
-		coord_counter_2 = prim_list_temp(j,2)
+		coord_counter_1 = (prim_list_temp(j,1) - 1) * 3
+		coord_counter_1 = coord_counter_1 + 1
+		coord_counter_2 = (prim_list_temp(j,2) - 1) * 3
+		coord_counter_2 = coord_counter_2 + 1
 		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
 		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))
 		r = ATOM_DISTANCE(coords_1, coords_2)
-		!if (r .lt. cut_off) then
-		prims_temp(j) = r
-		!else
-			!prims_temp(j) = 0.0
-		!end if
+		if (r .lt. cut_off) then
+			prims_temp(j) = r
+		else
+			prims_temp(j) = 0.0
+		end if
 	end do
 	
 	! The output arrays prims and prim_list must be allocated so that they can be populated.
@@ -53,26 +55,55 @@ contains
 		    alloc_counter = alloc_counter + 1
 		end if
 	end do
-	if (.not. ALLOCATED(prims)) allocate(prims(alloc_counter))
 	if (.not. ALLOCATED(prim_list)) allocate(prim_list(alloc_counter, 2))
 	
 	! The global integer, nprim, is also initialised here.
 	nprim = alloc_counter
 	
 	! Lastly, the output arrays prims and prim_list can be populated.
-	prims(:) = 0.0
 	prim_list(:,:) = 0
 	prims_counter = 1
 	do j=1, SIZE(prims_temp)
 	    temp_prim = prims_temp(j)
 		if (temp_prim .gt. 0.0) then
-		    prims(prims_counter) = prims_temp(j)
 			prim_list(prims_counter,:) = prim_list_temp(j,:)
 			prims_counter = prims_counter + 1
 		end if
 	end do
 	
-	end subroutine gen_prims
+	end subroutine define_prims
+	
+	
+	subroutine calc_prims(atom_num, n_prims, prims, x, prim_list) 
+	! Here, the primitive internal coordinates are calculated from a given primitive coordinate set.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
+	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               prims       : 1D array containing all the primitive internal coordinates associated with this input.
+	!               x           : 1D array containing all the cartesian coordinates of the system.
+	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
+	
+	implicit none
+	integer(i4b) :: i, j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2, n_prims
+	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:), to_generate(:)
+	real(sp) :: coords_1(3), coords_2(3), x(atom_num), r, temp_prim
+	real(sp), allocatable :: prims(:), prims_temp(:)
+	real(sp), parameter :: cut_off = 3.5 !Angstroms
+
+	! Using the earlier defined prim_list, each of the primitive interal coordinates can be calculated.
+	if (.not. ALLOCATED(prims)) allocate(prims(n_prims))
+	do j=1, n_prims
+		coord_counter_1 = (prim_list(j,1) - 1) * 3
+		coord_counter_1 = coord_counter_1 + 1
+		coord_counter_2 = (prim_list(j,2) - 1) * 3
+		coord_counter_2 = coord_counter_2 + 1
+		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
+		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))
+		r = ATOM_DISTANCE(coords_1, coords_2)
+		prims(j) = r
+	end do
+	
+	end subroutine calc_prims
 	
 	
 	subroutine gen_Bmat_prims(atom_num, n_prims, x, prim_list, Bmat_p)
@@ -96,8 +127,10 @@ contains
 	! The Wilson B matrix is populated with the relevant second derivative terms.
 	number_reset = prim_list(1,1)
 	do j=1, SIZE(prim_list, 1)
-		coord_counter_1 = prim_list(j,1)
-		coord_counter_2 = prim_list(j,2)
+		coord_counter_1 = (prim_list(j,1) - 1) * 3
+		coord_counter_1 = coord_counter_1 + 1
+		coord_counter_2 = (prim_list(j,2) - 1) * 3
+		coord_counter_2 = coord_counter_2 + 1
 		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
 		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))    
 	    grad = ATOM_DISTANCE_GRAD(coords_1, coords_2)
@@ -124,7 +157,7 @@ contains
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
 	!               hess        : 2D array which contains the hessian matrix in primitive subspace.
 	!               g2_p        : 1D array containing the gradient in primitive subspace for state 2.
-    !               g1_p        : 2D array which contains the primitive Wilson B matrix.
+    !               g1_p        : 1D array containing the gradient in primitive subspace for state 1.
 	!               prims_2     : 1D array containing all the primitive internal coordinates associated with state 2.
 	!               prims_1     : 1D array containing all the primitive internal coordinates associated with state 1.
 	
@@ -132,7 +165,7 @@ contains
 	integer(i4b) :: atom_num, n_prims
 	real(sp) :: hess(n_prims, n_prims), g2_p(n_prims), g1_p(n_prims), prims_2(n_prims), prims_1(n_prims)
 	real(sp) :: dg(n_prims), dq(n_prims), dhess(n_prims, n_prims), dgdq, dqHdq
-	
+		
 	! The changes associated with the gradient and coordinates from the current and previous iteration are calculated.
 	dg = g2_p - g1_p
 	dq = prims_2 - prims_1
@@ -148,7 +181,11 @@ contains
 	dhess = ((OUTER_PRODUCT(dg, dg, n_prims, n_prims)) / dgdq) &
 	& - ((OUTER_PRODUCT(MATMUL(hess, dq), MATMUL(dq, hess), n_prims, n_prims))  / dqHdq)
 
+	! Lastly, the newly updated hessian is obtained.
 	hess = hess + dhess
+	
+	prims_1(:) = 0.0
+	prims_2(:) = 0.0
 	
 	end subroutine update_bfgs_p
 		
@@ -168,7 +205,9 @@ contains
 	real(sp), allocatable :: g_p(:)
 	real(sp) :: BT_Ginv(n_prims, (3 * atom_num))
 
+	! The primitive gradient array is allocated. By definition, its dimensions are the number of prims.
 	if (.not. ALLOCATED(g_p)) allocate(g_p(n_prims))
+	g_p(:) = 0.0
 
 	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
 	BT_Ginv = MATMUL(TRANSPOSE(Bmat_p), SVD_INVERSE(MATMUL(Bmat_p, TRANSPOSE(Bmat_p)), SIZE(Bmat_p, 1), SIZE(Bmat_p, 1)))

@@ -95,17 +95,8 @@ contains
 	end function UNIT_VECTOR
 	
 	
-	!function GRAM_SCHMIDT(vecs) result(res)
-	! Here, an array of vectors is orthonormalised by the Gram Schmidt methodology.
-	! The first vector in the array is taken as the first, and thus it will not change, and the last vector will drop out.
-	
-	! TO-DO : Will write later when it comes to programming the constrained optimisation process.
-	
-	!end function GRAM_SCHMIDT
-	
-	
 	function SVD_INVERSE(A, rows, cols) result(A_inv)
-	! Here, a matrix is taken as input and the generalised inverse is calculated by using singlular value decomposition (SVD).
+	! Here, a square matrix is taken as input and the generalised inverse is calculated by using singlular value decomposition (SVD).
 	!
 	! ARGUMENTS:	A    : 2D array containing the array which is to be inverted by SVD.
 	!               rows : integer which represents the number of rows.
@@ -144,8 +135,6 @@ contains
 	end do
 	
 	! Lastly, the inverse is calculated by the usual formula.
-	! NOTE: This only works for square matrices, which is likely all that will be necessary.
-	!       If non-square matrices are to be used, the code will have to be updated.
 	A_inv = MATMUL(MATMUL(TRANSPOSE(VT), S_inv), TRANSPOSE(U))
 	
 	deallocate(WORK)
@@ -160,9 +149,7 @@ contains
 	! ARGUMENTS:	vecs   : 2D array containing the set of vectors whose orthogonality is checked.
 	!               length : integer which represents the length of the vectors.
     !				n      : integer which represents the number of vectors in the set.
-	
-	! NOTE: The integers length and n may be the wrong way around - needs to be checked when it comes to utilisation...
-	
+
 	implicit none
 	integer(i4b) :: i
 	integer(i4b), intent(in) :: length, n
@@ -194,7 +181,10 @@ contains
 	!
 	! ARGUMENTS:	matrix : 2D array containing the matrix which the determinant of will be calculated.
 	!               n      : integer which represents the number of rows/columns (it doesn't matter which as the matrix is square).
-    ! TO-DO: NEEDS SOME WORK...
+	!
+	!#############################
+    !# TO-DO: NEEDS SOME WORK... #
+	!#############################
 	
 	implicit none
 	integer(i4b), intent(in) :: n
@@ -260,21 +250,26 @@ contains
 	integer(i4b) :: LDA, LWORK, INFO
 	real(sp), intent(in) :: matrix(n, n)
 	real(sp), allocatable :: WORK(:)
-	real(sp) :: eigenvals(n)
+	real(sp) :: eigenvals(n), work_mat(n,n)
 	character :: JOBZ, UPLO
-	
+
+	! Assigning working matrix...
+	work_mat(:,:) = 0.0
+	work_mat(:,:) = matrix(:,:)
+
 	! Initialising some values....
 	JOBZ = 'N'
 	UPLO = 'U'
 	LDA = n
+	INFO = 0
 	
 	! Allocating working array...
 	LWORK = MAX(1, (3 * n) -1)
 	allocate(WORK(LWORK))
-
-	! Obtaining eigenvalues...
-	call DSYEV(JOBZ, UPLO, n, matrix, LDA, eigenvals, WORK, LWORK, INFO)
+	WORK(:) = 0.0
 	
+	! Obtaining eigenvalues...
+	call DSYEV(JOBZ, UPLO, n, work_mat, LDA, eigenvals, WORK, LWORK, INFO)
 	deallocate(WORK)
 
 	end function EVALS
@@ -292,22 +287,29 @@ contains
 	integer(i4b) :: LDA, LWORK, INFO
 	real(sp), intent(in) :: matrix(n, n)
 	real(sp), allocatable :: WORK(:)
-	real(sp) :: eigenvecs(n, n), eigenvals(n)
+	real(sp) :: eigenvecs(n, n), eigenvals(n), work_mat(n,n)
 	character :: JOBZ, UPLO
+
+	! Assigning working matrix...
+	work_mat(:,:) = 0.0
+	eigenvals(:) = 0.0
+	work_mat(:,:) = matrix(:,:)
 
 	! Initialising some values....
 	JOBZ = 'V'
 	UPLO = 'U'
 	LDA = n
+	INFO = 0
 	
 	! Allocating working array....
 	LWORK = MAX(1, (3 * n) -1)
 	allocate(WORK(LWORK))
+	WORK(:) = 0.0
 
 	! Obtaining eigenvectors...
-	call DSYEV(JOBZ, UPLO, n, matrix, LDA, eigenvals, WORK, LWORK, INFO)
-	eigenvecs = matrix
-	
+	call DSYEV(JOBZ, UPLO, n, work_mat, LDA, eigenvals, WORK, LWORK, INFO)
+	eigenvecs(:,:) = 0.0
+	eigenvecs(:,:) = work_mat(:,:)
 	deallocate(WORK)
 	
 	end function EVECS
@@ -401,6 +403,7 @@ contains
 	
 	end function INNER_PRODUCT
 	
+	
 	function OUTER_PRODUCT(vec1, vec2, n1, n2) result(outer)
 	! Here, the outer product of two 1D vectors is calculated.
 	!
@@ -419,6 +422,17 @@ contains
 		end do
 	end do
 	outer = TRANSPOSE(outer)
+	
 	end function OUTER_PRODUCT
+	
+		
+	!function GRAM_SCHMIDT(vecs) result(res)
+	! Here, an array of vectors is orthonormalised by the Gram Schmidt methodology.
+	! The first vector in the array is taken as the first, and thus it will not change, and the last vector will drop out.
+	
+	! TO-DO : Will write later when it comes to programming the constrained optimisation process.
+	
+	!end function GRAM_SCHMIDT
+	
 	
 END MODULE math

@@ -9,6 +9,7 @@ integer(i4b) :: I,j, img_num
 real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS((ndlc * 3) - 6), DelX(noptx), w(noptx)
 real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, maxchgx, temp_x(noptx)
 real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
+logical :: init = .True.
 stpmax = STPMX * REAL(noptx,sp)
 
 line_search=.false.
@@ -191,26 +192,32 @@ else if (coordtype .eq. 1) then
 		oh(:,:)=fulloh(img_num,:,:)
 		print *, 'ENERGY: ', e
 		
+		! To avoid discontinuity in the DLC, the primitive internal coordinates are defined once at the start of each optimisation cycle.
+		! With each evaluation of DLC, the actual values of the primitives are re-calculated, but their definition remains the same.
+		call define_prims(ndlc, to_generate, xopt, prim_list)
+
 		! Generating DLC for the given coordinate set.
-		call refresh_dlc(ndlc, xopt)
-		
-		! The primitive internal coordinates calculated are preserved as they are used in the BFGS update.
-		if (ALLOCATED(old_prims)) deallocate(old_prims)
+	    call refresh_dlc(ndlc, xopt, init)
+
+		! A selection of values are preserved as they are used in the BFGS update.
 		if (.not. ALLOCATED(old_prims)) allocate(old_prims(nprim))
 		old_prims(:) = prims(:)
+		if (.not. ALLOCATED(old_Bmat_dlc)) allocate(old_Bmat_dlc(((ndlc * 3) - 6), (ndlc * 3)))
+		old_Bmat_dlc(:,:) = Bmat_dlc
+		if (.not. ALLOCATED(old_Bmat_p)) allocate(old_Bmat_p((ndlc * 3), nprim))
+		old_Bmat_p(:,:) = Bmat_p
 
 		! Now, the BFGS algorithm can be used to generate the change in DLC from the calculated gradient.
-		! Firstly, the gradients must be updated to DLC subspace.
+		! Firstly, the gradients from both the current and previous step must be updated to DLC subspace.
 		! In addition, the gradients are updated to primitive subspace as these are used in the updating of the hessian matrix.
 		call gen_grad_cart_to_DLC(ndlc, nprim, Bmat_dlc, optg, optg_dlc)
-		call gen_grad_cart_to_DLC(ndlc, nprim, Bmat_dlc, og, og_dlc)
+		call gen_grad_cart_to_DLC(ndlc, nprim, old_Bmat_dlc, og, og_dlc)
 		call gen_grad_cart_to_prim(ndlc, nprim, Bmat_p, optg, optg_p)
-		call gen_grad_cart_to_prim(ndlc, nprim, Bmat_p, og, og_p)
+		call gen_grad_cart_to_prim(ndlc, nprim, old_Bmat_p, og, og_p)
 
 		! To avoid the repeated matrix diagonalisation that would be necessary to continually update the hessian matrix in DLC subspace, we update the primitive hessian.
-		! However, on the first optimisation step, the initial matrix is generate simply as a weighted unit matrix.
+		! However, on the first optimisation step, the initial matrix is generated simply as a weighted unit matrix.
 		! Subsequent iterations of the optimisation will use the BFGS scheme to update this primitive hessian matrix.
-		! The initial matrix is simply a weighted unit matrix, and the weights are all the same at present.
 		if (Nstep .eq. 0) then
 			allocate(h_p(nprim, nprim))
 			allocate(oh_p(nprim, nprim))
@@ -224,11 +231,14 @@ else if (coordtype .eq. 1) then
 			end do
 		end if
 
-		! The hessian matrix must also be updated to DLC subspace.
+		! The hessian matrix is updated to DLC subspace.
 		call gen_hess_prim_to_DLC(ndlc, nprim, Umat, oh_p, h_dlc)
 
 		! The change in DLC can now be evaluated using a quasi-Newton methodology.
 		ChgeS = -MATMUL(h_dlc, optg_dlc)
+		print *, "Original Change in S..."
+		print *, ChgeS
+		print *, "_______________________"
 
 		! The change is DLC is scaled using the maximum step length.
 		stpl = RMSD_CALC(ChgeS, dlc, (ndlc - 6))
@@ -241,19 +251,23 @@ else if (coordtype .eq. 1) then
 			ChgeS = ChgeS / lstep * STPMX
 			write (*,*)"Changing (2) Step Length"
 		END IF
-		
-		! BELOW STEP-LENGTH ALTERNATION NEEDS TO BE PUT INTO A PROPER ALGORITHM.
-		ChgeS = ChgeS * 0.001
-		
+		print *, "New Change in S..."
+		print *, ChgeS
+		print *, "_______________________"
+
 		! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 		temp_x(:) = xopt(:)
 		call DLC_to_cart(ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
-		ChgeX(:) = newx(:) - temp_x(:)
+		ChgeX = newx(:) - temp_x(:)
+		!print *, "Predicted", dlc
 
 		! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.
+		! To ensure continuity, a new set of primitive internal coordinates is calculated for newx.
+		call calc_prims(ndlc, nprim, prims, newx, prim_list)
 		call update_bfgs_p(ndlc, nprim, oh_p, optg_p, og_p, prims, old_prims)
+		print *, NORM2(h_dlc)
 		h_p = oh_p
-		
+
 		! evaluate convergence tests
 		convs = " NO"
 		converged=.false.
@@ -263,6 +277,11 @@ else if (coordtype .eq. 1) then
 		conv(3)=sqrt(sum(chgex**2)/real(noptx,sp))
 		conv(4)=maxval(abs(optg))
 		conv(5)=sqrt(sum(optg**2)/real(noptx,sp))
+		!conv(1)=e-oe
+		!conv(2)=maxval(abs(ChgeS))
+		!conv(3)=sqrt(sum(chgeS**2)/real(((ndlc * 3) - 6),sp))
+		!conv(4)=maxval(abs(optg_dlc))
+		!conv(5)=sqrt(sum(optg_dlc**2)/real(((ndlc * 3) - 6),sp))
 
 		! Tighter convergence test for climbing image
 		if (climbing(img_num)) then
