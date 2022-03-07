@@ -18,13 +18,13 @@ integer(i4b), allocatable :: nbonds(:),bonds(:,:),attyp(:),links(:,:), &
 real(sp), allocatable :: fullx(:,:), fullxq(:,:), fullxl(:,:), fullxopt(:,:), full_dlc(:,:)
 
 ! tables of coordinates of various groups of atoms, of a particular image
-real(sp), allocatable :: x(:), xq(:), xl(:), xopt(:), dlc(:), lratio(:), chg(:)
+real(sp), allocatable :: x(:), xq(:), xl(:), xopt(:), dlc(:), lratio(:), chg(:), x_copy(:)
 
 ! matrices used in the generation of DLC.
 ! these matrices are frequently deallocated and reallocated.
 integer(i4b), allocatable :: prim_list(:,:) ! Primitive coordinate indice array.
 integer(i4b), allocatable :: to_generate(:) ! Used dynamically to assign temporary atom indices.
-real(sp), allocatable :: prims(:), old_prims(:) ! Primitive internal coordinate array.
+real(sp), allocatable :: prims(:), old_prims(:), d_prims(:) ! Primitive internal coordinate array.
 real(sp), allocatable :: Bmat_p(:,:), old_Bmat_p(:,:) ! Primitive Wilson B matrix array.
 real(sp), allocatable :: Bmat_dlc(:,:), old_Bmat_dlc(:,:) ! DLC Wilson B matrix array.
 real(sp), allocatable :: Gmat(:,:) ! G matrix array.

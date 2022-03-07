@@ -12,7 +12,7 @@ IF (allocated(qg).or.allocated(tg)) THEN
 END IF
 
 allocate(qg(nx),tg(nx),g(nx),optg(noptx),og(noptx),h(noptx,noptx), &
-      & oh(noptx,noptx),ox(noptx),newx(noptx),mull(nq))
+      & oh(noptx,noptx),ox(noptx),newx(noptx),mull(nq),x_copy(noptx))
 allocate(fulloe(nimg),fullox(nimg,noptx),fullog(nimg,noptx), &
       & fulloh(nimg,noptx,noptx), fullte(nimg),fulltg(nimg,nx))
 allocate(fullqg(nimg,nx),fullqe(nimg),fullmull(nimg,nq),fulle(nimg), &

@@ -191,7 +191,7 @@ else if (coordtype .eq. 1) then
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
 		print *, 'ENERGY: ', e
-		
+		x_copy = xopt
 		! To avoid discontinuity in the DLC, the primitive internal coordinates are defined once at the start of each optimisation cycle.
 		! With each evaluation of DLC, the actual values of the primitives are re-calculated, but their definition remains the same.
 		call define_prims(ndlc, to_generate, xopt, prim_list)
@@ -202,6 +202,7 @@ else if (coordtype .eq. 1) then
 		! A selection of values are preserved as they are used in the BFGS update.
 		if (.not. ALLOCATED(old_prims)) allocate(old_prims(nprim))
 		old_prims(:) = prims(:)
+		if (.not. ALLOCATED(d_prims)) allocate(d_prims(nprim))
 		if (.not. ALLOCATED(old_Bmat_dlc)) allocate(old_Bmat_dlc(((ndlc * 3) - 6), (ndlc * 3)))
 		old_Bmat_dlc(:,:) = Bmat_dlc
 		if (.not. ALLOCATED(old_Bmat_p)) allocate(old_Bmat_p((ndlc * 3), nprim))
@@ -222,6 +223,7 @@ else if (coordtype .eq. 1) then
 			allocate(h_p(nprim, nprim))
 			allocate(oh_p(nprim, nprim))
 			oh_p(:,:) = 0.0
+			h_p(:,:) = 0.0
 			do i=1, nprim
 				do j=1, nprim
 					if (i == j) then
@@ -229,17 +231,26 @@ else if (coordtype .eq. 1) then
 					end if
 				end do
 			end do
+		else
+			allocate(h_p(nprim, nprim))
+			h_p(:,:) = 0.0
 		end if
+		
+		!if (Nstep .lt. 5) then
+			!print *, "Steepest descent."
+			!ChgeS = optg_dlc * 0.1
+			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
+			!temp_x(:) = xopt(:)
+			!call DLC_to_cart(ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			!ChgeX = newx(:) - temp_x(:)
+		!else
 
 		! The hessian matrix is updated to DLC subspace.
 		call gen_hess_prim_to_DLC(ndlc, nprim, Umat, oh_p, h_dlc)
-
+		
 		! The change in DLC can now be evaluated using a quasi-Newton methodology.
 		ChgeS = -MATMUL(h_dlc, optg_dlc)
-		print *, "Original Change in S..."
-		print *, ChgeS
-		print *, "_______________________"
-
+	
 		! The change is DLC is scaled using the maximum step length.
 		stpl = RMSD_CALC(ChgeS, dlc, (ndlc - 6))
 		IF (stpl .gt. stpmax) THEN
@@ -251,23 +262,37 @@ else if (coordtype .eq. 1) then
 			ChgeS = ChgeS / lstep * STPMX
 			write (*,*)"Changing (2) Step Length"
 		END IF
-		print *, "New Change in S..."
-		print *, ChgeS
-		print *, "_______________________"
-
+	
 		! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 		temp_x(:) = xopt(:)
 		call DLC_to_cart(ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
 		ChgeX = newx(:) - temp_x(:)
-		!print *, "Predicted", dlc
-
+		
 		! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.
 		! To ensure continuity, a new set of primitive internal coordinates is calculated for newx.
 		call calc_prims(ndlc, nprim, prims, newx, prim_list)
-		call update_bfgs_p(ndlc, nprim, oh_p, optg_p, og_p, prims, old_prims)
-		print *, NORM2(h_dlc)
-		h_p = oh_p
+		d_prims = prims - old_prims
+		call update_bfgs_p(ndlc, nprim, oh_p, h_p, optg_p, og_p, prims, old_prims)
+		! If a large change in the primitive hessian matrix is found, then it is hard-reset to the original state.
+		! This is pretty crude, but works for the most part.
+		!if (ABS(NORM2(h_p) - NORM2(oh_p)) .gt. 20) then
+			!print *, "Reset the prim hess."
+			!h_p(:,:) = 0.0
+			!do i=1, nprim
+				!do j=1, nprim
+					!if (i == j) then
+						!h_p(i,j) = 1
+					!end if
+				!end do
+			!end do
+		!end if
+		call sleep(4)
 
+			
+		! The hessian is updated for the next cycle.
+		oh_p = h_p
+		!end if
+		
 		! evaluate convergence tests
 		convs = " NO"
 		converged=.false.

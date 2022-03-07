@@ -278,7 +278,9 @@ contains
 
 	! The new DLC set (which should be close to init_dlc) and the new cartesian coordinates are saved.
 	x_2 = x_1 + dx_save
+	print *, target_dlc
 	call refresh_DLC(atom_num, x_2, init)
+	print *, dlc
 	
 	end subroutine DLC_to_cart
 	

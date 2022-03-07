@@ -149,23 +149,24 @@ contains
 	end subroutine gen_Bmat_prims
 
 
-	subroutine update_bfgs_p(atom_num, n_prims, hess, g2_p, g1_p, prims_2, prims_1) 
+	subroutine update_bfgs_p(atom_num, n_prims, hess_1, hess_2, g2_p, g1_p, prims_2, prims_1) 
 	! Here, the primtive hessian matrix is updated using the BFGS method.
 	! In the terminology in this subroutine, state 2 refers to the newly calculated values, and state 1 to the ones from the previous iteration.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
-	!               hess        : 2D array which contains the hessian matrix in primitive subspace.
+	!               hess_1      : 2D array which contains the hessian matrix in primitive subspace for state 1.
+	!               hess_2      : 2D array which contains the hessian matrix in primitive subspace for state 2.
 	!               g2_p        : 1D array containing the gradient in primitive subspace for state 2.
     !               g1_p        : 1D array containing the gradient in primitive subspace for state 1.
 	!               prims_2     : 1D array containing all the primitive internal coordinates associated with state 2.
 	!               prims_1     : 1D array containing all the primitive internal coordinates associated with state 1.
 	
 	implicit none
-	integer(i4b) :: atom_num, n_prims
-	real(sp) :: hess(n_prims, n_prims), g2_p(n_prims), g1_p(n_prims), prims_2(n_prims), prims_1(n_prims)
-	real(sp) :: dg(n_prims), dq(n_prims), dhess(n_prims, n_prims), dgdq, dqHdq
-		
+	integer(i4b) :: atom_num, n_prims, i, j
+	real(sp) :: hess_1(n_prims, n_prims), hess_2(n_prims, n_prims), g2_p(n_prims), g1_p(n_prims)
+	real(sp) :: dg(n_prims), dq(n_prims), dhess(n_prims, n_prims), prims_2(n_prims), prims_1(n_prims), dgdq, dqHdq
+
 	! The changes associated with the gradient and coordinates from the current and previous iteration are calculated.
 	dg = g2_p - g1_p
 	dq = prims_2 - prims_1
@@ -173,17 +174,25 @@ contains
 	! To ensure that values in the BFGS update do not become unreasonably large, some scaling can be required.
 	! First, initialise the values that may be scaled.
 	dgdq = INNER_PRODUCT(dg, dq, n_prims)
-	dqHdq = INNER_PRODUCT(MATMUL(dq, hess), dq, n_prims)
+	dqHdq = INNER_PRODUCT(MATMUL(dq, hess_1), dq, n_prims)
 	if (dgdq < 0.001) dgdq = 0.001
 	if (dqHdq < 0.001) dqHdq = 0.001
 
 	! The change in the hessian can now be calculated.
 	dhess = ((OUTER_PRODUCT(dg, dg, n_prims, n_prims)) / dgdq) &
-	& - ((OUTER_PRODUCT(MATMUL(hess, dq), MATMUL(dq, hess), n_prims, n_prims))  / dqHdq)
+	& - ((OUTER_PRODUCT(MATMUL(hess_1, dq), MATMUL(dq, hess_1), n_prims, n_prims))  / dqHdq)
+
+	!do i=1, n_prims
+		!do j=1, n_prims
+			!if (ABS(dhess(i,j)) .gt. 0.1) then
+				!dhess(i,j) = h_p(i,j) * 0.9
+			!end if
+		!end do
+	!end do
 
 	! Lastly, the newly updated hessian is obtained.
-	hess = hess + dhess
-	
+	hess_2 = hess_1 + dhess
+
 	prims_1(:) = 0.0
 	prims_2(:) = 0.0
 	
