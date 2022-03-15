@@ -87,7 +87,7 @@ contains
 	real(sp), allocatable :: Bmat_dlc(:,:)
 	
 	! The Wilson B matrix in DLC subspace is allocated. By definition, its dimensions are (3N-6) x (3N), where N is the number of atoms.
-	if (.not. ALLOCATED(Bmat_dlc)) allocate(Bmat_dlc(((3 * atom_num) - 6), (3 * atom_num)))
+	if (.not. ALLOCATED(Bmat_dlc)) allocate(Bmat_dlc((3 * atom_num), (3 * atom_num) - 6))
 	Bmat_dlc(:,:) = 0.0
 	
 	! The calculation of the B matrix in DLC subspace is a straightforward multiplication.	
@@ -172,15 +172,15 @@ contains
 	real(sp) :: Bmat_dlc((3 * atom_num), ((3 * atom_num) - 6)), g(atom_num * 3)
 	real(sp), allocatable :: g_dlc(:)
 	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num))
-
+	
 	! The primitive gradient array is allocated. By definition, its dimensions are the number of delocalised interal coordinates.
 	if (.not. ALLOCATED(g_dlc)) allocate(g_dlc((3 * atom_num) - 6))
 	g_dlc(:) = 0.0
-
+	
 	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
 	BT_Ginv = MATMUL(TRANSPOSE(Bmat_dlc), SVD_INVERSE(MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc)), SIZE(Bmat_dlc, 1), SIZE(Bmat_dlc, 1)))
 	g_dlc = MATMUL(g, TRANSPOSE(BT_Ginv))
-	
+
 	end subroutine gen_grad_cart_to_DLC
 	
 	
@@ -223,9 +223,9 @@ contains
 	
 	implicit none
 	integer(i4b) :: k, atom_num, n_prims
-	integer(i4b), parameter :: resolution = 10000
-	real(sp) :: dS_norm_save, dS_norm
-	real(sp) :: dS((3 * atom_num) - 6), dlc((3 * atom_num) - 6), x_1(3 * atom_num), x_2(3 * atom_num)
+	integer(i4b), parameter :: resolution = 1000
+	real(sp) :: dS_norm_save, dS_norm, dS_norm_init
+	real(sp) :: dS((3 * atom_num) - 6), dlc((3 * atom_num) - 6), x_1(3 * atom_num), x_2(3 * atom_num), init_dx(3 * atom_num)
 	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num)), Bmat_dlc((3 * atom_num), ((3 * atom_num) - 6))
 	real(sp) :: init_dlc((3 * atom_num) - 6), init_dS((3 * atom_num) - 6), target_dlc((3 * atom_num) - 6)
 	real(sp) :: dx(3 * atom_num), dx_step(3 * atom_num), dx_temp(3 * atom_num), dS_temp((3 * atom_num) - 6)
@@ -244,6 +244,7 @@ contains
 	! This is the initial drving force for the algorithm below.
 	dx(:) = 0.0
 	dx = MATMUL(TRANSPOSE(BT_Ginv), dS)
+	init_dx = dx
 	
 	! In the original implementation by Baker, the transformation procedure is iterative using the equation above.
 	! However, this procedure is rather unstable when it comes to large changes in DLC, or near 180 dihedral angles.
@@ -260,6 +261,7 @@ contains
 			call refresh_DLC(atom_num, temp_x, init)
 			dS_temp = target_dlc - dlc
 			dS_norm_save = NORM2(dS_temp)
+			dS_norm_init = dS_norm_save
 			dx_save = dx_temp
 			dS_save = dS_temp
 		else
@@ -276,11 +278,9 @@ contains
 		end if
 	end do
 
+	print *, "final dS_norm", dS_norm_save
 	! The new DLC set (which should be close to init_dlc) and the new cartesian coordinates are saved.
 	x_2 = x_1 + dx_save
-	print *, target_dlc
-	call refresh_DLC(atom_num, x_2, init)
-	print *, dlc
 	
 	end subroutine DLC_to_cart
 	

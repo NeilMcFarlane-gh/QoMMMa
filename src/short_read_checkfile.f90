@@ -48,13 +48,25 @@ do img_num=1,nimg
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) coordtype
 	
+	! If DLC are used, the primitive internal coordinate type
+	read(unit=8,fmt=*) dummy
+	read(unit=8,fmt=*) primtype
+	
 	! Primitive internal coordinate definitions.
 	if (coordtype .eq. 1) then
 		read(unit=8,fmt=*) dummy
 		read(unit=8,fmt=*) nprim
-		do q = 1, nprim
-			read (unit=8,fmt=*) (prim_list(q,j),j=1,2)
-		end do
+		if (primtype .eq. 0) then
+			allocate(prim_list(nprim,2))
+			do q = 1, nprim
+				read (unit=8,fmt=*) (prim_list(q,j),j=1,2)
+			end do
+		else if (primtype .eq. 1) then
+			allocate(prim_list(nprim,4))
+			do q = 1, nprim
+				read (unit=8,fmt=*) (prim_list(q,j),j=1,4)
+			end do		
+		end if
 	end if
 
 	! Now number & type of constraints

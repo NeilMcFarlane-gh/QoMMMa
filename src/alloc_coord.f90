@@ -36,6 +36,8 @@ read(8,*) dummy
 read(8,*) gsmtype
 read(8,*) dummy
 read(8,*) coordtype
+read(8,*) dummy
+read(8,*) primtype
 close(8)
 
 ! then allocate
@@ -53,11 +55,6 @@ end if
 allocate(qm(nq),nbonds(n),chg(n),bonds(n,maxbond),attyp(n),modchg(n),inact(n),opt(nopt)) 
 allocate(fullx(nimg,nx),fullxq(nimg,nqx),fullxl(nimg,nlx),fullxopt(nimg,noptx))
 allocate(x(nx),xq(nqx),xl(nlx),xopt(noptx),lratio(nl),llabel(nl),label(n),links(nl,2)) 
-
-
-allocate(prim_list(15, 2))
-
-
 allocate(qlabel(nq))
 allocate(img_string(nimg))
 

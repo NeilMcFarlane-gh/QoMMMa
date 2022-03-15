@@ -33,7 +33,7 @@ real(sp),allocatable :: fulloptga(:,:),fulloptgb(:,:)
 real(sp) :: qea,qeb,ea,eb,oea,oeb
 
 real(sp), parameter :: hart_kcal = 627.5095d0
-real(sp), parameter :: stpmx = 1.d-1
+real(sp), parameter :: stpmx = 7.d-1
 integer(i4b), parameter :: maxcnsat = 10
 ! The most complicated constraint will apply to less than 10 atoms
 ! All the following convergence criteria are read from user input through read_converg

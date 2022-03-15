@@ -1,6 +1,6 @@
 FF=gfortran-6
 LD=gfortran-6
-FFLAGS=
+FFLAGS=-fbounds-check
 LIBS=/usr/local/lapack-3.10.0-gcc6/libblas.a /usr/local/lapack-3.10.0-gcc6/liblapack.a
 LFLAGS=-llapack -lblas
 RM=rm -f
@@ -36,7 +36,7 @@ math.o primitive.o delocalised.o \
 alloc_optim.o alloc_coord.o  read_expl_coord.o  write_first_report.o  read_charges.o  \
 write_charges.o   write_resp.o   write_inactive.o  write_first_checkfile.o  \
 read_initfile.o  setup_first.o det_sm_coord.o write_sm_coord.o write_atomic.o \
-check_constrained_atoms.o initialize_update_geom.o
+check_constrained_atoms.o initialize_update_geom.o initialize_prims.o
 
 QOMMMA_MECP=$(BIN)/qommma_mecp.x
 QOMMMA_MECP_OBJ= \

@@ -7,7 +7,7 @@ implicit none
 
 character(3) :: tmplab
 character(80) :: dummy
-integer(i4b) :: rstat
+integer(i4b) :: rstat, prima
 integer(i4b) :: i, j, k, ii, jj, kk, nmodif, neba, nebb, nebc, gsma, coorda
 real(sp) :: rql, rqm, tmpchg
 
@@ -45,6 +45,10 @@ read(unit=8,fmt=*) gsma
 ! Coordinate selection
 read(unit=8,fmt=*) dummy
 read(unit=8,fmt=*) coorda
+
+! If DLC are used, the primitive internal coordinate type
+read(unit=8,fmt=*) dummy
+read(unit=8,fmt=*) prima
 
 ! now reads the QM atoms
 read(unit=8,fmt=*) dummy

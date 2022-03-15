@@ -97,14 +97,25 @@ def fortinp():
         icoordtyp = 0
     elif coordtype.lower() =='dlc':
         icoordtyp = 1
-    elif coordtype.lower() == 'cart_dlc':
-        icoordtyp = 2
     else:
         qomutil.qomlog('Error, unknown coordtype : ' + coordtype + ' is requested', usrdir)
     qomutil.qomlog('The coordinate type : ' + coordtype + ' is requested', usrdir)
     fd.write('coordtype')
     fd.write('\n')
     fd.write(str(icoordtyp))
+    fd.write('\n') 
+    
+    # If DLC are used, then the type of primitive internal coordinates used to generate them is written to fortinput.
+    if primtype.lower() == 'tc':
+        iprimtyp = 0
+    elif coordtype.lower() =='full':
+        iprimtyp = 1
+    else:
+        qomutil.qomlog('Error, unknown primtype : ' + primtype + ' is requested', usrdir)
+    qomutil.qomlog('The coordinate type : ' + primtype + ' is requested', usrdir)
+    fd.write('primtype')
+    fd.write('\n')
+    fd.write(str(iprimtyp))
     fd.write('\n') 
     
     # The atom indices and types relating to the QM atoms is written to fortinput using the function qmread defined in qomutil.py.

@@ -35,6 +35,21 @@ do img_num=1,nimg
 	write(unit=8,fmt='(2I6, F10.2)') gsmtype
 	write(unit=8,fmt='(A)') "Then the coordinate selection for optimisation"
 	write(unit=8,fmt='(2I6, F10.2)') coordtype
+	write(unit=8,fmt='(A)') "If DLC are used, the type of primitive internal coordinates used to generate the DLC"
+	write(unit=8,fmt='(2I6, F10.2)') primtype
+	if (coordtype .eq. 1) then
+		write(unit=8,fmt='(A)') "Then the number of primitive internal coordinates and their definition."
+		write(unit=8,fmt='(2I6, F10.2)') nprim
+		if (primtype .eq. 0) then
+			do i = 1, nprim
+				write (unit=8,fmt='(2I6,3X)') (prim_list(i,j),j=1,2)
+			end do
+		else if (primtype .eq. 1) then
+			do i = 1, nprim
+				write (unit=8,fmt='(4I6,3X)') (prim_list(i,j),j=1,4)
+			end do
+		end if
+	end if
 	write(unit=8,fmt='(A)') "Then the number of constraints and the type (1=Harmonic or 2=tanh)"
 	write(unit=8,fmt='(2I6)') ncon, kcnstyp
 	write(unit=8,fmt='(A)') "Then the list of which atoms are QM:"

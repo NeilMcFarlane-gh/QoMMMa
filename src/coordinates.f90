@@ -3,7 +3,8 @@ use nrtype
 implicit none
 
 integer(i4b), parameter :: maxbond = 8
-integer(i4b) :: n, nx, nq, nqx, nl, nlx, nopt, noptx, ndlc, nprim, ninact, ncon, kcnstyp, nimg, nebtype, gsmtype, coordtype
+integer(i4b) :: n, nx, nq, nqx, nl, nlx, nopt, noptx, ndlc, nprim, ninact, ncon, kcnstyp, nimg, nebtype 
+integer(i4b) :: gsmtype, coordtype, primtype
 real(sp) :: tolde_org, tolgmax_org, tolgrms_org, toldxmax_org, toldxrms_org, tolper
 
 real(sp) :: kspring

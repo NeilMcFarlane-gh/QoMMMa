@@ -5,27 +5,22 @@ implicit none
 contains
 
 
-	subroutine define_prims(atom_num, to_generate, x, prim_list) 
+	subroutine define_prims_TC(atom_num, to_generate, coords, prim_list)
 	! Here, the primitive internal coordinates are defined for a given cartesian coordinate set using a total connectivity scheme with a distance cutoff.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               to_generate : 1D array containing the list of atom indices which primitive internal coordinates are to be generated for.
-	!               x           : 1D array containing all the cartesian coordinates of the system.
+	!               coords      : 1D array containing all the cartesian coordinates of the system.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
-	
-	implicit none
-	integer(i4b) :: i, j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2
-	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:), to_generate(:)
-	real(sp) :: coords_1(3), coords_2(3), x(atom_num), r, temp_prim
-	real(sp), allocatable :: prims_temp(:)
-	real(sp), parameter :: cut_off = 35 !Angstroms
 
-	! Firstly, the list of atom indices for which primitive internal coordinates is allocated and populated.
-	! The numbers are simply in numerical order as it does not especially matter since the DLC and cartesian coordinates are combined separately.
-	if (.not. ALLOCATED(to_generate)) allocate(to_generate(atom_num))
-	to_generate = (/(i, i=1,atom_num, 1)/)
-	
-	! The list of primitive internal coordinates is simple to define when every atom is connected to every atom.
+	implicit none
+	integer(i4b) :: i, j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2, prim_type
+	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:), to_generate(:)
+	real(sp) :: coords_1(3), coords_2(3), coords(atom_num * 3), r, temp_prim
+	real(sp), allocatable :: prims_temp(:)
+	real(sp), parameter :: cut_off = 25 !Angstroms
+
+	! The list of primitive internal coordinates is rather simple to define when every atom is connected to every atom.
 	prim_list_temp = COMBINATIONS_2(to_generate, SIZE(to_generate))
 	
 	! Next, using prim_list_temp, all the primitive coordinates can be generated, and their size can be checked.
@@ -37,8 +32,8 @@ contains
 		coord_counter_1 = coord_counter_1 + 1
 		coord_counter_2 = (prim_list_temp(j,2) - 1) * 3
 		coord_counter_2 = coord_counter_2 + 1
-		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
-		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))
+		coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
+		coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
 		r = ATOM_DISTANCE(coords_1, coords_2)
 		if (r .lt. cut_off) then
 			prims_temp(j) = r
@@ -50,9 +45,9 @@ contains
 	! The output arrays prims and prim_list must be allocated so that they can be populated.
 	alloc_counter = 0
 	do j=1, SIZE(prims_temp)
-	    temp_prim = prims_temp(j)
+		temp_prim = prims_temp(j)
 		if (temp_prim .gt. 0.0) then
-		    alloc_counter = alloc_counter + 1
+			alloc_counter = alloc_counter + 1
 		end if
 	end do
 	if (.not. ALLOCATED(prim_list)) allocate(prim_list(alloc_counter, 2))
@@ -64,60 +59,162 @@ contains
 	prim_list(:,:) = 0
 	prims_counter = 1
 	do j=1, SIZE(prims_temp)
-	    temp_prim = prims_temp(j)
+		temp_prim = prims_temp(j)
+		if (temp_prim .gt. 0.0) then
+			prim_list(prims_counter,:) = prim_list_temp(j,:)
+			prims_counter = prims_counter + 1
+		end if
+	end do
+	print *, prim_list
+	end subroutine define_prims_TC
+	
+	
+	subroutine define_prims_full(atom_num, to_generate, coords, prim_list)
+	! Here, the primitive internal coordinates are defined for a given cartesian coordinate set using a bond lengths, angles and torsions.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
+	!               to_generate : 1D array containing the list of atom indices which primitive internal coordinates are to be generated for.
+	!               coords      : 1D array containing all the cartesian coordinates of the system.
+	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
+
+	implicit none
+	integer(i4b) :: i, j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2, prim_type
+	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:), to_generate(:)
+	real(sp) :: coords_1(3), coords_2(3), coords(atom_num * 3), r, temp_prim
+	real(sp), allocatable :: prims_temp(:)
+	real(sp), parameter :: cut_off = 3.0 !Angstroms
+
+	! The list of primitive internal coordinates is rather simple to define when every atom is connected to every atom.
+	prim_list_temp = COMBINATIONS_2(to_generate, SIZE(to_generate))
+	
+	! Next, using prim_list_temp, all the primitive coordinates can be generated, and their size can be checked.
+	! Each of these distances are subsquently checked with a distance criteria so that the system makes chemical sense.
+	! If they are greater than the predefined cut-off, then they are set to zero to allow for subsequent removal.
+	if (.not. ALLOCATED(prims_temp)) allocate(prims_temp(SIZE(prim_list_temp, 1)))
+	do j=1, SIZE(prim_list_temp, 1)
+		coord_counter_1 = (prim_list_temp(j,1) - 1) * 3
+		coord_counter_1 = coord_counter_1 + 1
+		coord_counter_2 = (prim_list_temp(j,2) - 1) * 3
+		coord_counter_2 = coord_counter_2 + 1
+		coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
+		coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
+		r = ATOM_DISTANCE(coords_1, coords_2)
+		if (r .lt. cut_off) then
+			prims_temp(j) = r
+		else
+			prims_temp(j) = 0.0
+		end if
+	end do
+	
+	! The output arrays prims and prim_list must be allocated so that they can be populated.
+	alloc_counter = 0
+	do j=1, SIZE(prims_temp)
+		temp_prim = prims_temp(j)
+		if (temp_prim .gt. 0.0) then
+			alloc_counter = alloc_counter + 1
+		end if
+	end do
+	if (.not. ALLOCATED(prim_list)) allocate(prim_list(alloc_counter, 2))
+	
+	! The global integer, nprim, is also initialised here.
+	nprim = alloc_counter
+	
+	! Lastly, the output arrays prims and prim_list can be populated.
+	prim_list(:,:) = 0
+	prims_counter = 1
+	do j=1, SIZE(prims_temp)
+		temp_prim = prims_temp(j)
 		if (temp_prim .gt. 0.0) then
 			prim_list(prims_counter,:) = prim_list_temp(j,:)
 			prims_counter = prims_counter + 1
 		end if
 	end do
 	
-	end subroutine define_prims
+	end subroutine define_prims_full
 	
-	
-	subroutine calc_prims(atom_num, n_prims, prims, x, prim_list) 
+	subroutine calc_prims(atom_num, n_prims, prims, coords, prim_list) 
 	! Here, the primitive internal coordinates are calculated from a given primitive coordinate set.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
 	!               prims       : 1D array containing all the primitive internal coordinates associated with this input.
-	!               x           : 1D array containing all the cartesian coordinates of the system.
+	!               coords      : 1D array containing all the cartesian coordinates of the system.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 	
 	implicit none
-	integer(i4b) :: i, j, atom_num, prims_counter, alloc_counter, coord_counter_1, coord_counter_2, n_prims
-	integer(i4b), allocatable :: prim_list(:,:), prim_list_temp(:,:), to_generate(:)
-	real(sp) :: coords_1(3), coords_2(3), x(atom_num), r, temp_prim
-	real(sp), allocatable :: prims(:), prims_temp(:)
-	real(sp), parameter :: cut_off = 3.5 !Angstroms
+	integer(i4b) :: i, j, atom_num, prims_counter, alloc_counter, n_prims
+	integer(i4b) :: coord_counter_1, coord_counter_2, coord_counter_3, coord_counter_4
+	integer(i4b), allocatable :: prim_list(:,:)
+	real(sp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
+	real(sp) :: r, theta, phi, temp_prim
+	real(sp), allocatable :: prims(:)
 
-	! Using the earlier defined prim_list, each of the primitive interal coordinates can be calculated.
+	! Using the earlier defined prim_list, each of the primitive internal coordinates can be calculated.
 	if (.not. ALLOCATED(prims)) allocate(prims(n_prims))
 	do j=1, n_prims
-		coord_counter_1 = (prim_list(j,1) - 1) * 3
-		coord_counter_1 = coord_counter_1 + 1
-		coord_counter_2 = (prim_list(j,2) - 1) * 3
-		coord_counter_2 = coord_counter_2 + 1
-		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
-		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))
-		r = ATOM_DISTANCE(coords_1, coords_2)
-		prims(j) = r
+		if (SIZE(prim_list,j) .eq. 2) then
+			! Stashing coordinates.
+			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = coord_counter_1 + 1
+			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = coord_counter_2 + 1
+			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
+			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
+			
+			! Calculating the primitive and adding to prims.
+			r = ATOM_DISTANCE(coords_1, coords_2)
+			prims(j) = r
+		else if (SIZE(prim_list,j) .eq. 3) then
+			! Stashing coordinates.
+			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = coord_counter_1 + 1
+			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = coord_counter_2 + 1
+			coord_counter_3 = (prim_list(j,3) - 1) * 3
+			coord_counter_3 = coord_counter_3 + 1
+			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
+			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
+			coords_3(:) = coords(coord_counter_3:(coord_counter_3 + 2))
+			
+			! Calculating the primitive and adding to prims.
+			theta = ATOM_ANGLE(coords_1, coords_2, coords_3)
+			prims(j) = theta
+		else if (SIZE(prim_list,j) .eq. 4) then
+			! Stashing coordinates.
+			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = coord_counter_1 + 1
+			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = coord_counter_2 + 1
+			coord_counter_3 = (prim_list(j,3) - 1) * 3
+			coord_counter_3 = coord_counter_3 + 1
+			coord_counter_4 = (prim_list(j,4) - 1) * 3
+			coord_counter_4 = coord_counter_4 + 1
+			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
+			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
+			coords_3(:) = coords(coord_counter_3:(coord_counter_3 + 2))
+			coords_4(:) = coords(coord_counter_4:(coord_counter_4 + 2))
+			
+			! Calculating the primitive and adding to prims.
+			phi = ATOM_DIHEDRAL(coords_1, coords_2, coords_3, coords_4)
+			prims(j) = phi
+		end if
 	end do
 	
 	end subroutine calc_prims
 	
 	
-	subroutine gen_Bmat_prims(atom_num, n_prims, x, prim_list, Bmat_p)
+	subroutine gen_Bmat_prims(atom_num, n_prims, coords, prim_list, Bmat_p)
 	! Here, the Wilson B matrix for the conversion between cartesian and primitive internal coordinates is created.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
-	!               x           : 1D array containing all the cartesian coordinates of the system.
+	!               coords      : 1D array containing all the cartesian coordinates of the system.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
     !               Bmat_p      : 2D array which contains the primitive Wilson B matrix.	
 	
 	implicit none
 	integer(i4b) :: i, j, k, number_reset, atom_num, n_prims, prim_list(n_prims, 2), coord_counter_1, coord_counter_2
-	real(sp) :: x(atom_num), grad(3,2), coords_1(3), coords_2(3)
+	real(sp) :: coords(atom_num * 3), grad(3,2), coords_1(3), coords_2(3)
 	real(sp), allocatable :: Bmat_p(:,:)
 	
 	! The Wilson B matrix is allocated. By definition, its dimensions are (number of prims) x (3N), where N is the number of atoms.
@@ -131,8 +228,8 @@ contains
 		coord_counter_1 = coord_counter_1 + 1
 		coord_counter_2 = (prim_list(j,2) - 1) * 3
 		coord_counter_2 = coord_counter_2 + 1
-		coords_1(:) = x(coord_counter_1:(coord_counter_1 + 2))
-		coords_2(:) = x(coord_counter_2:(coord_counter_2 + 2))    
+		coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
+		coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))    
 	    grad = ATOM_DISTANCE_GRAD(coords_1, coords_2)
 		do i=1, 2
 			if ((prim_list(j,i) - number_reset) == 0) then
@@ -182,13 +279,14 @@ contains
 	dhess = ((OUTER_PRODUCT(dg, dg, n_prims, n_prims)) / dgdq) &
 	& - ((OUTER_PRODUCT(MATMUL(hess_1, dq), MATMUL(dq, hess_1), n_prims, n_prims))  / dqHdq)
 
-	!do i=1, n_prims
-		!do j=1, n_prims
-			!if (ABS(dhess(i,j)) .gt. 0.1) then
-				!dhess(i,j) = h_p(i,j) * 0.9
-			!end if
-		!end do
-	!end do
+	do i=1, n_prims
+		do j=1, n_prims
+			if (ABS(dhess(i,j)) .gt. 0.5) then
+!				print *, "adjusting hessian in position...", i, j
+				dhess(i,j) = h_p(i,j) * 0.0
+			end if
+		end do
+	end do
 
 	! Lastly, the newly updated hessian is obtained.
 	hess_2 = hess_1 + dhess

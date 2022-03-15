@@ -30,7 +30,7 @@ contains
 	end function ATOM_DISTANCE
 	
 	
-	function ATOM_DISTANCE_GRAD(coords_i, coords_j) result(grad)
+	function ATOM_DISTANCE_GRAD(coords_i, coords_j) result(grad_r)
 	! Here, two sets of cartesian coordinates are taken, and the first derivatives for the distance between the points are calculated.
 	! This is used to fill the Wilson B matrix in generation of a primitive internal coordinate space.
 	!
@@ -41,7 +41,7 @@ contains
 	integer(i4b) :: i, j
 	real(sp) :: unit_vec(3), vec(3)
 	real(sp), intent(in) :: coords_i(3), coords_j(3)
-	real(sp) :: grad(3,2)
+	real(sp) :: grad_r(3,2)
 	
 	! Calculating vector between both coordinates.
 	do i = 1, 3
@@ -50,10 +50,72 @@ contains
 	
 	! Calculating analytical first derivatives.
 	unit_vec = unit_vector(vec, SIZE(vec))
-	grad(:,1) = -1 * unit_vec
-	grad(:,2) = unit_vec
+	grad_r(:,1) = -1 * unit_vec
+	grad_r(:,2) = unit_vec
 	
 	end function ATOM_DISTANCE_GRAD
+	
+	
+	function ATOM_ANGLE(coords_i, coords_j, coords_k) result(theta)
+	! Here, three sets of cartesian coordinates are taken, and the angle between the points is calculated.
+	! This is used to obtain an internal coordinate set.
+	!
+	! ARGUMENTS:	coords_i : 1D array containing the x,y,z coordinates of atom i.
+	!				coords_j : 1D array containing the x,y,z coordinates of atom j.	
+	!				coords_k : 1D array containing the x,y,z coordinates of atom k.	
+	
+	implicit none
+	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3)
+	real(sp) :: theta
+	
+	end function ATOM_ANGLE
+	
+	
+	function ATOM_ANGLE_GRAD(coords_i, coords_j, coords_k) result(grad_theta)
+	! Here, three sets of cartesian coordinates are taken, and the first derivatives for the angle between the points is calculated.
+	! This is used to obtain an internal coordinate set.
+	!
+	! ARGUMENTS:	coords_i : 1D array containing the x,y,z coordinates of atom i.
+	!				coords_j : 1D array containing the x,y,z coordinates of atom j.	
+	!				coords_k : 1D array containing the x,y,z coordinates of atom k.	
+	
+	implicit none
+	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3)
+	real(sp) :: grad_theta(3,3)	
+	
+	end function ATOM_ANGLE_GRAD
+	
+	
+	function ATOM_DIHEDRAL(coords_i, coords_j, coords_k, coords_l) result(phi)
+	! Here, three sets of cartesian coordinates are taken, and the dihedral torsion between the points is calculated.
+	! This is used to obtain an internal coordinate set.
+	!
+	! ARGUMENTS:	coords_i : 1D array containing the x,y,z coordinates of atom i.
+	!				coords_j : 1D array containing the x,y,z coordinates of atom j.	
+	!				coords_k : 1D array containing the x,y,z coordinates of atom k.	
+	!				coords_l : 1D array containing the x,y,z coordinates of atom l.	
+	
+	implicit none
+	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3), coords_l(3)
+	real(sp) :: phi
+	
+	end function ATOM_dihedral
+	
+	
+	function ATOM_DIHEDRAL_GRAD(coords_i, coords_j, coords_k, coords_l) result(grad_phi)
+	! Here, four sets of cartesian coordinates are taken, and the first derivatives for the dihedral torsion between the points is calculated.
+	! This is used to obtain an internal coordinate set.
+	!
+	! ARGUMENTS:	coords_i : 1D array containing the x,y,z coordinates of atom i.
+	!				coords_j : 1D array containing the x,y,z coordinates of atom j.	
+	!				coords_k : 1D array containing the x,y,z coordinates of atom k.	
+	!				coords_l : 1D array containing the x,y,z coordinates of atom l.	
+	
+	implicit none
+	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3), coords_l(3)
+	real(sp) :: grad_phi(3,4)	
+	
+	end function ATOM_DIHEDRAL_GRAD	
 	
 	
 	function VECTOR_PROJECT(vec1, vec2, length) result(proj_vec)
@@ -113,7 +175,7 @@ contains
 	LDA = rows
 	LDU = rows
 	LDVT = cols
-	
+
 	! A working array is created for use in calculation of SVD.
 	LWORK = MAX(1, (3 * MIN(rows, cols) + MAX(rows, cols)), (5 * min(rows, cols)))
 	allocate(WORK(LWORK))
@@ -136,7 +198,7 @@ contains
 	
 	! Lastly, the inverse is calculated by the usual formula.
 	A_inv = MATMUL(MATMUL(TRANSPOSE(VT), S_inv), TRANSPOSE(U))
-	
+
 	deallocate(WORK)
 	
 	end function SVD_INVERSE

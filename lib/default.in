@@ -57,6 +57,10 @@ qmcode='Jaguar'
 # Coordinate system choice. The default of 'cart' means cartesian coordinates for the whole system.
 coordtype='cart'
 
+# If DLC are selected, then there are two methods of primitive internal coordinate definition.
+# These are a total connectivity scheme, or the default of bonds, angles and torsions.
+primtype='tc'
+
 # Growing string method. The default of 'none' will not use the growing string method.
 gsmtype='none'
 
