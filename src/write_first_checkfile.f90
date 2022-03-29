@@ -18,7 +18,6 @@ END IF
 
 ! Start loop over all images
 do img_num=1,nimg
-	 
 	! Then Start to dump a new "FullGeom" file
 	! and check that the number of the various atom types is correct
 	open(unit=8,file=("CheckFile"//trim(img_string(img_num))),status="replace")
@@ -39,16 +38,10 @@ do img_num=1,nimg
 	write(unit=8,fmt='(2I6, F10.2)') primtype
 	if (coordtype .eq. 1) then
 		write(unit=8,fmt='(A)') "Then the number of primitive internal coordinates and their definition."
-		write(unit=8,fmt='(2I6, F10.2)') nprim
-		if (primtype .eq. 0) then
-			do i = 1, nprim
-				write (unit=8,fmt='(2I6,3X)') (prim_list(i,j),j=1,2)
-			end do
-		else if (primtype .eq. 1) then
-			do i = 1, nprim
-				write (unit=8,fmt='(4I6,3X)') (prim_list(i,j),j=1,4)
-			end do
-		end if
+		write(unit=8,fmt='(2I6, F10.2)') SIZE(prim_list,1)
+		do i = 1, SIZE(prim_list,1)
+			write (unit=8,fmt='(4I6,3X)') (prim_list(i,j),j=1,4)
+		end do
 	end if
 	write(unit=8,fmt='(A)') "Then the number of constraints and the type (1=Harmonic or 2=tanh)"
 	write(unit=8,fmt='(2I6)') ncon, kcnstyp

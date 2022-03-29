@@ -65,17 +65,10 @@ do img_num=1,nimg
 	if (coordtype .eq. 1) then
 		read(unit=8,fmt=*) dummy
 		read(unit=8,fmt=*) nprim
-		if (primtype .eq. 0) then
-			allocate(prim_list(nprim,2))
-			do q = 1, nprim
-				read (unit=8,fmt=*) (prim_list(q,j),j=1,2)
-			end do
-		else if (primtype .eq. 1) then
-			allocate(prim_list(nprim,4))
-			do q = 1, nprim
-				read (unit=8,fmt=*) (prim_list(q,j),j=1,4)
-			end do		
-		end if
+		allocate(prim_list(nprim,4))
+		do q = 1, nprim
+			read (unit=8,fmt=*) (prim_list(q,j),j=1,4)
+		end do		
 	end if
 
 	! Number and overall type of constraints

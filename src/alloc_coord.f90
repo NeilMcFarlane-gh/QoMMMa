@@ -52,7 +52,7 @@ if (coordtype .eq. 1) then
 	ndlc = nopt
 end if
 
-allocate(qm(nq),nbonds(n),chg(n),bonds(n,maxbond),attyp(n),modchg(n),inact(n),opt(nopt)) 
+allocate(qm(nq),nbonds(n),chg(n),bonds(n,maxbond),bonds_xopt(nopt,maxbond),attyp(n),modchg(n),inact(n),opt(nopt)) 
 allocate(fullx(nimg,nx),fullxq(nimg,nqx),fullxl(nimg,nlx),fullxopt(nimg,noptx))
 allocate(x(nx),xq(nqx),xl(nlx),xopt(noptx),lratio(nl),llabel(nl),label(n),links(nl,2)) 
 allocate(qlabel(nq))

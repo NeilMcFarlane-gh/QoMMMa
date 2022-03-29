@@ -80,15 +80,9 @@ do img_num=1,nimg
 	if (coordtype .eq. 1) then
 		write(unit=8,fmt='(A)') "Then the number of primitive internal coordinates and their definition."
 		write(unit=8,fmt='(2I6, F10.2)') nprim
-		if (primtype .eq. 0) then
-			do i = 1, nprim
-				write (unit=8,fmt='(2I6,3X)') (prim_list(i,j),j=1,2)
-			end do
-		else if (primtype .eq. 1) then
-			do i = 1, nprim
-				write (unit=8,fmt='(4I6,3X)') (prim_list(i,j),j=1,4)
-			end do
-		end if
+		do i = 1, nprim
+			write (unit=8,fmt='(4I6,3X)') (prim_list(i,j),j=1,4)
+		end do
 	end if
 	write(unit=8,fmt='(A)') "Then the number of constraints and the type (1=Harmonic or 2=tanh)"
 	write(unit=8,fmt='(2I6)') ncon, kcnstyp

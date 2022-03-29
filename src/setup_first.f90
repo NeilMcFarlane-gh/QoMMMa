@@ -1,5 +1,5 @@
 PROGRAM setup_first
-use nrtype
+use nrtype ; use coordinates ; use optimdata
 implicit none
 
 ! This program is run at the beginning of the QM/MM calculation.
@@ -12,8 +12,8 @@ call read_expl_coord()
 call read_charges()
 call read_initfile()
 call initialize_update_geom()
-call initialize_prims()
 call det_sm_coord()
+call initialize_prims()
 call write_sm_coord()
 call write_atomic()
 call write_charges()

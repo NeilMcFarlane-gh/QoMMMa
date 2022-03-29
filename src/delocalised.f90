@@ -40,7 +40,7 @@ contains
 	!                             This can be used to transform to a redundant internal coordinate set, but this is not presently used.
 	
 	implicit none
-	integer(i4b) :: atom_num, n_prims, j, i, U_vector_counter, R_vector_counter
+	integer(i4b) :: atom_num, n_prims, j, U_vector_counter, R_vector_counter
 	real(sp) :: Gmat(n_prims, n_prims), eigenvals(n_prims), eigenvecs(n_prims, n_prims), temp_eval
 	real(sp), allocatable :: Umat(:,:), Rmat(:,:)
 	
@@ -85,14 +85,14 @@ contains
 	integer(i4b) :: atom_num, n_prims
 	real(sp) :: Bmat_p((3 * atom_num), n_prims), Umat(n_prims, ((3 * atom_num) - 6))
 	real(sp), allocatable :: Bmat_dlc(:,:)
-	
+
 	! The Wilson B matrix in DLC subspace is allocated. By definition, its dimensions are (3N-6) x (3N), where N is the number of atoms.
 	if (.not. ALLOCATED(Bmat_dlc)) allocate(Bmat_dlc((3 * atom_num), (3 * atom_num) - 6))
 	Bmat_dlc(:,:) = 0.0
 	
 	! The calculation of the B matrix in DLC subspace is a straightforward multiplication.	
 	Bmat_dlc = MATMUL(Bmat_p, Umat)
-	
+
 	end subroutine gen_Bmat_DLC
 	
 	
@@ -125,7 +125,7 @@ contains
 	end subroutine gen_DLC
 	
 	
-	subroutine refresh_DLC(atom_num, coords, init)
+	subroutine refresh_DLC(atom_num, coords)
 	! Here, the DLC are refreshed or generated for the first time.
 	! All arrays used in the generation are deallocated so that they can be allocated appropriately again.
 	!
@@ -135,8 +135,7 @@ contains
 	implicit none
 	integer(i4b) :: atom_num
 	real(sp) :: coords(atom_num * 3)
-	logical :: init
-
+	
 	! First, (if necessary) deallocate all arrays used in DLC generation.
 	if (ALLOCATED(prims) .or. ALLOCATED(Bmat_p) &
 	& .or. ALLOCATED(Bmat_dlc) .or. ALLOCATED(Gmat) .or. ALLOCATED(Umat) &
@@ -151,9 +150,6 @@ contains
 	call diag_Gmat(atom_num, nprim, Gmat, Umat, Rmat)
 	call gen_DLC(atom_num, nprim, Umat, prims, dlc)
 	call gen_Bmat_DLC(atom_num, nprim, Bmat_p, Umat, Bmat_dlc)
-	!if (init .eqv. .True.) then
-		!print *, "calculated", dlc
-	!end if
 
 	end subroutine refresh_DLC
 	
@@ -171,14 +167,15 @@ contains
 	integer(i4b) :: atom_num, n_prims
 	real(sp) :: Bmat_dlc((3 * atom_num), ((3 * atom_num) - 6)), g(atom_num * 3)
 	real(sp), allocatable :: g_dlc(:)
-	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num))
+	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num)), Gmat(((3 * atom_num) - 6),((3 * atom_num) - 6))
 	
 	! The primitive gradient array is allocated. By definition, its dimensions are the number of delocalised interal coordinates.
 	if (.not. ALLOCATED(g_dlc)) allocate(g_dlc((3 * atom_num) - 6))
 	g_dlc(:) = 0.0
 	
 	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
-	BT_Ginv = MATMUL(TRANSPOSE(Bmat_dlc), SVD_INVERSE(MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc)), SIZE(Bmat_dlc, 1), SIZE(Bmat_dlc, 1)))
+	Gmat = MATMUL(TRANSPOSE(Bmat_dlc), Bmat_dlc)
+	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, SIZE(Gmat,1), SIZE(Gmat,1)), TRANSPOSE(Bmat_dlc))
 	g_dlc = MATMUL(g, TRANSPOSE(BT_Ginv))
 
 	end subroutine gen_grad_cart_to_DLC
@@ -223,42 +220,39 @@ contains
 	
 	implicit none
 	integer(i4b) :: k, atom_num, n_prims
-	integer(i4b), parameter :: resolution = 1000
+	integer(i4b), parameter :: resolution = 500
 	real(sp) :: dS_norm_save, dS_norm, dS_norm_init
 	real(sp) :: dS((3 * atom_num) - 6), dlc((3 * atom_num) - 6), x_1(3 * atom_num), x_2(3 * atom_num), init_dx(3 * atom_num)
-	real(sp) :: BT_Ginv(((3 * atom_num) - 6), (3 * atom_num)), Bmat_dlc((3 * atom_num), ((3 * atom_num) - 6))
-	real(sp) :: init_dlc((3 * atom_num) - 6), init_dS((3 * atom_num) - 6), target_dlc((3 * atom_num) - 6)
-	real(sp) :: dx(3 * atom_num), dx_step(3 * atom_num), dx_temp(3 * atom_num), dS_temp((3 * atom_num) - 6)
-	real(sp) :: temp_x(3 * atom_num), dx_save(3 * atom_num), dS_save((3 * atom_num) - 6)
-	logical :: init = .False.
+	real(sp) :: BT_Ginv((3 * atom_num) - 6, (3 * atom_num)), Bmat_dlc((3 * atom_num), ((3 * atom_num) - 6))
+	real(sp) :: dS_temp((3 * atom_num) - 6), dlc_save((3 * atom_num) - 6)
+	real(sp) :: init_dlc((3 * atom_num) - 6), init_dS((3 * atom_num) - 6), target_dlc((3 * atom_num) - 6), old_dlc((3 * atom_num) -6)
+	real(sp) :: dx(3 * atom_num), dx_step(3 * atom_num), dx_temp(3 * atom_num)
+	real(sp) :: temp_x(3 * atom_num), dx_save(3 * atom_num), dS_save((3 * atom_num) - 6), Gmat((atom_num * 3) - 6, (atom_num * 3) - 6)
+	real(sp), allocatable :: work(:)
 
     ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
-	BT_Ginv = MATMUL(TRANSPOSE(Bmat_dlc), SVD_INVERSE(MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc)), SIZE(Bmat_dlc, 1), SIZE(Bmat_dlc, 1)))
+	Gmat = MATMUL(TRANSPOSE(Bmat_dlc), Bmat_dlc)
+	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, SIZE(Gmat,1), SIZE(Gmat,1)), TRANSPOSE(Bmat_dlc))
+	dx = MATMUL(TRANSPOSE(BT_Ginv), dS)
 
 	! Stashing the initial and target values.
 	init_dS(:) = dS(:)
 	init_dlc(:) = dlc(:)
 	target_dlc(:) = dlc(:) + init_dS(:)
 
-	! The change in cartesian coordinates associated with the change in DLC is calculated.
-	! This is the initial drving force for the algorithm below.
-	dx(:) = 0.0
-	dx = MATMUL(TRANSPOSE(BT_Ginv), dS)
-	init_dx = dx
-	
 	! In the original implementation by Baker, the transformation procedure is iterative using the equation above.
 	! However, this procedure is rather unstable when it comes to large changes in DLC, or near 180 dihedral angles.
 	! In the research group of P. Ayers, they use a procedure of calculating a number cartesian coordinates and comparing to DLC.
 	! The cartesian set closest to the target DLC is then taken as the new coordinates.
 	! In this implementation, the algorithm is inspired by this method where a 'resolution' is defined.
-	! This resolution defines how many small steps in cartesians are made to find the DLC - higher resolution = more accurate DLC.
+	! This resolution defines how many small steps in cartesians are made to find the DLC: higher resolution implies more accurate DLC.
 	! While this method is not as accurate or fast as the original implementation, it is much more stable.
 	dx_step = dx / resolution
 	do k=1, resolution
 		if (k == 1) then
 			dx_temp = dx_step
 			temp_x = dx_temp + x_1
-			call refresh_DLC(atom_num, temp_x, init)
+			call refresh_DLC(atom_num, temp_x)
 			dS_temp = target_dlc - dlc
 			dS_norm_save = NORM2(dS_temp)
 			dS_norm_init = dS_norm_save
@@ -267,7 +261,7 @@ contains
 		else
 			dx_temp = dx_temp + dx_step
 			temp_x = dx_temp + x_1
-			call refresh_DLC(atom_num, temp_x, init)
+			call refresh_DLC(atom_num, temp_x)
 			dS_temp = target_dlc - dlc
 			dS_norm = NORM2(dS_temp)
 			if (dS_norm .lt. dS_norm_save) then
@@ -278,7 +272,8 @@ contains
 		end if
 	end do
 
-	print *, "final dS_norm", dS_norm_save
+	print *, "final dS_norm ", dS_norm_save
+		
 	! The new DLC set (which should be close to init_dlc) and the new cartesian coordinates are saved.
 	x_2 = x_1 + dx_save
 	

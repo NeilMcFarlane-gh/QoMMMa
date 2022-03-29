@@ -1,5 +1,5 @@
 PROGRAM qommmafort6
-use nrtype
+use nrtype ; use coordinates ; use optimdata
 implicit none
 
 ! This program is run at each cycle of the QM/MM calculation.

@@ -108,7 +108,7 @@ def fortinp():
     # If DLC are used, then the type of primitive internal coordinates used to generate them is written to fortinput.
     if primtype.lower() == 'tc':
         iprimtyp = 0
-    elif coordtype.lower() =='full':
+    elif primtype.lower() =='full':
         iprimtyp = 1
     else:
         qomutil.qomlog('Error, unknown primtype : ' + primtype + ' is requested', usrdir)

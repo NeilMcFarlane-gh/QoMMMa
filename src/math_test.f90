@@ -1,23 +1,29 @@
 program math_test
 use math ; use nrtype
 
-real(sp) :: distance
-real(sp), allocatable :: grad(:,:), unit_vec(:), proj_vec(:), inv_arr(:,:), output_mat(:,:)
-integer(i4b) :: to_generate(5), i
+real(sp) :: distance, theta, phi
+real(sp), allocatable :: unit_vec(:), proj_vec(:), inv_arr(:,:), output_mat(:,:)
+integer(i4b) :: i
 integer(i4b), allocatable :: combinations(:,:)
 real(sp) :: vectors(3,3), eigens(3,3), coords_1(3), coords_2(3), arr(2,2), det, eigenvals(3), eigenvecs(3,3)
+real(sp) :: coords_3(3), grad_r(3,2), grad_theta(3,3), grad_phi(3,4), array(3,3), coords_4(3)
 logical :: orthogonality
 
-! List of integers for which Heap's algorithm is to be tested...
-to_generate = (/1, 5, 7, 12, 15/)
-
 ! Random coordinate set...
-coords_1(1) = 2
-coords_2(1) = 4
-coords_1(2) = 6
-coords_2(2) = 1
-coords_1(3) = 5
-coords_2(3) = 2
+coords_1(1) = 0
+coords_2(1) = 0
+coords_3(1) = 0.819
+coords_4(1) = -0.819
+
+coords_1(2) = 0.7375
+coords_2(2) = -0.7375
+coords_3(2) = 0.817
+coords_4(2) = -0.817
+
+coords_1(3) = -0.0528
+coords_2(3) = -0.0528
+coords_3(3) = 0.422
+coords_4(3) = 0.422
 
 
 ! Set of orthogonal vectors...
@@ -54,13 +60,18 @@ arr(1,2) = 2
 arr(2,1) = 3
 arr(2,2) = 4
 
-output_mat = MATRIX_MULTIPLY(vectors, eigens, SIZE(vectors,1), SIZE(vectors,2), SIZE(eigens,1), SIZE(eigens,2))
 
-!print *, output_mat
+! Array for testing determinant...
+array(1,1) = 2
+array(1,2) = -3
+array(1,3) = 1
+array(2,1) = 2
+array(2,2) = 0
+array(2,3) = -1
+array(3,1) = 1
+array(3,2) = 4
+array(3,3) = 5
 
-combinations = COMBINATIONS_2(to_generate, SIZE(to_generate))
-
-!print *, combinations
 
 eigenvecs = EVECS(eigens, SIZE(eigens, 1))
 
@@ -70,7 +81,7 @@ eigenvals = EVALS(eigens, SIZE(eigens, 1))
 
 !print *, "eigenvalues: ", eigenvals
 
-det = DETERMINANT(arr, SIZE(arr, 1))
+det = DETERMINANT(array, SIZE(array, 1))
 
 !print *, "determinant: ", det
 
@@ -86,9 +97,25 @@ distance = atom_distance(coords_1, coords_2)
 
 !print *, "distance: ", distance
 
-grad = atom_distance_grad(coords_1, coords_2)
+grad_r = atom_distance_grad(coords_1, coords_2)
 
-!print *, "grad: ", grad
+!print *, "grad: ", grad_r
+
+theta = atom_angle(coords_2, coords_1, coords_3)
+
+!print *, "angle: ", theta
+
+grad_theta = atom_angle_grad(coords_1, coords_2, coords_3)
+
+!print *, "grad: ", grad_theta
+
+phi = atom_dihedral(coords_3, coords_1, coords_2, coords_4)
+
+print *, "dihedral: ", phi * 57
+
+grad_phi = atom_dihedral_grad(coords_4, coords_1, coords_2, coords_3)
+
+!print *, "grad: ", grad_phi
 
 unit_vec = unit_vector(coords_1, SIZE(coords_1))
 

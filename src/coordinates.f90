@@ -12,7 +12,8 @@ real(sp) :: kspring
 logical, allocatable :: modchg(:), inact(:)
 
 real(sp), parameter :: bohr=.529177d0
-integer(i4b), allocatable :: nbonds(:),bonds(:,:),attyp(:),links(:,:), &
+real(sp), parameter :: cut_off = 1.5 ! Angstroms
+integer(i4b), allocatable :: nbonds(:),bonds(:,:), bonds_xopt(:,:),attyp(:),links(:,:), &
     &  qm(:),opt(:)
 
 ! tables of coordinate of various groups of atoms, of all images 

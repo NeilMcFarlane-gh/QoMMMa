@@ -15,19 +15,24 @@ if (coordtype .eq. 1) then
 	if (.not. ALLOCATED(to_generate)) allocate(to_generate(ndlc))
 	to_generate = (/(i, i=1,ndlc, 1)/)
 	
-	! The cartesian coordinates of the DLC region are obtained to calculate prims.
-	xopt=0.d0
-	do i=1, nopt
+	! The cartesian coordinates of the DLC region are used to define the prims in define_prims_full.
+	! First, add the QM atoms, and then add the link atom coordinates.
+	xopt = 0.d0
+	do i=1, nq
 		j = (3 * (i-1)) + 1
 		k = (3 * (opt(i)-1)) + 1
 		xopt(j:j+2) = x(k:k+2)
 	end do
+	do i=1, nl
+		j = (3 * nq) + i
+		xopt(j:j+2) = xl(i:i+2)
+	end do
 
 	! Now, the primitive internal coordinates can be defined.
 	if (primtype .eq. 0) then ! Total connectivity
-		call define_prims_TC(ndlc, to_generate, xopt, prim_list)
+		call define_prims_TC(ndlc, to_generate, prim_list)
 	else if (primtype .eq. 1) then ! Full definition
-		call define_prims_full(ndlc, to_generate, xopt, prim_list)	
+		call define_prims_full(ndlc, nl, to_generate, xopt, prim_list)	
 	end if
 
 end if

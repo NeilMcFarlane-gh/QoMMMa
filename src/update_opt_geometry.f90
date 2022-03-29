@@ -9,7 +9,6 @@ integer(i4b) :: I,j, img_num
 real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS((ndlc * 3) - 6), DelX(noptx), w(noptx)
 real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, maxchgx, temp_x(noptx)
 real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
-logical :: init = .True.
 stpmax = STPMX * REAL(noptx,sp)
 
 line_search=.false.
@@ -194,7 +193,7 @@ else if (coordtype .eq. 1) then
 		x_copy = xopt
 
 		! Generating DLC for the given coordinate set.
-	    call refresh_dlc(ndlc, xopt, init)
+	    call refresh_dlc(ndlc, xopt)
 		
 		! A selection of values are preserved as they are used in the BFGS update.
 		if (.not. ALLOCATED(old_prims)) allocate(old_prims(nprim))
@@ -224,31 +223,69 @@ else if (coordtype .eq. 1) then
 				do j=1, nprim
 					if (i == j) then
 						oh_p(i,j) = 1
+						h_p(i,j) = 1
 					end if
 				end do
 			end do
 		else
 			allocate(h_p(nprim, nprim))
-			h_p(:,:) = 0.0
+			h_p(:,:) = oh_p(:,:)
 		end if
-
-		if (Nstep .eq. 0) then
-			print *, "Steepest descent."
-			ChgeS = optg_dlc * 0.7
+		
+		if (Nstep .le. 5) then
+			!###################
+			! Steepest descent.#
+			!###################
+			
+			ChgeS = optg_dlc * 0.7 * (-1)
+			
+			! The change is DLC is scaled using the maximum step length.
+			stpl = RMSD_CALC(ChgeS, dlc, ((ndlc * 3) - 6))
+			IF (stpl .gt. stpmax) THEN
+				ChgeS = ChgeS / stpl * stpmax
+				write (*,*) "Changing (1) Step Length"
+			END IF
+			lstep = maxval(abs(ChgeS))
+			IF (lstep .gt. STPMX) THEN
+				ChgeS = ChgeS / lstep * STPMX
+				write (*,*)"Changing (2) Step Length"
+			END IF
+			
 			!The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
 			call DLC_to_cart(ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
 			ChgeX = newx(:) - temp_x(:)
-		else
-			print *, 'Quasi newton'
-			! The hessian matrix is updated to DLC subspace.
-			call gen_hess_prim_to_DLC(ndlc, nprim, Umat, oh_p, h_dlc)
 			
+			call sleep(1)
+		else
+			!###############
+			! Quasi newton.#
+			!###############
+			
+			! The hessian matrix is updated to DLC subspace.
+			call gen_hess_prim_to_DLC(ndlc, nprim, Umat, h_p, h_dlc)
+
 			! The change in DLC can now be evaluated using a quasi-Newton methodology.
-			ChgeS = -MATMUL(h_dlc, optg_dlc)
+			ChgeS = MATMUL(h_dlc, optg_dlc) * (-10)
+			print *, "Maxval dlc ", MAXVAL(ChgeS)
+			
+			if (MAXVAL(ChgeS) .le. 1E-1) then
+				if (.not. ALLOCATED (h_p)) allocate(h_p(nprim, nprim))
+				if (.not. ALLOCATED (oh_p)) allocate(oh_p(nprim, nprim))
+				oh_p(:,:) = 0.0
+				h_p(:,:) = 0.0
+				do i=1, nprim
+					do j=1, nprim
+						if (i == j) then
+							oh_p(i,j) = 1
+							h_p(i,j) = 1
+						end if
+					end do
+				end do
+			end if
 		
 			! The change is DLC is scaled using the maximum step length.
-			!stpl = RMSD_CALC(ChgeS, dlc, (ndlc - 6))
+			!stpl = RMSD_CALC(ChgeS, dlc, ((ndlc * 3) - 6))
 			!IF (stpl .gt. stpmax) THEN
 				!ChgeS = ChgeS / stpl * stpmax
 				!write (*,*) "Changing (1) Step Length"
@@ -267,27 +304,24 @@ else if (coordtype .eq. 1) then
 			! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.
 			! To ensure continuity, a new set of primitive internal coordinates is calculated for newx.
 			call calc_prims(ndlc, nprim, prims, newx, prim_list)
-			!print *, "New prims: ", prims
-			!print *, "Old prims: ", old_prims
-			call update_bfgs_p(ndlc, nprim, oh_p, h_p, optg_p, og_p, prims, old_prims)
+			call update_bfgs_p(ndlc, nprim, h_p, optg_p, og_p, prims, old_prims)
 
 			call sleep(1)
-				
-			! The hessian is updated for the next cycle.
-			oh_p = h_p
 		end if
-		
+		if ((Nstep .eq. 10) .or. (Nstep .eq. 20) .or. (Nstep .eq. 30)) then
+			oh_p = 0.0
+		end if
 		! evaluate convergence tests
 		convs = " NO"
 		converged=.false.
 		i=0
 		conv(1)=e-oe
-		!conv(2)=maxval(abs(ChgeX))
+		conv(2)=maxval(abs(ChgeX))
 		conv(3)=sqrt(sum(chgex**2)/real(noptx,sp))
 		conv(4)=maxval(abs(optg))
 		conv(5)=sqrt(sum(optg**2)/real(noptx,sp))
 		!conv(1)=e-oe
-		conv(2)=maxval(abs(ChgeS))
+		!conv(2)=maxval(abs(ChgeS))
 		!conv(3)=sqrt(sum(chgeS**2)/real(((ndlc * 3) - 6),sp))
 		!conv(4)=maxval(abs(optg_dlc))
 		!conv(5)=sqrt(sum(optg_dlc**2)/real(((ndlc * 3) - 6),sp))
