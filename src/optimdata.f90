@@ -8,14 +8,16 @@ logical :: converged, line_search, reversing, resetting
 logical, allocatable :: fullconverged(:), update_geom(:), climbing(:)
 character(len=3) :: convs(6)
 character(len=3), allocatable :: fullconvs(:,:)
-integer(i4b), allocatable :: cnstyp(:), cnsat(:,:), ncnsat(:)
+integer(i4b), allocatable :: cnstyp(:), cnsat(:,:), ncnsat(:),cnstyp_dlc(:), cnsat_dlc(:,:), ncnsat_dlc(:)
 real(sp) :: te, qe, e, oe, conv(5), totcnsen, weight
 real(sp) :: tolde, tolgmax, tolgrms, toldxmax, toldxrms
 real(sp), allocatable :: fulle(:), fulloe(:), fullte(:), fullqe(:), fulltotcnsen(:), &
-          fullconv(:,:), fullcnsen(:,:), fullcnsg(:,:), fullcnsval(:,:)
+          fullconv(:,:), fullcnsen(:,:), fullcnsg(:,:), fullcnsval(:,:), &
+          & fullcnsen_dlc(:,:), fullcnsg_dlc(:,:), fullcnsval_dlc(:,:)
 
 real(sp), allocatable :: tg(:), qg(:), g(:), optg(:), og(:), h(:,:), oh(:,:), &
-     &  ox(:), newx(:), mull(:), kcns(:), cnsidl(:), cnsval(:), cnsen(:), cnsg(:)
+     &  ox(:), newx(:), mull(:), kcns(:), cnsidl(:), cnsval(:), cnsen(:), cnsg(:), &
+	 & cnsidl_dlc(:), cnsval_dlc(:), cnsen_dlc(:), cnsg_dlc(:)
 real(sp), allocatable :: fullog(:,:), fulloh(:,:,:), fullox(:,:), fulltg(:,:), &
      &  fullqg(:,:), fullmull(:,:), fulloptg(:,:), fullh(:,:,:), fullnewx(:,:), norm_per_force(:)
 	 
@@ -34,7 +36,8 @@ real(sp) :: qea,qeb,ea,eb,oea,oeb
 
 real(sp), parameter :: hart_kcal = 627.5095d0
 real(sp), parameter :: stpmx = 0.5
-integer(i4b), parameter :: maxcnsat = 10
+integer(i4b), parameter :: maxcnsat_cart = 10
+integer(i4b), parameter :: maxcnsat_dlc = 4
 ! The most complicated constraint will apply to less than 10 atoms
 ! All the following convergence criteria are read from user input through read_converg
 !real(sp), parameter :: tolde_org = 1.d-4

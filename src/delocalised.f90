@@ -255,7 +255,6 @@ contains
 			call refresh_DLC(atom_num, temp_x)
 			dS_temp = target_dlc - dlc
 			dS_norm_save = NORM2(dS_temp)
-			dS_norm_init = dS_norm_save
 			dx_save = dx_temp
 			dS_save = dS_temp
 		else
@@ -271,8 +270,6 @@ contains
 			end if
 		end if
 	end do
-
-	print *, "final dS_norm ", dS_norm_save
 		
 	! The new DLC set (which should be close to init_dlc) and the new cartesian coordinates are saved.
 	x_2 = x_1 + dx_save

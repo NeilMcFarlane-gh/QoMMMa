@@ -75,6 +75,15 @@ do img_num=1,nimg
 
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) ncon,kcnstyp
+	
+	! Driving internal coordinate definitions if single ended GSM is used.
+	if (gsmtype .eq. 2) then
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) ndriv
+		do q = 1, ndriv
+			read (unit=8,fmt=*) (driving_coords(q,j),j=1,4), drive_dq(q)
+		end do		
+	end if
 
 	! Now read list of QM atoms.
 	read(unit=8,fmt=*) dummy
@@ -161,36 +170,48 @@ do img_num=1,nimg
 		  end do
 	end if
 
-	! Now read in details of constraints to apply to the geometry
-																												 
-	read(unit=8,fmt=*) dummy
-	read(unit=8,fmt=*) dummy
-	read(unit=8,fmt=*) dummy
-	read(unit=8,fmt=*) dummy
+		! Now read in details of any constraint to apply to the geometry
+	
+	if (coordtype .eq. 0) then
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) dummy
+	else if (coordtype .eq. 1) then
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) dummy
+	end if
 
 	if (ncon.gt.0) then
-	! otherwise move on....
-	cnsat=0
-	do i=1,ncon
-			read(unit=8,fmt=*) cnstyp(i),kcns(i),cnsidl(i)
-			if ((cnstyp(i).lt.1).or.(cnstyp(i).gt.4)) then
-					write (*,*) "Impossible Bond Constraint - Should be between 1-4. ERROR."
-					close(8)
-					stop
-			end if
-			if (kcns(i).lt.0.) then
-					write (*,*) "Constraint constant kcns negative. ERROR."
-					close(8)
-					stop
-			end if
-			if (cnstyp(i).eq.1) ncnsat(i)=2
-			if ((cnstyp(i).eq.2).or.cnstyp(i).eq.3) ncnsat(i)=4
-			if (cnstyp(i).eq.4) ncnsat(i)=6
-			read(unit=8,fmt=*) (cnsat(i,j),j=1,ncnsat(i))
-	end do
-
-	! Check that all constrained atoms are QM, Link or HessOpt
-	call check_constrained_atoms()
+		! otherwise move on....
+		if (coordtype .eq. 0) then
+			cnsat=0
+			do i=1,ncon
+					read(unit=8,fmt=*) cnstyp(i),kcns(i),cnsidl(i)
+					if ((cnstyp(i).lt.1).or.(cnstyp(i).gt.4)) then
+							write (*,*) "Impossible Bond Constraint - Should be between 1-4. ERROR."
+							close(8)
+							stop
+					end if
+					if (kcns(i).lt.0.) then
+							write (*,*) "Constraint constant kcns negative. ERROR."
+							close(8)
+							stop
+					end if
+					if (cnstyp(i).eq.1) ncnsat(i)=2
+					if ((cnstyp(i).eq.2).or.cnstyp(i).eq.3) ncnsat(i)=4
+					if (cnstyp(i).eq.4) ncnsat(i)=6
+					read(unit=8,fmt=*) (cnsat(i,j),j=1,ncnsat(i))
+			end do
+		else if (coordtype .eq. 1) then
+			cnsat_dlc=0
+			do i=1,ncon
+				read(unit=8,fmt=*) cnsidl_dlc(i)
+				read(unit=8,fmt=*) (cnsat_dlc(i,j),j=1,4)
+			end do
+		end if
+		! Check that all constrained atoms are QM, Link or HessOpt
+		 call check_constrained_atoms()
 	end if
 																															   
 	! Read list of atomic charges.

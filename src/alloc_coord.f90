@@ -18,7 +18,7 @@ END IF
 
 open(unit=8,file="fortinput",position="rewind")
 read(8,*) dummy
-read(8,*) n, nq, nl, nopt
+read(8,*) n, nq, nl, nopt, ndriv
 read(8,*) dummy
 read(8,*) disp
 read(8,*) dummy
@@ -50,6 +50,11 @@ noptx=3*nopt
 ! The number of atoms to be delocalised is initialised, if required.
 if (coordtype .eq. 1) then
 	ndlc = nopt
+end if
+
+! Driving coordinate arrays are initialised if needed.
+if (ndriv .gt. 0) then
+	allocate(driving_coords(ndriv,4), drive_dq(ndriv))
 end if
 
 allocate(qm(nq),nbonds(n),chg(n),bonds(n,maxbond),bonds_xopt(nopt,maxbond),attyp(n),modchg(n),inact(n),opt(nopt)) 

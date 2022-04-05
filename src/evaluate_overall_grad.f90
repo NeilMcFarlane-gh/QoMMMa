@@ -72,24 +72,26 @@ do img_num=1,nimg
 	write (unit=8,fmt='(3F12.6)') vec
 
 	close(8)
-	
-	! TO-DO : DLC conversion code should go here? Will probably make other Fortran files for B_mat, G_mat, etc..
 
 	! Now, if appropriate, evaluate the constraint effect on energy & gradients.
 	! TO-DO : Implement DLC constraint here?
 	totcnsen=0.d0
 	if (ncon.ne.0) then
+        if (coordtype .eq. 0) then
+			do i=1,ncon
+				call evaluate_constraint(i)
+				fullcnsval(img_num,i)=cnsval(i)
+				fullcnsg(img_num,i)=cnsg(i)
+				fullcnsen(img_num,i)=cnsen(i)
+			end do
+			
+			totcnsen=sum(cnsen(1:ncon))
 
-	do i=1,ncon
-		call evaluate_constraint(i)
-		fullcnsval(img_num,i)=cnsval(i)
-		fullcnsg(img_num,i)=cnsg(i)
-		fullcnsen(img_num,i)=cnsen(i)
-	end do
-	totcnsen=sum(cnsen(1:ncon))
-
-	fulltotcnsen(img_num)=totcnsen
-	e = e + totcnsen
+			fulltotcnsen(img_num)=totcnsen
+			e = e + totcnsen
+		else if (coordtype .eq. 1) then
+			!placeholder
+		end if
 
 	end if
 

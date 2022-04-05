@@ -7,8 +7,9 @@ implicit none
 
 integer(i4b) :: I,j, img_num
 real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS((ndlc * 3) - 6), DelX(noptx), w(noptx)
-real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, maxchgx, temp_x(noptx)
+real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, maxchgx, temp_x(noptx), temp_dlc
 real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
+real(sp),parameter :: minstep = 0.1
 stpmax = STPMX * REAL(noptx,sp)
 
 line_search=.false.
@@ -189,7 +190,6 @@ else if (coordtype .eq. 1) then
 		xopt(:)=fullxopt(img_num,:)
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
-		print *, 'ENERGY: ', e
 		x_copy = xopt
 
 		! Generating DLC for the given coordinate set.
@@ -266,35 +266,19 @@ else if (coordtype .eq. 1) then
 			call gen_hess_prim_to_DLC(ndlc, nprim, Umat, h_p, h_dlc)
 
 			! The change in DLC can now be evaluated using a quasi-Newton methodology.
-			ChgeS = MATMUL(h_dlc, optg_dlc) * (-10)
-			print *, "Maxval dlc ", MAXVAL(ChgeS)
-			
-			if (MAXVAL(ChgeS) .le. 1E-1) then
-				if (.not. ALLOCATED (h_p)) allocate(h_p(nprim, nprim))
-				if (.not. ALLOCATED (oh_p)) allocate(oh_p(nprim, nprim))
-				oh_p(:,:) = 0.0
-				h_p(:,:) = 0.0
-				do i=1, nprim
-					do j=1, nprim
-						if (i == j) then
-							oh_p(i,j) = 1
-							h_p(i,j) = 1
-						end if
-					end do
-				end do
-			end if
+			ChgeS = MATMUL(h_dlc, optg_dlc) * (-1)
 		
 			! The change is DLC is scaled using the maximum step length.
-			!stpl = RMSD_CALC(ChgeS, dlc, ((ndlc * 3) - 6))
-			!IF (stpl .gt. stpmax) THEN
-				!ChgeS = ChgeS / stpl * stpmax
-				!write (*,*) "Changing (1) Step Length"
-			!END IF
-			!lstep = maxval(abs(ChgeS))
-			!IF (lstep .gt. STPMX) THEN
-				!ChgeS = ChgeS / lstep * STPMX
-				!write (*,*)"Changing (2) Step Length"
-			!END IF
+			stpl = RMSD_CALC(ChgeS, dlc, ((ndlc * 3) - 6))
+			IF (stpl .gt. stpmax) THEN
+				ChgeS = ChgeS / stpl * stpmax
+				write (*,*) "Changing (1) Step Length"
+			END IF
+			lstep = maxval(abs(ChgeS))
+			IF (lstep .gt. STPMX) THEN
+				ChgeS = ChgeS / lstep * STPMX
+				write (*,*)"Changing (2) Step Length"
+			END IF
 		
 			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
@@ -308,9 +292,7 @@ else if (coordtype .eq. 1) then
 
 			call sleep(1)
 		end if
-		if ((Nstep .eq. 10) .or. (Nstep .eq. 20) .or. (Nstep .eq. 30)) then
-			oh_p = 0.0
-		end if
+
 		! evaluate convergence tests
 		convs = " NO"
 		converged=.false.
@@ -318,13 +300,13 @@ else if (coordtype .eq. 1) then
 		conv(1)=e-oe
 		conv(2)=maxval(abs(ChgeX))
 		conv(3)=sqrt(sum(chgex**2)/real(noptx,sp))
-		conv(4)=maxval(abs(optg))
-		conv(5)=sqrt(sum(optg**2)/real(noptx,sp))
+		!conv(4)=maxval(abs(optg))
+		!conv(5)=sqrt(sum(optg**2)/real(noptx,sp))
 		!conv(1)=e-oe
 		!conv(2)=maxval(abs(ChgeS))
 		!conv(3)=sqrt(sum(chgeS**2)/real(((ndlc * 3) - 6),sp))
-		!conv(4)=maxval(abs(optg_dlc))
-		!conv(5)=sqrt(sum(optg_dlc**2)/real(((ndlc * 3) - 6),sp))
+		conv(4)=maxval(abs(optg_dlc))
+		conv(5)=sqrt(sum(optg_dlc**2)/real(((ndlc * 3) - 6),sp))
 
 		! Tighter convergence test for climbing image
 		if (climbing(img_num)) then

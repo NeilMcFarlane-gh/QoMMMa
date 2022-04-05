@@ -305,7 +305,7 @@ def setini(cwd, nimg, usrdir):
       
     # For every image (if using the nudged elastic band, that is), the initial setup is performed.  
     l = 0  		
-    for i in range(nimg):        
+    for i in range(nimg):     
         l = l + 1
         fu = open(('%s%d'%('update_geom', l)), 'w')
         dst = cwd + ('%s%d'%('/image', l))
@@ -569,11 +569,62 @@ def link_write(link):
             fd.write(str(link[i][j]).rjust(8))
         fd.write('\n')  
     fd.close()
-
-def cons_write(cons, usrdir):
+    
+def driving_write(driving_coord):
     """
     
-    // Function which generates the constraint details. //
+    // Function which generates the details for driving coordinates if the single-ended GSM is used. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    driving_coord : tuple
+        Represents the details for each driving coordinate.
+
+    """
+    
+    # The file fortinput is opened.
+    fd = open('fortinput','a')
+                    
+    # Driving coordinate(s) details are written to fortinput.
+    for i in range(len(driving_coord)):
+        for j in range(len(driving_coord[i])):
+            fd.write(str(driving_coord[i][j]).rjust(8))
+        fd.write('\n')  
+    fd.close()
+
+
+def cons_write_dlc(cons, usrdir):
+    """
+    
+    // Function which generates the constraint details for delocalised internal coordinates. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    cons : tuple
+        Represents the details for each constraint.
+    usrdir : string
+        The user directory.
+        
+    """
+    
+    # The file fortinput is opened.
+    fd = open('fortinput', 'a')
+
+    for i in range(len(cons)):
+        # The constraint details are written to fortinput.
+        fd.write(str(cons[i][0]).rjust(8)) # The desired value.
+        fd.write('\n')
+        for j in range(len(cons[i][1])):
+            fd.write(str(cons[i][1][j]).rjust(8))
+        fd.write('\n')
+    fd.close()
+    
+def cons_write_cart(cons, usrdir):
+    """
+    
+    // Function which generates the constraint details for cartesian coordinates. //
     // This function is called in the function fortinp found in qommmma.py. //
     
     Arguments

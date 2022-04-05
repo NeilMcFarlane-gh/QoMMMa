@@ -8,7 +8,7 @@ implicit none
 character(3) :: tmplab
 character(80) :: dummy
 integer(i4b) :: rstat, prima
-integer(i4b) :: i, j, k, ii, jj, kk, nmodif, neba, nebb, nebc, gsma, coorda
+integer(i4b) :: i, j, k, ii, jj, kk, iii, nmodif, neba, nebb, nebc, gsma, coorda
 real(sp) :: rql, rqm, tmpchg
 
 ! First check whether the arrays are in fact already allocated...
@@ -19,7 +19,7 @@ END IF
 
 open(unit=8,file="fortinput",position="rewind")
 read(unit=8,fmt=*) dummy
-read(unit=8,fmt=*) i, j, k, ii
+read(unit=8,fmt=*) i, j, k, ii, iii
 
 if ((i.ne.n).or.(j.ne.nq).or.(k.ne.nl).or.(ii.ne.nopt)) THEN
       write (*,*) "Mismatch in number of atoms in input file. ERROR. Check your input or fortinput file."
@@ -49,6 +49,20 @@ read(unit=8,fmt=*) coorda
 ! If DLC are used, the primitive internal coordinate type
 read(unit=8,fmt=*) dummy
 read(unit=8,fmt=*) prima
+
+! now read the list of driving coordinates if the single-ended GSM is used
+if (gsmtype .eq. 2) then
+	read(unit=8,fmt=*) dummy
+	do i=1,ndriv
+		read(unit=8,fmt=*,IOSTAT=rstat) driving_coords(i,1), driving_coords(i,2), driving_coords(i,3),&
+										driving_coords(i,4), drive_dq(i)
+		if (rstat .ne. 0) then
+			write (*,*) "Error; Check your input or fortinput file in jobfiles directory."
+			close(8)
+			stop
+		end if
+	end do
+end if
 
 ! now reads the QM atoms
 read(unit=8,fmt=*) dummy
@@ -146,26 +160,33 @@ end if
 ! Now read in details of constraints to apply to the geometry
 if (ncon.gt.0) then
  read(unit=8,fmt=*) dummy
- do i=1,ncon
-  	read(unit=8,fmt=*) cnstyp(i),kcns(i),cnsidl(i)
-	if ((cnstyp(i).lt.1).or.(cnstyp(i).gt.4)) then
-		write (*,*) "Impossible Bond Constraint - Should be between 1-4. Check your input."
-		close(8)
-		stop
-	end if
-	if (kcns(i).lt.0.) then
-		write (*,*) "Constraint constant kcns negative. Check your input."
-		close(8)
-		stop
-	end if
-	if (cnstyp(i).eq.1) ncnsat(i)=2
-	if ((cnstyp(i).eq.2).or.cnstyp(i).eq.3) ncnsat(i)=4
-	if (cnstyp(i).eq.4) ncnsat(i)=6
-	read(unit=8,fmt=*) (cnsat(i,j),j=1,ncnsat(i))
- end do
+ if (coordtype .eq. 0) then
+	 do i=1,ncon
+		read(unit=8,fmt=*) cnstyp(i),kcns(i),cnsidl(i)
+		if ((cnstyp(i).lt.1).or.(cnstyp(i).gt.4)) then
+			write (*,*) "Impossible Bond Constraint - Should be between 1-4. Check your input."
+			close(8)
+			stop
+		end if
+		if (kcns(i).lt.0.) then
+			write (*,*) "Constraint constant kcns negative. Check your input."
+			close(8)
+			stop
+		end if
+		if (cnstyp(i).eq.1) ncnsat(i)=2
+		if ((cnstyp(i).eq.2).or.cnstyp(i).eq.3) ncnsat(i)=4
+		if (cnstyp(i).eq.4) ncnsat(i)=6
+		read(unit=8,fmt=*) (cnsat(i,j),j=1,ncnsat(i))
+	 end do
+ else if (coordtype .eq. 1) then
+	 do i=1,ncon
+		read(unit=8,fmt=*) cnsidl_dlc(i)
+		read(unit=8,fmt=*) (cnsat_dlc(i,j),j=1,4)
+	 end do
+ end if
  
-! Check that all constrained atoms are QM, Link or HessOpt
-call check_constrained_atoms()
+ ! Check that all constrained atoms are QM, Link or HessOpt
+ call check_constrained_atoms()
 end if
 
 ! read in list of atoms on which the charge needs to be changed.

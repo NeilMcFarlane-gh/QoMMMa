@@ -28,12 +28,13 @@ def fortinp():
     fd = open('fortinput','w')
   
     # Numbers relating to QM, MM, link, and total QM optimised atoms are written to fortinput.
-    fd.write('natom     nqm      nlink   nopt')
+    fd.write('natom     nqm      nlink   nopt      ndriv')
     fd.write('\n')
     fd.write(str(natom))
     fd.write(str(('%s%d'%('   ', nqm))))
     fd.write(str(('%s%d'%('   ', nlink))))
     fd.write(str(('%s%d'%('   ', nopt))))
+    fd.write(str(('%s%d'%('   ', ndriv)))) 
     fd.write('\n')
     
     # Whether dispersion is to be calculated (1) or not (0) is written to fortinput.
@@ -118,6 +119,17 @@ def fortinp():
     fd.write(str(iprimtyp))
     fd.write('\n') 
     
+    # If the single-ended growing string method is used, then at least 1 driving coordinate must be provided.
+    if igsmtyp == 2:
+        fd.write('Driving coordinate(s) details')
+        fd.write('\n')
+        if driving_coord != 'None':
+            fd.close()
+            qomutil.driving_write(driving_coord) 
+            fd = open('fortinput', 'a')
+        else:
+            qomutil.qomend('ERROR: you must provide at least 1 driving coordinate for the single-ended growing string method to function', cwd, usrdir) 
+    
     # The atom indices and types relating to the QM atoms is written to fortinput using the function qmread defined in qomutil.py.
     # If the old format of defining qm atoms is used, then it will still work, but this will be removed in future versions.
     if nqm > 0:
@@ -157,19 +169,28 @@ def fortinp():
         fd = open('fortinput', 'a')
     else:
         qomutil.qomlog('No MM atom is included in Hessian optimization',usrdir)
-    
-    # If used, constraint details are written to fortinput using the function cons_write defined in qomutil.py.
-    # If the old format of defining constraints is used, then it will still work, but this will be removed in future versions.
+       
+    # Constraints can either be provided in the form of cartesians or delocalised internal coordinates.
+    # If used, constraint details are written to fortinput using the function cons_write_cart or cons_write_dlc defined in qomutil.py.
+    # For cartesians, the old format of defining constraints will still work, but this will be removed in future versions.
     if ncon > 0:
-        fd.write('Constrain details')
-        fd.write('\n')
-        if constrain_lst != 'None':
-            fd.close()
-            qomutil.cons_write(constrain_lst, usrdir)  
-            fd = open('fortinput', 'a')
-        else:
-            fd.write((constrain.lstrip()))     
-            qomutil.qomlog('''Note, to provide constrain details try to use 'constrain_lst' option (see manual), instead of 'constrain'. Since 'constrain' option will be removed in the next version of QoMMMa.''', usrdir)
+        if (icoordtyp == 0):
+            fd.write('Constrain details - cartesian')
+            fd.write('\n')
+            if cart_constrain_lst != 'None':
+                fd.close()
+                qomutil.cons_write_cart(cart_constrain_lst, usrdir)  
+                fd = open('fortinput', 'a')
+            else:
+                fd.write((constrain.lstrip()))     
+                qomutil.qomlog('''Note, to provide constrain details try to use 'constrain_lst' option (see manual), instead of 'constrain'. Since 'constrain' option will be removed in the next version of QoMMMa.''', usrdir)
+        elif (icoordtyp == 1):
+            fd.write('Constrain details - DLC')
+            fd.write('\n')
+            if dlc_constrain_lst != 'None':
+                fd.close()
+                qomutil.cons_write_dlc(dlc_constrain_lst, usrdir)  
+                fd = open('fortinput', 'a')      
     else:
         qomutil.qomlog('No constrain is taken into account, since ncon=0.', usrdir)
     
@@ -233,6 +254,7 @@ def fortinp():
     fc.write(str(dGper))
     fc.write('\n')
     fc.close()
+    
 
 def mmjob(mjob):
     """
@@ -332,6 +354,7 @@ def mmjob(mjob):
             qomutil.qomend('Unknown MM job: ' + job, cwd, usrdir)
     else:
         qomutil.qomend('Unknown MM code: ' + mmcode, cwd, usrdir)
+        
 
 
 def qminitial():
@@ -750,10 +773,10 @@ if __name__ == "__main__":
     
     # Initial QM input files are prepared.
     qminitial()	
-    	 	
+	
     # Results from the QoMMMa setup program are moved.
     qomutil.setini(cwd, nimg, usrdir) 	
-    
+	   
     # New MM key files are creates using results from the QoMMMa setup program.
     mmjob('initial2')
     

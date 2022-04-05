@@ -17,8 +17,8 @@ inpgeom_prefix='init_geom'
 
 # QoMMMa Convergence
 dEmax=1.E-4
-dGmax=3.E-3
-dGrms=2.E-3
+dGmax=5.E-3
+dGrms=3.E-3
 dXmax=7.E-3
 dXrms=4.E-3
 #for NEB
@@ -27,14 +27,17 @@ dGper=2.E-3
 # for QoMMMa input
 qm_lst='None'
 link_lst='None'
-constrain_lst='None'
+driving_coord='None'
+cart_constrain_lst='None'
+dlc_constrain_lst='None'
 newcha_lst='None'
 newcha='''
 0
 '''
 # above five default variables should be removed when old style input options qm, link, constrain and newcha are removed from QoMMMa, and then fortinp module in qommma main program need modification.
   
-nlink=0	 	
+nlink=0
+ndriv=0	 	
 ncon=0  	
 kcnstype='harmonic'
 kspring=100
@@ -59,7 +62,7 @@ coordtype='cart'
 
 # If DLC are selected, then there are two methods of primitive internal coordinate definition.
 # These are a total connectivity scheme, or the default of bonds, angles and torsions.
-primtype='tc'
+primtype='full'
 
 # Growing string method. The default of 'none' will not use the growing string method.
 gsmtype='none'

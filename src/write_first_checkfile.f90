@@ -24,8 +24,8 @@ do img_num=1,nimg
 	write(unit=8,fmt='(A)') "This file contains info needed for execution of qmmm.x"
 	write(unit=8,fmt='(A)') "First, the number of steps already taken:"
 	write(unit=8,fmt='(I3)') 0
-	write(unit=8,fmt='(A)') "Then, the total, QM, Link, and Hessian-optimized number of atoms:"
-	write(unit=8,fmt='(4I6)') n, nq, nl, nopt
+	write(unit=8,fmt='(A)') "Then, the total, QM, Link, and Hessian-optimized number of atoms and the number of driving coordinates:"
+	write(unit=8,fmt='(5I6)') n, nq, nl, nopt, ndriv
 	write(unit=8,fmt='(A)') "Do we want dispersion energy between QM atoms to be calculated?"
 	write(unit=8,fmt='(I6)') disp
 	write(unit=8,fmt='(A)') "Then the number of images,type of calculation, spring force constant"
@@ -45,6 +45,13 @@ do img_num=1,nimg
 	end if
 	write(unit=8,fmt='(A)') "Then the number of constraints and the type (1=Harmonic or 2=tanh)"
 	write(unit=8,fmt='(2I6)') ncon, kcnstyp
+	if (gsmtype .eq. 2) then
+		write(unit=8,fmt='(A)') "Then the number of driving coordinates and their definition."
+		write(unit=8,fmt='(2I6, F10.2)') SIZE(driving_coords,1)
+		do i = 1, SIZE(driving_coords,1)
+			write (unit=8,fmt='(4I6,F10.2,3X)') (driving_coords(i,j),j=1,4), drive_dq(i)
+		end do
+	end if
 	write(unit=8,fmt='(A)') "Then the list of which atoms are QM:"
 	do i = 1, nq
 		 write (unit=8,fmt='(I6,3X,A2)') qm(i),qlabel(i)
@@ -62,18 +69,30 @@ do img_num=1,nimg
 			  write (unit=8,fmt='(I6)') opt(nq+nl+i)
 		 end do
 	end if
-	write(unit=8,fmt='(A)') "Constraint Details. For each constraint, first the nature &
-		&  of the constrained coordinate:"
-	write(unit=8,fmt='(A)') "(1 = r(A-B), 2 = r(A-B) - r(C-D), 3 = r(A-B) + r(C-D),&
-		& 4 = r(A-B) + r(C-D) - r(E-F))"
-	write(unit=8,fmt='(A)') "Then the force constant in kcal/mol / Angstrom^2, and the ideal value."
-	write(unit=8,fmt='(A)') "Then (in a new line) the Atoms to which the constraint&
-		& should apply (A, B, (C, D, (E, F)))"
-	if (ncon.gt.0) then
-	   do i=1,ncon
-			write(unit=8,fmt='(I6,F10.2,F10.4)') cnstyp(i),kcns(i),cnsidl(i)
-			write(unit=8,fmt='(13I6)') (cnsat(i,j),j=1,ncnsat(i))
-	   end do
+	
+	if (coordtype .eq. 0) then
+		write(unit=8,fmt='(A)') "Constraint Details. For each constraint, first the nature &
+			&  of the constrained coordinate:"
+		write(unit=8,fmt='(A)') "(1 = r(A-B), 2 = r(A-B) - r(C-D), 3 = r(A-B) + r(C-D),&
+			& 4 = r(A-B) + r(C-D) - r(E-F))"
+		write(unit=8,fmt='(A)') "Then the force constant in kcal/mol / Angstrom^2, and the ideal value."
+		write(unit=8,fmt='(A)') "Then (in a new line) the Atoms to which the constraint&
+			& should apply (A, B, (C, D, (E, F)))"
+		if (ncon.gt.0) then
+		   do i=1,ncon
+				write(unit=8,fmt='(I6,F10.2,F10.4)') cnstyp(i),kcns(i),cnsidl(i)
+				write(unit=8,fmt='(13I6)') (cnsat(i,j),j=1,ncnsat(i))
+		   end do
+		end if
+	else if (coordtype .eq. 1) then
+		write(unit=8,fmt='(A)') "Constraint Details. For each constraint, first the ideal value."
+		write(unit=8,fmt='(A)') "Then (in a new line) the Atoms to which the constraint should apply."
+		if (ncon.gt.0) then
+		   do i=1,ncon
+				write(unit=8,fmt='(F10.4)') cnsidl_dlc(i)
+				write(unit=8,fmt='(4I6)') (cnsat_dlc(i,j),j=1,4)
+		   end do
+		end if
 	end if
 
 	write(unit=8,fmt='(A)') "Atomic Charges (on all atoms - not used on QM atoms! - flag for non-standard)"

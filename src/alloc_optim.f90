@@ -23,9 +23,15 @@ allocate(dispgrad(nx))
 allocate(fullqend(nimg))
 
 if (ncon.gt.0) then
-      allocate(cnstyp(ncon),cnsat(ncon,maxcnsat),kcns(ncon),cnsval(ncon), &
+	if (coordtype .eq. 0) then
+         allocate(cnstyp(ncon),kcns(ncon),cnsat(ncon,maxcnsat_cart),cnsval(ncon), &
          & ncnsat(ncon),cnsidl(ncon),cnsen(ncon),cnsg(ncon), & 
          & fullcnsen(nimg,ncon),fullcnsg(nimg,ncon),fullcnsval(nimg,ncon))
+	else if (coordtype .eq. 1) then
+		 allocate(cnsat_dlc(ncon,maxcnsat_dlc), &
+         & ncnsat_dlc(ncon),cnsidl_dlc(ncon),cnsen_dlc(ncon),cnsg_dlc(ncon), & 
+         & fullcnsen_dlc(nimg,ncon),fullcnsg_dlc(nimg,ncon),fullcnsval_dlc(nimg,ncon))
+	  end if
 end if
 
 ! Assign values for convergence tests 
