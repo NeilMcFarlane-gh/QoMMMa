@@ -870,7 +870,9 @@ if __name__ == "__main__":
             gsmutil.gsmlog('With the GSM type: ' + str(gsmtype) + '  you have chosen to use ' + total_nodes + '  nodes in total', basedir)
         elif gsmtype == 2:
             gsmutil.gsmlog('With the GSM type: ' + str(gsmtype) + '   the driving coordinate(s) are as below...', basedir)
+            #driving_coords = gsmutil.read_driving(workdir)
             #write driving coordinates somehow?
+            #error driving coordinates not found in file driving_coords.in
         
         # The growth phase commences.
         gsmutil.gsmlog('        /// Growing the string... ///       ', basedir)
@@ -887,6 +889,10 @@ if __name__ == "__main__":
                 nodeP_dir = basedir + '/nodeP'
                 if (os.path.exists(nodeP_dir)) is not True:
                     gsmutil.gsmend(gsmutil.gsmlog('Error: for a double-ended GSM calculation, a (preferentially well-optimised) product directory called ''nodeP'' within the working directory must exist.', basedir)
+                
+                # For the first cycle, the frontier nodes are the reactant and product nodes.
+                frontierR_dir = nodeR_dir
+                frontierP_dir = nodeP_dir
                 all_nodes.append(nodeR_dir)
                 all_nodes.append(nodeP_dir)
                 
@@ -896,30 +902,40 @@ if __name__ == "__main__":
                 # Normal node addition scheme.
                 for (i,j) in zip(range(2, total_nodes, 1), range(total_nodes - 1, math.ceil(total_nodes / 2), -1)):
                     # Creating new directories for new nodes.
-                    work_dirs = []
-                    frontierR_dir = basedir + '/node' + i
-                    frontierP_dir = basedir + '/node' + j
-                    work_dirs.append(frontierR_dir)
-                    work_dirs.append(frontierP_dir)
-                    all_nodes.append(frontierR_dir)
-                    all_nodes.append(frontierP_dir)
-                    os.mkdir(frontierR_dir)
-                    os.mkdir(frontierP_dir)
+                    new_dirs = []
+                    frontier_dirs = []
+                    new_frontierR_dir = basedir + '/node' + i
+                    new_frontierP_dir = basedir + '/node' + j
+                    new_dirs.append(new_frontierR_dir)
+                    new_dirs.append(new_frontierP_dir)
+                    frontier_dirs.append(frontierR_dir)
+                    frontier_dirs.append(frontierP_dir)
+                    all_nodes.append(new_frontierR_dir)
+                    all_nodes.append(new_frontierP_dir)
+                    os.mkdir(new_frontierR_dir)
+                    os.mkdir(new_frontierP_dir)
                     gsmutil.gsmlog('Node ' + str(i) + '   has been added to the string (reactant side)...', basedir)
                     gsmutil.gsmlog('Node ' + str(j) + '   has been added to the string (product side)...', basedir)
                     current_nodes += 2
                     
                     # To define the coordinates of the new nodes, obtain the difference in primitive internal coordinates between the reactant and product side frontier nodes.
                     # New nodes are then added along this tangent.
-                    tangent = gsmutil.DE_get_tangent(work_dirs, basedir)
+                    tangent = gsmutil.DE_get_tangent(frontier_dirs, current_nodes, total_nodes, basedir)
                     
                     # Now create two new qommma.in files for these new nodes and copy the geometries of the previous nodes over.
                     # The generation of new geometries (mathematically intensive) is handled by the Fortran code.
-                    gsmutil.DE_add_nodes(work_dirs, tangent, basedir)
-                
+                    gsmutil.DE_add_nodes(frontier_dirs, new_dirs, tangent, basedir)
+                    
+                    # Update the frontier directories to represent the new nodes.
+                    frontier_dirs = []
+                    frontierR_dir = new_frontierR_dir
+                    frontierP_dir = new_frontierP_dir
+                    frontier_dirs.append(frontierR_dir)
+                    frontier_dirs.append(frontierP_dir)
+                    
                     # Now, the new nodes can be optimised subject to the conditions of a growth phase calculation.
                     # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
-                    for dir in work_dirs:
+                    for dir in frontier_dirs:
                         try:
                             exec(open(qommmadir + '/lib/default.in').read())
                         except:
@@ -934,26 +950,34 @@ if __name__ == "__main__":
                         
                     # Whenever new nodes are added, the string is reparameterised.
                     # This is to say that it is ensured that the nodes are evenly spaced along the reaction path tangent.
-                    gsmutil.DE_reparam_g(all_nodes, basedir)
+                    gsmutil.DE_reparam_g(all_nodes, current_nodes, total_nodes, basedir)
                     gsmutil.gsmlog('Reparameterising the string... All nodes should be evenly spaced', basedir)
                         
                 # For an odd number of nodes, one final node from the reactant side must be added and then the growing terminated.
                 if current_nodes < total_nodes:
                     # Creating new directory for the central node.
-                    frontier_dir = basedir + '/node' + math.ceil(total_nodes / 2)
-                    all_nodes.append(frontier_dir)
-                    os.mkdir(frontier_dir)
+                    new_dirs = []
+                    frontier_dirs = []
+                    new_frontier_dir = basedir + '/node' + math.ceil(total_nodes / 2)
+                    new_dirs.append(new_frontier_dir)
+                    frontier_dirs.append(frontierR_dir)
+                    frontier_dirs.append(frontierP_dir)
+                    all_nodes.append(new_frontier_dir)
+                    os.mkdir(new_frontier_dir)
                     gsmutil.gsmlog('The final central node ' + str(math.ceil(total_nodes / 2)) + '   has been added to the string...', basedir)
                     current_nodes += 1
                     
                     # To define the coordinates of the central node, obtain the difference in primitive internal coordinates between the reactant and product side frontier nodes.
                     # The node is then added along this tangent.
-                    gsmutil.DE_get_tangent_central(all_nodes, basedir)
+                    gsmutil.DE_get_tangent(frontier_dirs, current_nodes, total_nodes, basedir)
                     
                     # Now create two new qommma.in files for these new nodes and copy the geometries of the previous nodes over.
                     # The generation of new geometries (mathematically intensive) is handled by the Fortran code.
-                    gsmutil.DE_add_node_central(all_nodes, tangent, basedir)
-                
+                    gsmutil.DE_add_nodes(frontier_dirs, new_dirs, tangent, basedir, to_add=1)
+                    
+                    # Update the frontier directory to represent the new node.
+                    frontier_dir = new_frontier_dir
+               
                     # Now, the central node can be optimised subject to the conditions of a growth phase calculation.
                     # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
                     try:
@@ -968,9 +992,8 @@ if __name__ == "__main__":
                     QoMMMa_opt(frontier_dir) # performing QoMMMa growth-phase optimisation.
                     gsmutil.gsmlog('Optimising node (growth-phase): ' + inpf + '........', basedir)
                     
-                    # Finally, the string is reparameterised.
-                    # This is to say that it is ensured that the nodes are evenly spaced along the reaction path tangent.
-                    gsmutil.DE_reparam_g(all_nodes, basedir)
+                    # Finally, the string is reparameterised one more time.
+                    gsmutil.DE_reparam_g(all_nodes, current_nodes, total_nodes, basedir)
                     gsmutil.gsmlog('Reparameterising the string... All nodes should be evenly spaced', basedir)
                         
                 # Growth phase complete!
@@ -985,6 +1008,9 @@ if __name__ == "__main__":
                 nodeR_dir = basedir + '/nodeR'
                 if (os.path.exists(nodeR_dir)) is not True:
                     gsmutil.gsmend(gsmutil.gsmlog('Error: for a single-ended GSM calculation, a (preferentially well-optimised) reactant directory called ''nodeR'' within the working directory must exist.', basedir)
+                
+                # For the first cycle, the frontier node is the reactant node.
+                frontier_dir = nodeR_dir
                 all_nodes.append(nodeR_dir)
                 
                 # Now begin the loop of adding nodes. The node counter is one ahead of the current state so that the final number reflects the current number.
@@ -992,21 +1018,22 @@ if __name__ == "__main__":
                 
                 while SP_found == False:
                     # Creating directory for new node.
-                    frontier_dir = basedir + '/node' + str(current_nodes)
-                    all_nodes.append(frontier_dir)
-                    os.mkdir(frontier_dir)
+                    new_frontier_dir = basedir + '/node' + str(current_nodes)
+                    all_nodes.append(new_frontier_dir)
+                    os.mkdir(new_frontier_dir)
                     gsmutil.gsmlog('Node ' + str(current_nodes) + '   has been added to the string...', basedir)
                     current_nodes += 1
-                    #get driving coordinates from qommma.in.
-                    #error could not find driving coordinates.
                     
                     # To define the coordinates of the new nodes, create tangent along the user-specified driving coordinates.
                     # New nodes are then added along this tangent.
-                    tangent = gsmutil.SE_get_tangent(frontier_dir, driving_coord, basedir)
+                    tangent = gsmutil.SE_get_tangent(frontier_dir, driving_coords, basedir)
                     
                     # Now create a new qommma.in file for the new node and copy the geometry of the previous node over.
                     # The generation of the new geometry (mathematically intensive) is handled by the Fortran code.
-                    gsmutil.SE_add_node(nodeR_dir, frontier_dir, tangent, basedir)
+                    gsmutil.SE_add_node(frontier_dir, new_frontier_dir, tangent, basedir)
+                    
+                    # Update the frontier directory to represent the new node.
+                    frontier_dir = new_frontier_dir
                     
                     # Now, the new node can be optimised subject to the conditions of a growth phase calculation.
                     # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
@@ -1025,28 +1052,29 @@ if __name__ == "__main__":
                     # Lastly, check if the current node is lower in energy than the previous node.
                     # If so, then the stationary point (SP) has been found and the main part of the growth phase is over.
                     #check if energy of new node is lower than old node
+                    #gsmutil.SE_check_delE()
                     #SP_found = True
                 
                 # When the stationary point (SP) has been surpassed, 2 - 4 new nodes with large steps are created - hopefully finding the minimum on the other side.
                 # The large steps are defined based on the total primitive internal coordinate change from the pre-SP nodes.
                 # This is based on the assumption that the drop off in energy after the SP will be approximately at the same rate as pre-SP.
-                tangent = gsmutil.SE_get_last_tangent(nodeR_dir, frontier_dir, driving_coord, basedir)
+                tangent = gsmutil.SE_get_final_tangent(nodeR_dir, frontier_dir, driving_coords, basedir)
                 
                 # Based on the magnitude of the tangent, new directories can be created. 
                 # The criteria for these magnitudes are essentially based on trial and error, but can be easily modified.
                 #create dirs for new nodes.
-                #add new node directories to work_dirs
+                #add new node directories to new_dirs
                 #add new node directories to all_nodes.
                 #current_nodes += 2 to 4
                               
                 # Now create new qommma.in files for the new nodes and copy the geometries of the previous nodes over.
                 # In this case, the starting geometry for all 2-4 nodes is the same and is the current frontier node.
                 # The generation of the new geometries (mathematically intensive) is handled by the Fortran code.
-                gsmutil.SE_add_last_nodes(work_dirs, frontier_dir, tangent, basedir)
-                
+                gsmutil.SE_add_final_nodes(frontier_dir, new_dirs, tangent, basedir)
+
                 # Lastly, the new nodes can be optimised subject to the conditions of a growth phase calculation.
                 # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
-                for dir in work_dirs:
+                for dir in new_dirs:
                     try:
                         exec(open(qommmadir + '/lib/default.in').read())
                     except:
@@ -1073,7 +1101,7 @@ if __name__ == "__main__":
             
             # Now, optimise each node with stricter convergence criteria than in the growth phase.
             # This starts with creating the qommma.in files for every node and then optimising each.
-            gsmutil.gen_input_opt(all_nodes, tangent_list, max_opt_steps, basedir)
+            gsmutil.gen_input_opt(all_nodes, tangent_list, basedir)
             for dir in all_nodes:
                 try:
                     exec(open(qommmadir + '/lib/default.in').read())
