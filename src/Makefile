@@ -11,7 +11,7 @@ BIN=../bin
 QOMMMA=$(BIN)/qommma8.x
 QOMMMA_OBJ= \
 nrtype.o  coordinates.o  optimdata.o \
-math.o primitive.o delocalised.o \
+math.o primitive.o delocalised.o dlc_constraint.o \
 mainprogram.o \
 alloc_optim.o read_converg.o alloc_coord.o \
 read_checkfile.o  read_expl_coord.o  read_tinkergrad.o \
@@ -25,24 +25,24 @@ disp_corr.o
 POSTMICRO=$(BIN)/postmicro8.x
 POSTMICRO_OBJ= \
 nrtype.o  coordinates.o  optimdata.o \
-math.o primitive.o delocalised.o \
+math.o primitive.o delocalised.o dlc_constraint.o  \
 process_postmicro.o alloc_coord.o  alloc_optim.o read_expl_coord.o  read_hessgeom.o \
 short_read_checkfile.o collategeoms.o write_coord.o write_charges.o write_resp.o
 
 SETUP=$(BIN)/setup8.x
 SETUP_OBJ= \
 nrtype.o  coordinates.o optimdata.o  \
-math.o primitive.o delocalised.o \
+math.o primitive.o delocalised.o dlc_constraint.o  \
 alloc_optim.o alloc_coord.o  read_expl_coord.o  write_first_report.o  read_charges.o  \
 write_charges.o   write_resp.o   write_inactive.o  write_first_checkfile.o  \
 read_initfile.o  setup_first.o det_sm_coord.o write_sm_coord.o write_atomic.o \
 check_constrained_atoms.o initialize_update_geom.o initialize_prims.o \
-initialize_driving.o
+initialize_step.o
 
 QOMMMA_MECP=$(BIN)/qommma_mecp.x
 QOMMMA_MECP_OBJ= \
 nrtype.o  coordinates.o  optimdata.o \
-math.o primitive.o delocalised.o \
+math.o primitive.o delocalised.o dlc_constraint.o  \
 mainprogram_mecp.o \
 alloc_optim_mecp.o  read_converg.o alloc_coord.o \
 read_checkfile_mecp.o  read_expl_coord.o  read_tinkergrad.o \

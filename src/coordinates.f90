@@ -3,8 +3,8 @@ use nrtype
 implicit none
 
 integer(i4b), parameter :: maxbond = 8
-integer(i4b) :: n, nx, nq, nqx, nl, nlx, nopt, noptx, ndlc, nprim, ninact, ncon, kcnstyp, nimg, nebtype 
-integer(i4b) :: gsmtype, coordtype, primtype, ndriv
+integer(i4b) :: n, nx, nq, nqx, nl, nlx, nopt, noptx, ndlc, nprim, ninact, kcnstyp, nimg, nebtype 
+integer(i4b) :: gsmtype, gsmphase, coordtype, primtype, ncon_prim, ncon_cart
 real(sp) :: tolde_org, tolgmax_org, tolgrms_org, toldxmax_org, toldxrms_org, tolper
 
 real(sp) :: kspring
@@ -22,17 +22,18 @@ real(sp), allocatable :: fullx(:,:), fullxq(:,:), fullxl(:,:), fullxopt(:,:), fu
 ! tables of coordinates of various groups of atoms, of a particular image
 real(sp), allocatable :: x(:), xq(:), xl(:), xopt(:), dlc(:), lratio(:), chg(:), x_copy(:)
 
-! matrices used in the generation of DLC.
+! matrices used in the generation and constraining of DLC.
 ! these matrices are frequently deallocated and reallocated.
 integer(i4b), allocatable :: prim_list(:,:) ! Primitive coordinate indice array.
 integer(i4b), allocatable :: to_generate(:) ! Used dynamically to assign temporary atom indices.
-integer(i4b), allocatable :: driving_coords(:,:) ! definition of driving coordinates.
-real(sp), allocatable :: prims(:), old_prims(:), d_prims(:) ! Primitive internal coordinate array.
+integer(i4b), allocatable :: driving_coords(:,:) ! Definition of driving coordinates.
+real(sp), allocatable :: prims(:), old_prims(:) ! Primitive internal coordinate array.
 real(sp), allocatable :: Bmat_p(:,:), old_Bmat_p(:,:) ! Primitive Wilson B matrix array.
 real(sp), allocatable :: Bmat_dlc(:,:), old_Bmat_dlc(:,:) ! DLC Wilson B matrix array.
-real(sp), allocatable :: drive_dq(:) ! values for driving coordinates.
+real(sp), allocatable :: drive_dq(:) ! Values for driving coordinates.
 real(sp), allocatable :: Gmat(:,:) ! G matrix array.
 real(sp), allocatable :: Umat(:,:) ! U matrix array.
+real(sp), allocatable :: Vmat(:,:) ! V matrix array.
 real(sp), allocatable :: Rmat(:,:) ! R matrix array.
 
 character(4), allocatable :: img_string(:)

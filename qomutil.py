@@ -570,34 +570,10 @@ def link_write(link):
         fd.write('\n')  
     fd.close()
     
-def driving_write(driving_coord):
+def cons_write_prim(cons, usrdir):
     """
     
-    // Function which generates the details for driving coordinates if the single-ended GSM is used. //
-    // This function is called in the function fortinp found in qommmma.py. //
-    
-    Arguments
-    ----------
-    driving_coord : tuple
-        Represents the details for each driving coordinate.
-
-    """
-    
-    # The file fortinput is opened.
-    fd = open('fortinput','a')
-                    
-    # Driving coordinate(s) details are written to fortinput.
-    for i in range(len(driving_coord)):
-        for j in range(len(driving_coord[i])):
-            fd.write(str(driving_coord[i][j]).rjust(8))
-        fd.write('\n')  
-    fd.close()
-
-
-def cons_write_dlc(cons, usrdir):
-    """
-    
-    // Function which generates the constraint details for delocalised internal coordinates. //
+    // Function which generates the constraint details for primitive internal coordinates. //
     // This function is called in the function fortinp found in qommmma.py. //
     
     Arguments
@@ -614,7 +590,7 @@ def cons_write_dlc(cons, usrdir):
 
     for i in range(len(cons)):
         # The constraint details are written to fortinput.
-        fd.write(str(cons[i][0]).rjust(8)) # The desired value.
+        fd.write(str(cons[i][0]).rjust(8)) # The desired change in primitive coordinates.
         fd.write('\n')
         for j in range(len(cons[i][1])):
             fd.write(str(cons[i][1][j]).rjust(8))

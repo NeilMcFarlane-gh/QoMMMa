@@ -35,19 +35,15 @@ contains
 	!               prim_list     : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3,4],[2,3,4,5] etc..).
 
 	implicit none
-	integer(i4b) :: i, j, k, l, m, atom_num, nlinks, temp, temp2, is_link, to_generate(atom_num), neigh_pos
-	integer(i4b) :: coord_counter_1, coord_counter_2, opt_id, neighbours(atom_num,maxbond), zero_count, total_prims
-	integer(i4b) :: bonding(atom_num,maxbond), qm_indices(atom_num-nlinks), link_list(nlinks), actual_bond(2), actual_bond2(2)
-	integer(i4b) :: possible_ang(3), possible_di(4), actual_ang(3), actual_di(4), possible_di2(4), actual_ang2(3)
-	integer(i4b) :: atom_1, atom_2, atom_3, atom_4, prim_counter, ang_counter, angles_start, angles_end
-	integer(i4b) :: bonds_start, bonds_end, di_start, di_end, di_atom, temp_prim(4), temp_prim_1(4), temp_prim_2(4)
+	integer(i4b) :: i, j, k, m, atom_num, nlinks, to_generate(atom_num), neigh_pos
+	integer(i4b) :: coord_counter_1, coord_counter_2, opt_id, neighbours(atom_num,maxbond), total_prims
+	integer(i4b) :: actual_bond(2), actual_bond2(2), actual_ang(3), actual_ang2(3), possible_di(4), possible_di2(4)
+	integer(i4b) :: atom_1, atom_2, prim_counter, ang_counter, di_atom, temp_prim(4), temp_prim_1(4), temp_prim_2(4)
 	integer(i4b), allocatable :: TC_list(:,:), prim_list(:,:), prim_list_ordered(:,:), angle_atoms(:)
-	integer(i4b), allocatable :: prim_list_temp(:,:), combo_list(:,:), the_prims(:,:)
-	real(sp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
-	real(sp) :: r, theta, phi, dist
+	integer(i4b), allocatable :: prim_list_temp(:,:), combo_list(:,:)
+	real(sp) :: coords_1(3), coords_2(3), coords(atom_num * 3), r, dist
 	real(sp), allocatable :: distances(:)
-	logical :: use_cut = .TRUE.
-	logical :: is_bonded, is_dupe
+	logical :: is_dupe = .FALSE.
 	logical :: is_allocated = .FALSE.
 
 	! This algorithm starts very similarly to define_prims_TC, where every atom is connected to every atom.
@@ -208,31 +204,32 @@ contains
 			is_allocated = .TRUE.
 		end if
 	end do
-	
+
 	! The algorithm is not perfect, so can produce duplicates. These are first located.
-	total_prims = prim_counter-1
+	total_prims = SIZE(prim_list_temp,1)
 	do i=1, SIZE(prim_list_temp,1)
 		temp_prim_1(:) = prim_list_ordered(i,:)
 		do j=1, SIZE(prim_list_temp,1)
 			temp_prim_2(:) = prim_list_ordered(j,:)
 			if ((i .ne. j) .AND. (SUM(temp_prim_1) .ne. 0) .AND. (SUM(temp_prim_2) .ne. 0)) then
 				temp_prim = temp_prim_1 - temp_prim_2
-				is_dupe = .TRUE.
 				do k=1, 4
 					if (ABS(temp_prim(k)) .gt. 0) then
 						is_dupe = .FALSE.
 						exit
+					else if (k == 4) then
+						is_dupe = .TRUE.
 					end if
 				end do
 				if (is_dupe .eqv. .TRUE.) then
-					prim_list_ordered(i,:) = 0
-					prim_list_temp(i,:) = 0
+					prim_list_ordered(j,:) = 0
+					prim_list_temp(j,:) = 0
 					total_prims = total_prims - 1
 				end if
 			end if
 		end do
-	end do	
-	
+	end do
+
 	! Lastly, the final set of primitive internal coordinates is placed in an array.
 	allocate(prim_list(total_prims,4))
 	prim_list = 0
@@ -246,7 +243,7 @@ contains
 	
 	! The global integer, nprim, is also initialised here.
 	nprim = SIZE(prim_list,1)
-		
+
 	end subroutine define_prims_full
 	
 	subroutine calc_prims(atom_num, n_prims, prims, coords, prim_list) 
@@ -266,8 +263,11 @@ contains
 	real(sp) :: r, theta, phi
 	real(sp), allocatable :: prims(:)
 
-	! Using the earlier defined prim_list, each of the primitive internal coordinates can be calculated.
+	! First, allocate (if necessary) and zero the primitive internal coordinates.
 	if (.not. ALLOCATED(prims)) allocate(prims(n_prims))
+	prims(:) = 0.0
+
+	! Using the earlier defined prim_list, each of the primitive internal coordinates can be calculated.
 	do j=1, n_prims
 		! First, decide which kind of primitive internal coordinate we are dealing with.
 		zero_count = 0
@@ -474,19 +474,23 @@ contains
 	! The change in the hessian can now be calculated.
 	dhess = ((OUTER_PRODUCT(dg, dg, n_prims, n_prims)) / dgdq) &
 			- ((OUTER_PRODUCT(MATMUL(hess, dq), MATMUL(dq, hess), n_prims, n_prims))  / dqHdq)
-
-!	do i=1, n_prims
-!		do j=1, n_prims
-!			if (ABS(dhess(i,j)) .gt. 2) then
-!				print *, "adjusting hessian in position...", i, j
-!				dhess(i,j) = dhess(i,j) * 0.0
-!			end if
-!		end do
-!	end do
+	
+    ! In some cases, the change in Hessian becomes unreasonably small. 
+    ! When this is the case, the magnitude of the value is increased, but it's direction (positive or negative) remains the same.
+	! In other cases, the change in Hessian is unreasonably large.
+	! When this is the case, the change in the given Hessian element is simply set to zero.
+	do i=1, n_prims
+		do j=1, n_prims
+			if (ABS(dhess(i,j)) .lt. 0.05) then
+				dhess(i,j) = dhess(i,j) * 2
+			else if (ABS(dhess(i,j)) .gt. 2) then
+				dhess(i,j) = 0.0
+			end if
+		end do
+	end do
 
 	! Lastly, the newly updated hessian is obtained.
 	hess = hess + dhess
-
 	prims_1(:) = 0.0
 	prims_2(:) = 0.0
 	
@@ -506,28 +510,119 @@ contains
 	integer(i4b) :: atom_num, n_prims
 	real(sp) :: Bmat_p((3 * atom_num), n_prims), g(atom_num * 3)
 	real(sp), allocatable :: g_p(:)
-	real(sp) :: BT_Ginv(n_prims, (3 * atom_num))
+	real(sp) :: BT_Ginv(n_prims, (3 * atom_num)), Gmat(n_prims, n_prims)
 
 	! The primitive gradient array is allocated. By definition, its dimensions are the number of prims.
 	if (.not. ALLOCATED(g_p)) allocate(g_p(n_prims))
 	g_p(:) = 0.0
-
-	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
-	BT_Ginv = MATMUL(TRANSPOSE(Bmat_p), SVD_INVERSE(MATMUL(Bmat_p, TRANSPOSE(Bmat_p)), SIZE(Bmat_p, 1), SIZE(Bmat_p, 1)))
-	g_p = MATMUL(g, TRANSPOSE(BT_Ginv))
 	
+	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
+	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
+	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, SIZE(Gmat,1), SIZE(Gmat,1)), TRANSPOSE(Bmat_p))
+	g_p = MATMUL(g, TRANSPOSE(BT_Ginv))
+
 	end subroutine gen_grad_cart_to_prim
 	
-	
-	subroutine gen_hess_cart_to_prims
-	! Here, the cartesian hessian matrix is updated to primitive internal coordinate subspace.
-	
-	end subroutine gen_hess_cart_to_prims
-	
-	
-	subroutine prims_to_cart
+
+	subroutine prims_to_cart(atom_num, n_prims, dq, q, x_1, x_2, Bmat_p, prim_list)
 	! Here, the primitive internal coordinates are converted to cartesian coordinates using an iterative procedure.
+	! This is used to generate the cartesian coordinates following a linear interpolation in primitive internal coordinates.
+	!
+	! ARGUMENTS:    atom_num : Integer which represents the total number of atoms to be delocalised.
+	!               n_prims  : Integer which represents the total number of primitive internal coordinates.	
+	!           	dq       : 1D array containing the change in primitive internal coordinates.
+	!				q_1      : 1D array containing the primitive internal coordinate set of the starting point.  
+    !               x_1      : 2D array containing all the cartesian coordinates of the starting point.	
+	!				x_2      : 2D array containing all the cartesian coordinates after conversion.
+	!				Bmat_p   : 2D array containing the Wilson B matrix used to convert between cartesian and primitive internal coordinates.
+	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 	
+	implicit none
+	integer(i4b) :: atom_num, n_prims, i, iter_counter, prim_list(n_prims, 4)
+	real(sp) :: dq(n_prims), q(n_prims), q_2(n_prims), x_1(3 * atom_num), x_2(3 * atom_num)
+	real(sp) :: BT_Ginv(n_prims, (3 * atom_num)), Bmat_p((3 * atom_num), n_prims)
+	real(sp) :: dq_actual(n_prims), check(n_prims), temp_check, xyz_rms_1, xyz_rms_2
+	real(sp) :: init_dq(n_prims), target_q(n_prims), dx(3 * atom_num), Gmat(n_prims, n_prims)
+	real(sp), allocatable :: temp_q(:)
+	logical :: convergence
+	
+    ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
+    ! Instead, an iterative transformation procedure must be used.
+    ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
+	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
+	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, SIZE(Gmat,1), SIZE(Gmat,1)), TRANSPOSE(Bmat_p))
+
+	! Stashing some values for convergence criteria.
+	convergence = .FALSE.
+	xyz_rms_1 = 0
+	xyz_rms_2 = 0
+	init_dq(:) = dq(:)
+	target_q(:) = q(:) + init_dq(:)
+
+	do while (convergence .eqv. .FALSE.) 
+		! The change in cartesian coordinates associated with the change in primitive internal coordinates is calculated.
+		dx(:) = 0.0
+		dx = MATMUL(TRANSPOSE(BT_Ginv), dq)
+		
+		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
+		xyz_rms_2 = RMSD_CALC(dx, x_1, SIZE(x_1))
+		
+		! The new cartesian geometry is evaluated, and the new primitive internal coordinate set and Wilson B matrix are obtained.
+		x_2 = x_1 + dx
+		q(:) = 0.0
+		Bmat_p(:,:) = 0.0
+		if (ALLOCATED(temp_q)) then 
+			deallocate(temp_q)
+		end if
+		call calc_prims(atom_num, n_prims, temp_q, x_2, prim_list) 
+		call gen_Bmat_prims(atom_num, n_prims, x_2, prim_list, Bmat_p)
+		q(:) = temp_q(:)
+		
+		! The Moore-Penrose inverse is constructed for the next iteration.
+		BT_Ginv(:,:) = 0.0
+		Gmat(:,:) = 0.0
+		Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
+		BT_Ginv = MATMUL(SVD_INVERSE(Gmat, SIZE(Gmat,1), SIZE(Gmat,1)), TRANSPOSE(Bmat_p))
+
+        ! The change in primitive internals for the next iteration is evaluated, and any which do not change in the original change in primitive internals is set to zero.
+		! This mitigates any risk of primitive internal coordinates changing which should remain constant, thus making the interpolation linear.
+		dq(:) = 0.0
+		dq = (target_q - q)
+		do i=1, SIZE(dq)
+			if (init_dq(i) .eq. 0.0) then
+				dq(i) = 0.0
+			end if
+		end do
+		
+		! Now, the three exit conditions should be checked...
+		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
+        ! The second ending condition for this transformation is when the difference in root-mean-square change in cartesians between iteration i and i+1 is less than 10^-12.
+        ! The third ending condition for this transformation is when the difference between the target DIC and the calculated DLC is less than 10^-6.
+		check = target_q - q
+		if (ABS(xyz_rms_2) < 1E-06) then
+			convergence = .TRUE.
+		else if (ABS(xyz_rms_2 - xyz_rms_1) < 1E-12) then
+			convergence = .TRUE.
+		end if
+		do i=1, SIZE(check)
+			temp_check = check(i)
+			if (ABS(temp_check) < 1E-12) then
+				convergence = .TRUE.
+			end if
+		end do
+		
+		! Values which are calculated from the iterative procedure are updated to be ith property for the next iteration.
+		x_1(:) = x_2(:)
+		xyz_rms_1 = xyz_rms_2
+
+		! In some cases, cartesians cannot be solved, so an exit condition must exist for this case.
+		iter_counter = iter_counter + 1
+		if (iter_counter == 1000) then
+			print *, "Error; could not solve cartesians from the change in primitive internal coordinates."
+			exit
+		end if
+	end do
+
 	end subroutine prims_to_cart
 	
 

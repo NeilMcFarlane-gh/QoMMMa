@@ -15,15 +15,22 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims
-	real(sp) :: Bmat_p((3 * atom_num), n_prims)
+	real(sp) :: Bmat_p((3 * atom_num), n_prims), deter
 	real(sp), allocatable :: Gmat(:,:)
 	
 	! The G matrix is simply the Wilson B matrix multiplied by its transpose.
 	! By definition, it has dimensions of n_prims x n_prims, so it is allocated accordingly.
 	if (.not. ALLOCATED(Gmat)) allocate(Gmat(n_prims, n_prims))
 	Gmat(:,:) = 0.0
-	
 	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
+	
+	! By definition, the G matrix must have a determinant of zero. 
+	! This criteria is checked to mitigate errors down the line.
+	deter = DETERMINANT(Gmat, n_prims)
+	if (deter .gt. 1E-6) then
+		write (*,*) "Error; the determinant of the G matrix is not zero - there must be some problem."
+        stop
+	end if
 
 	end subroutine gen_Gmat
 	
@@ -41,7 +48,7 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, j, U_vector_counter, R_vector_counter
-	real(sp) :: Gmat(n_prims, n_prims), eigenvals(n_prims), eigenvecs(n_prims, n_prims), temp_eval
+	real(sp) :: Gmat(n_prims, n_prims), eigenvals(n_prims), eigenvecs(n_prims, n_prims), temp_eval, temp
 	real(sp), allocatable :: Umat(:,:), Rmat(:,:)
 	
 	! By definition, the U matrix should contain 3N-6 (where N is the total number of atoms) eigenvectors.

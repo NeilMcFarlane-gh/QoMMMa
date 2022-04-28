@@ -74,26 +74,22 @@ do img_num=1,nimg
 	close(8)
 
 	! Now, if appropriate, evaluate the constraint effect on energy & gradients.
-	! TO-DO : Implement DLC constraint here?
-	totcnsen=0.d0
-	if (ncon.ne.0) then
-        if (coordtype .eq. 0) then
-			do i=1,ncon
-				call evaluate_constraint(i)
-				fullcnsval(img_num,i)=cnsval(i)
-				fullcnsg(img_num,i)=cnsg(i)
-				fullcnsen(img_num,i)=cnsen(i)
-			end do
-			
-			totcnsen=sum(cnsen(1:ncon))
-
+	if (ncon_cart.gt.0) then
+		totcnsen=0.d0
+		do i=1,ncon_cart
+			call evaluate_constraint(i)
+			fullcnsval(img_num,i)=cnsval(i)
+			fullcnsg(img_num,i)=cnsg(i)
+			fullcnsen(img_num,i)=cnsen(i)
+		end do
+			totcnsen=sum(cnsen(1:ncon_cart))
 			fulltotcnsen(img_num)=totcnsen
 			e = e + totcnsen
-		else if (coordtype .eq. 1) then
-			!placeholder
-		end if
-
+	else if (ncon_prim.gt.0) then
+		! TO-DO : Implement prim/DLC constraint here?
+		!placeholder
 	end if
+
 
 	fulloptg(img_num,:)=optg(:)
 	fulle(img_num)=e

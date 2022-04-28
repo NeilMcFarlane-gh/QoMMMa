@@ -36,8 +36,8 @@ do img_num=1,nimg
 	   write (unit=8,fmt='(A,1X,I4)') "This is a report file for image", img_num
 	end if
 
-	if (ncon.gt.0) then
-	   write (unit=8,fmt='(A,1X,I4,A)') "You have put",ncon," constraints on the geometry."
+	if (ncon_cart.gt.0) then
+	   write (unit=8,fmt='(A,1X,I4,A)') "You have put",ncon_cart," cartesian constraints on the geometry."
 	end if
 
 	if (disp.eq.1) then

@@ -1,286 +1,234 @@
-!------------------------------------------------------------------------------
-! subroutine gen_cons
-!
-! Generates a constraints matrix in the primitive internal basis from the
-! specification in icons(iseq,*)
-!
-! Arguments:
-! cdat(np,nc): constraints matrix (out)
-! icons(6,nc): constraints specification (in)
-! nc:          number of constraints (in)
-! np:          dimension of the primitive space
-!------------------------------------------------------------------------------
+MODULE dlc_constraint
+use nrtype ; use coordinates ; use optimdata ; use math
+implicit none
 
-  SUBROUTINE gen_cons(cdat,icons,nc,np)
+contains
 
-! args
-    INTEGER nc, np, icons(6,nc)
-    REAL (rk), DIMENSION (np,nc) :: cdat
 
-! local vars
-    INTEGER ip, ic
-! begin
-    DO ic = 1, nc
-      DO ip = 1, np
-        cdat(ip,ic) = 0.0D0
-      END DO
-      cdat(icons(6,ic),ic) = 1.0D0
-! jk: take care of bond difference
-! the positive contribution is stored in icons(6,ic)
-! the negative contribution is stored in icons(4,ic)      
-      IF (icons(5,ic)==5) THEN
-        cdat(icons(4,ic),ic) = -dsqrt(2.D0)
-        cdat(icons(6,ic),ic) = dsqrt(2.D0)
-      END IF
-    END DO
+	subroutine gen_cons(n_cons, n_prims, cdat, prim_list)
+	! Here, the constraint vectors are generated.
+	!
+	! ARGUMENTS:    n_cons      : Integer which represents the total number of constraints
+	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               cdat        : 2D array containing the details of each constraint.
+	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 
-! end gen_cons
-  END SUBROUTINE gen_cons
+	implicit none
+	integer(i4b) :: i, j, n_cons, n_prims, prim_list(n_prims, 4)
+	integer(i4b) :: temp_cons(4), temp_prim(4)
+	real(sp) :: cdat(n_cons, n_prims)
 
-!------------------------------------------------------------------------------
-! subroutine proj_cons
-!
-! Projects the vectors in the matrix c into the space spanned by utmat
-!
-! Arguments:
-! cdat(np,nc): unprojected constraints matrix (in) / projected matrix (out)
-! utdat(m,np): m-dimensional space of vectors of dimension np (in)
-! work(m):     scratch array, used for dp_{ic,j} (in)
-! m:           dimension of the space spanned by utmat (nonredundant) (in)
-! nc:          number of constraints (in)
-! np:          dimension of the space in which utmat is represented (in)
-!------------------------------------------------------------------------------
+	! By simple comparison of prim_list and the constrained primtives, we can obtain the integer corresponding to each constraint to add to cdat.
+	do i=1, n_cons
+		temp_cons = cnsat_dlc(i,:)
+		do j=1, n_prims
+			temp_prim = prim_list(j,:)
+			if (MAXVAL(temp_cons - temp_prim) .eq. 0) then
+				cdat(i,j) = 1.0
+			end if
+		end do
+	end do
+	
+	end subroutine gen_cons
+	
 
-  SUBROUTINE proj_cons(cdat,utdat,work,m,nc,np)
+	subroutine proj_cons(atom_num, n_cons, n_prims, cdat, Umat)
+	! Here, the vectors in cdat are projected onto the active DLC subspace such that they can be later isolated.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to be delocalised.
+	!               n_cons      : Integer which represents the total number of constraints
+	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               cdat        : 2D array containing the details of each constraint.
+	!							  After this subroutine, each of the constraint vectors have been projected into active DLC subspace.
+	!               Umat        : 2D array containing the eigenvectors with eigenvalues greater than zero. 
+	!                             This is the DLC transformation vector set.
+	
+	implicit none
+	integer(i4b) :: atom_num, n_cons, n_prims, ic, ip, j
+	real(sp) :: work((3 * atom_num) - 6), cdat(n_cons, n_prims), Umat(((3 * atom_num) - 6), n_prims)
+	real(sp) :: cdat_unproj(n_cons, n_prims)
 
-! args
-    INTEGER nc, np, m
-    REAL (rk), DIMENSION (m) :: work
-    REAL (rk), DIMENSION (np,nc) :: cdat
-    REAL (rk), DIMENSION (m,np) :: utdat
+	! First, start by performing the operation: dp_{ic,j} = <C_ic|U_j>
+	do ic=1, n_cons
+		do j=1, SIZE(Umat,1)
+			work(j) = 0.0
+			do ip = 1, n_prims
+				work(j) = work(j) + Umat(j,ip) * cdat(ip,ic)
+			end do
+		end do
 
-! local vars
-    INTEGER ic, ip, j
+		! Now, the unprojected cdat is saved so that the coordinate set can later be restored.
+		cdat_unproj(:,:) = cdat(:,:)
+		cdat(:,:) = 0.0
 
-! begin, dp_{ic,j} = <C_ic|U_j>
-    DO ic = 1, nc
-      DO j = 1, m
-        work(j) = 0.0D0
-        DO ip = 1, np
-          work(j) = work(j) + utdat(j,ip)*cdat(ip,ic)
-        END DO
-      END DO
+		! Lastly, perform the operation: C_ic = sum_j dp_{ic,j}*U_j
+		do j=1, SIZE(Umat,1)
+			do ip=1, n_prims
+				cdat(ip,ic) = cdat(ip,ic) + work(j) * Umat(j,ip)
+			end do
+		end do
+	end do
 
-! C_ic = 0
-      DO ip = 1, np
-        cdat(ip,ic) = 0.0D0
-      END DO
+	end subroutine proj_cons
 
-! C_ic = sum_j dp_{ic,j}*U_j
-      DO j = 1, m
-        DO ip = 1, np
-          cdat(ip,ic) = cdat(ip,ic) + work(j)*utdat(j,ip)
-        END DO
-      END DO
-    END DO ! ic = 1,nc
 
-! end proj_cons
-  END SUBROUTINE proj_cons
+	subroutine gen_Vmat(atom_num, n_cons, n_prims, cdat, Umat, Vmat)
+	! Here, the V matrix is generated by stacking of the projected constraint vector onto the active DLC subspace.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to be delocalised.
+	!               n_cons      : Integer which represents the total number of constraints
+	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               cdat        : 2D array containing the projected constraints.
+	!               Umat        : 2D array containing the eigenvectors with eigenvalues greater than zero. 
+	!                             This is the DLC transformation vector set.
+	!               Vmat        : 2D array containing the newly obtained V matrix which is the new active coordinate set + constraint vector.
+	
+	
+	implicit none
+	integer(i4b) :: atom_num, n_cons, n_prims, i, alloc_counter, cons_counter, U_counter
+	real(sp) :: work((3 * atom_num) - 6), cdat(n_cons, n_prims), Umat(((3 * atom_num) - 6), n_prims)
+	real(sp), allocatable :: Vmat(:,:)
+	
+	! First, allocate Vmat appropriately.
+	if (.not. ALLOCATED(Vmat)) allocate(Vmat((((3 * atom_num) - 6) + n_cons), n_prims))
+	
+	! Now, the V matrix can be easily created. The constraint vector(s) are added first, followed by the original U matrix.
+	alloc_counter = 1
+	cons_counter = 1
+	U_counter = 1
+	do i=1, SIZE(Vmat,1)
+		if (alloc_counter .le. n_cons) then
+			Vmat(i,:) = cdat(cons_counter,:)
+			alloc_counter = alloc_counter + 1
+			cons_counter = cons_counter + 1
+		else
+			Vmat(i,:) = Umat(U_counter,:)
+			alloc_counter = alloc_counter + 1
+			U_counter = U_counter + 1
+		end if
+	end do
+	
+	end subroutine gen_Vmat
+	
+	
+	subroutine ortho_mat(atom_num, n_cons, n_prims, Vmat)
+	! Here, the V matrix is Gram-Schmidt orthogonalised.
+	! The first vector taken in the procedure is the constraint vector(s), and the last vector should drop out as zero.
+	! This leaves a 3N - 6 vector set containing the constraint vector(s) along with the active coordinate set.
+	! This subroutine is shamelessly ripped from DL-FIND...
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to be delocalised.
+	!               n_cons      : Integer which represents the total number of constraints.
+	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               Vmat        : 2D array containing the V matrix which is the active coordinate set + constraint vector(s).
+	!                             After this subroutine, the last vector in the V matrix should be all zero.
+	
+	implicit none
+	integer(i4b) :: atom_num, n_cons, n_prims, i, j, k, nelem, nvec
+	real(sp) :: work(n_prims), dnorm, scapro, tol, Vmat((((3 * atom_num) - 6) + n_cons), n_prims)
+	real(sp), parameter :: tolerance = 1.0D-10
 
-!------------------------------------------------------------------------------
-! subroutine merge_cons
-!
-! Composes a new matrix V out of [C,Ut]
-!
-! Arguments:
-! v_mat:  matrix (np,m+nc) of [cmat,utmat transposed] (out)
-! c_mat:  matrix (np,nc) of projected constraints (in)
-! ut_mat: matrix (m,np) of U transposed (in)
-! work:   work array(np) (in)
-! m:      dimension of the space spanned by utmat (nonredundant) (in)
-! nc:     number of constraints (in)
-! np:     dimension of the space in which utmat is represented (in)
-!------------------------------------------------------------------------------
+	! Start by initialising some values.
+	nvec = ((3 * atom_num) - 6) + n_cons
+	nelem = n_prims
+	work = 0.0
+	
+	! begin, orthogonalise vectors i = 2,nvec
+	do i = 1, nvec
+		! make vector i orthogonal to vectors  k = 1,i-1
+		do k = 1, i - 1
+			scapro = 0.0D0
+			do j = 1, nelem
+				scapro = scapro + Vmat(i,j)*Vmat(k,j)
+			end do
+			do j = 1, nelem
+				work(j) = work(j) + Vmat(k,j)*scapro
+			end do
+		end do
 
-  SUBROUTINE merge_cons(v_mat,c_mat,ut_mat,work,m,nc,np)
+		! subtract the collinear vector to make vector i orthogonal to k = 1,i-1
+		do j = 1, nelem
+			Vmat(i,j) = Vmat(i,j) - work(j)
+		end do
 
-! args
-    INTEGER m, nc, np
-    TYPE (matrix) :: v_mat, c_mat, ut_mat
-    REAL (rk), DIMENSION (np) :: work
+		! normalise vector i
+		dnorm = 0.0
+		do j = 1, nelem
+			dnorm = dnorm + Vmat(i,j)*Vmat(i,j)
+		end do
+		if (ABS(dnorm) < tolerance) then
+			dnorm = 0.0D0
+		else
+			dnorm = 1.0D0 / SQRT(dnorm)
+		end if
+		do j = 1, nelem
+			Vmat(i,j) = Vmat(i,j)*dnorm
+		end do
+	end do
 
-! local vars
-    INTEGER i, idum, j
+	end subroutine ortho_mat
 
-! begin
-    DO i = 1, nc
-      idum = matrix_get_column(c_mat,size(work),work,i)
-      idum = matrix_set_column(v_mat,size(work),work,i)
-    END DO
-    j = nc
-    DO i = 1, m
-      j = j + 1
-      idum = matrix_get_row(ut_mat,size(work),work,i)
-      idum = matrix_set_column(v_mat,size(work),work,j)
-    END DO
 
-! end merge_cons
-  END SUBROUTINE merge_cons
+	subroutine move_cons(atom_num, n_cons, n_prims, Vmat)
+	! Here, the constraint vector(s) are moved behind the active space in Vmat and any zero vector(s) are dropped for the ease of working.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to be delocalised.
+	!               n_cons      : Integer which represents the total number of constraints.
+	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               Vmat        : 2D array containing the V matrix which is the active coordinate set + constraint vector(s).
+	
+	implicit none
+	integer(i4b) :: atom_num, n_cons, n_prims, i
+	real(sp) :: work((((3 * atom_num) - 6) + n_cons), n_prims)!, Vmat((((3 * atom_num) - 6) + n_cons), n_prims)
+	real(sp), allocatable :: Vmat(:,:)
 
-!------------------------------------------------------------------------------
-! subroutine ortho_mat
-!
-! Applies Schmidt orthogonalisation to the columns of vmat
-! Taken from mankyopt: orthog.F
-!
-! Arguments:
-! v_dat(np,nc+m): [cmat,utmat transposed] (in), orthogonalised (out)
-! work(np):       work array (in)
-! m, nc, np:      see above (in)
-!------------------------------------------------------------------------------
+	! Firstly, the V matrix is saved in work so that the V matrix can be appropriately deallocated and reallocated.
+	work(:,:) = Vmat(:,:)
+	
+	! Now, the V matrix is deallocated and reallocated with appropriate dimensions.
+	deallocate(Vmat)
+	allocate(Vmat(((3 * atom_num) - 6), n_prims))
+	
+	! The constraint(s) are now exracted from the working array and added to the back of the newly allocated Vmat.
+	do i=1, n_cons
+		if (i .eq. 1) then
+			Vmat(((3 * atom_num) - 6),:) = work(n_cons,:)
+		else
+			Vmat(((3 * atom_num) - 6) - i,:) = work(n_cons - i,:)
+		end if
+	end do
+	
+	! Lastly, adding the active space to Vmat...
+	do i=1, (((3 * atom_num) - 6) - n_cons)
+		Vmat(i,:) = work(n_cons + i,:)
+	end do
 
-  SUBROUTINE ortho_mat(v_dat,work,m,nc,np)
+	end subroutine move_cons
 
-! args
-    INTEGER m, nc, np
-    REAL (rk), DIMENSION (np,nc+m) :: v_dat
-    REAL (rk), DIMENSION (np) :: work
 
-! local vars
-    INTEGER i, j, k, nelem, nvec
-    REAL (rk) dnorm, scapro, tol
+	subroutine unproj_cons(atom_num, n_cons, n_prims, Vmat, cdat_unproj)
+	! Here, the constraint vector(s) are moved behind the active space in Vmat and any zero vector(s) are dropped for the ease of working.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to be delocalised.
+	!               n_cons      : Integer which represents the total number of constraints.
+	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               Vmat        : 2D array containing the V matrix which is the active coordinate set + constraint vector(s).
+	!               cdat        : 2D array containing the details of each constraint - unprojected!!
+	
+	implicit none
+	integer(i4b) :: atom_num, n_cons, n_prims, i
+	real(sp) :: Vmat(((3 * atom_num) - 6), n_prims), cdat_unproj(n_cons, n_prims)
+	
+	! The unprojected constraint(s) are simply put back into Vmat.
+	do i=1, n_cons
+		if (i .eq. 1) then
+			Vmat(((3 * atom_num) - 6),:) = cdat_unproj(n_cons,:)
+		else
+			Vmat((((3 * atom_num) - 6) - i),:) = cdat_unproj(n_cons - i,:)
+		end if
+	end do
 
-! data
-    DATA tol/1.0D-10/
+	end subroutine unproj_cons
+	
 
-! begin, orthogonalise vectors i = 2,nvec
-    nvec = m + nc
-    nelem = np
-    DO i = 1, nvec
-      DO j = 1, nelem
-        work(j) = 0.0D0
-      END DO
-
-! make vector i orthogonal to vectors  k = 1,i-1
-      DO k = 1, i - 1
-        scapro = 0.0D0
-        DO j = 1, nelem
-          scapro = scapro + v_dat(j,i)*v_dat(j,k)
-        END DO
-        DO j = 1, nelem
-          work(j) = work(j) + v_dat(j,k)*scapro
-        END DO
-      END DO
-
-! subtract the collinear vector to make vector i orthogonal to k = 1,i-1
-      DO j = 1, nelem
-        v_dat(j,i) = v_dat(j,i) - work(j)
-      END DO
-
-! normalise vector i
-      dnorm = 0.0D0
-      DO j = 1, nelem
-        dnorm = dnorm + v_dat(j,i)*v_dat(j,i)
-      END DO
-      IF (abs(dnorm)<tol) THEN
-        dnorm = 0.0D0
-      ELSE
-        dnorm = 1.0D0/dsqrt(dnorm)
-      END IF
-      DO j = 1, nelem
-        v_dat(j,i) = v_dat(j,i)*dnorm
-      END DO
-    END DO
-
-! report resulting matrix
-!   do i = 1,nvec
-!      work(i) = 0.0D0
-!      do j = 1,nelem
-!         work(i) = work(i) + v_dat(j,i)*v_dat(j,i)
-!      end do
-!   end do
-
-! end ortho_mat
-  END SUBROUTINE ortho_mat
-
-!------------------------------------------------------------------------------
-! subroutine move_cons
-!
-! Moves the constraints behind the active space in the V matrix, transposes
-! V and stores it in Ut
-!
-! Arguments: see merge_cons
-!------------------------------------------------------------------------------
-
-  SUBROUTINE move_cons(v_mat,ut_mat,work,m,nc,np)
-
-! args
-    INTEGER m, nc, np
-    TYPE (matrix) :: v_mat, ut_mat
-    REAL (rk), DIMENSION (np) :: work
-
-! local vars
-    INTEGER is, it, i
-    REAL (rk) dnorm, tol
-
-! data
-    DATA tol/1.0D-10/
-
-! begin
-    DO is = 1, nc
-      i = matrix_get_column(v_mat,size(work),work,is)
-      i = matrix_set_row(ut_mat,size(work),work,m-nc+is)
-    END DO
-    it = 0
-    DO is = nc + 1, nc + m
-      i = matrix_get_column(v_mat,size(work),work,is)
-      dnorm = 0.0D0
-      DO i = 1, np
-        dnorm = dnorm + work(i)*work(i)
-      END DO
-      IF (dnorm>tol) THEN
-!         write(stdout,'("JK dnorm ",g15.7," tol ",g15.7)') dnorm,tol
-        it = it + 1
-        IF (it>m-nc) THEN
-          WRITE (stdout,'(A,I5)') 'Too many active vectors, required: ', &
-            m - nc
-!            write(stdout,'("JK dnorm ",g15.7," tol ",g15.7)') dnorm,tol
-          CALL hdlc_errflag('Constraints error','abort')
-        ELSE
-          i = matrix_set_row(ut_mat,size(work),work,it)
-        END IF
-      END IF
-    END DO
-
-! end move_cons
-  END SUBROUTINE move_cons
-
-!------------------------------------------------------------------------------
-! subroutine unproj_cons
-!
-! Replaces projected constraints by the unprojected ones in the matrix
-! U transposed
-!
-! Arguments: see merge_cons
-!------------------------------------------------------------------------------
-
-  SUBROUTINE unproj_cons(ut_mat,c_mat,work,m,nc,np)
-
-! args
-    INTEGER m, nc, np
-    TYPE (matrix) :: ut_mat, c_mat
-    REAL (rk), DIMENSION (np) :: work
-
-! local vars
-    INTEGER is, i
-
-! begin
-    DO is = 1, nc
-      i = matrix_get_column(c_mat,size(work),work,is)
-      i = matrix_set_row(ut_mat,size(work),work,m-nc+is)
-    END DO
-
-! end unproj_cons
-  END SUBROUTINE unproj_cons
-
-END MODULE dlfhdlc_constraint
+end module dlc_constraint

@@ -3,7 +3,7 @@ use nrtype ; use coordinates
 implicit none
 
 character(80) :: dummy
-integer(i4b), parameter :: nconsmax = 10 ! not a good idea to have more constraints than this
+integer(i4b), parameter :: nconsmax_cart = 10 ! not a good idea to have more constraints than this
 integer(i4b) :: disp
 
 ! First check whether the arrays are in fact already allocated...
@@ -18,12 +18,12 @@ END IF
 
 open(unit=8,file="fortinput",position="rewind")
 read(8,*) dummy
-read(8,*) n, nq, nl, nopt, ndriv
+read(8,*) n, nq, nl, nopt
 read(8,*) dummy
 read(8,*) disp
 read(8,*) dummy
-read(8,*) ncon, kcnstyp
-if ((ncon .lt. 0).or.(ncon.gt.nconsmax)) then
+read(8,*) ncon_cart, kcnstyp 
+if ((ncon_cart .lt. 0).or.(ncon.gt.nconsmax_cart)) then
       write (*,*) "Too few/many constraints. ERROR"
       stop
 else if ((kcnstyp.ne.1).and.(kcnstyp.ne.2)) then
@@ -31,9 +31,17 @@ else if ((kcnstyp.ne.1).and.(kcnstyp.ne.2)) then
       stop
 end if
 read(8,*) dummy
+read(8,*) ncon_prim
+if (ncon_prim .lt. 0) then
+	write (*,*) "Too few constraints. ERROR"
+    stop
+end if
+read(8,*) dummy
 read(8,*) nimg, nebtype, kspring
 read(8,*) dummy
 read(8,*) gsmtype
+read(8,*) dummy
+read(8,*) gsmphase
 read(8,*) dummy
 read(8,*) coordtype
 read(8,*) dummy

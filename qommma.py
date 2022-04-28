@@ -8,19 +8,24 @@
 import os
 import sys
 import shutil
-import qomutil
 import platform
+import math
 from time import asctime
 
-def fortinp():
+# Local imports.
+import qomutil
+import gsmutil
+
+
+def fortinp(usrdir):
     """
     
     // Function which creates two input files (fortinput and converg.data) required for execution of the QoMMMa Fortran code. //
-    // This function takes no arguments as they have been read in through default and user input files. //
     
     Arguments
     ----------
-    NONE
+    usrdir : string
+        The user directory - in this case it is the directory containing the files qommma.in and init_geom1.xyz.
 
     """
   
@@ -28,13 +33,12 @@ def fortinp():
     fd = open('fortinput','w')
   
     # Numbers relating to QM, MM, link, and total QM optimised atoms are written to fortinput.
-    fd.write('natom     nqm      nlink   nopt      ndriv')
+    fd.write('natom     nqm      nlink   nopt')
     fd.write('\n')
     fd.write(str(natom))
     fd.write(str(('%s%d'%('   ', nqm))))
     fd.write(str(('%s%d'%('   ', nlink))))
     fd.write(str(('%s%d'%('   ', nopt))))
-    fd.write(str(('%s%d'%('   ', ndriv)))) 
     fd.write('\n')
     
     # Whether dispersion is to be calculated (1) or not (0) is written to fortinput.
@@ -43,10 +47,10 @@ def fortinp():
     fd.write(str((disp)))   # dispersion = 1 or 0 (on/off)
     fd.write('\n') 
 
-    # The number of constraints, is used, as well as whether the constraint is harmonic (1) or tannic (2) is written to fortinput.
-    fd.write('ncon     kcnstype')
+    # The number of cartesian coordinate constraints, if used, as well as whether the constraint is harmonic (1) or tannic (2) is written to fortinput.
+    fd.write('ncon_cart     kcnstype')
     fd.write('\n')
-    fd.write(str(ncon))
+    fd.write(str(ncon_cart))
     if kcnstype.lower() == 'harmonic':
         ikcnstype = 1
     elif kcnstype.lower() == 'tanh':
@@ -54,6 +58,12 @@ def fortinp():
     else:
         qomutil.qomlog('Error, unknown constrain type : ' + kcnstype + ' is requested', usrdir)
     fd.write(str(('%s%d'%('   ', ikcnstype))))
+    fd.write('\n') 
+    
+    # The number of primitive coordinate constraints, if used, is written to fortinput.
+    fd.write('ncon_prim')
+    fd.write('\n')
+    fd.write(str(ncon_prim))
     fd.write('\n') 
       
     # If used, the nudged elastic band method used as well as the spring constant is written to fortinput.
@@ -78,7 +88,7 @@ def fortinp():
     fd.write(str(('%s%d'%('   ', kspring))))
     fd.write('\n')
       
-    # If used, the growing string method is written to fortinput.
+    # If used, the growing string method mode (double- or single-ended) is written to fortinput.
     if gsmtype.lower() == 'none':
         igsmtyp = 0
     elif gsmtype.lower() =='de_gsm':
@@ -91,6 +101,23 @@ def fortinp():
     fd.write('gsmtype')
     fd.write('\n')
     fd.write(str(igsmtyp))
+    fd.write('\n')
+    
+    # The phase that the growing string method is currently in is written to fortinput.
+    if gsmphase.lower() == 'none':
+        igsmphase = 0
+    elif gsmphase.lower() =='growth':
+        igsmphase = 1
+    elif gsmphase.lower() =='opt':
+        igsmphase = 2
+    elif gsmphase.lower() =='exact_TS':
+        igsmphase = 3
+    else:
+        qomutil.qomlog('Error, unknown gsmphase : ' + gsmphase + ' is requested', usrdir)
+    qomutil.qomlog('GSM is in the phase : ' + gsmphase + ' at the moment...', usrdir)
+    fd.write('gsmphase')
+    fd.write('\n')
+    fd.write(str(igsmphase))
     fd.write('\n')
 
     # The type of coordinates used is written to fortinput.
@@ -118,17 +145,6 @@ def fortinp():
     fd.write('\n')
     fd.write(str(iprimtyp))
     fd.write('\n') 
-    
-    # If the single-ended growing string method is used, then at least 1 driving coordinate must be provided.
-    if igsmtyp == 2:
-        fd.write('Driving coordinate(s) details')
-        fd.write('\n')
-        if driving_coord != 'None':
-            fd.close()
-            qomutil.driving_write(driving_coord) 
-            fd = open('fortinput', 'a')
-        else:
-            qomutil.qomend('ERROR: you must provide at least 1 driving coordinate for the single-ended growing string method to function', cwd, usrdir) 
     
     # The atom indices and types relating to the QM atoms is written to fortinput using the function qmread defined in qomutil.py.
     # If the old format of defining qm atoms is used, then it will still work, but this will be removed in future versions.
@@ -170,10 +186,10 @@ def fortinp():
     else:
         qomutil.qomlog('No MM atom is included in Hessian optimization',usrdir)
        
-    # Constraints can either be provided in the form of cartesians or delocalised internal coordinates.
-    # If used, constraint details are written to fortinput using the function cons_write_cart or cons_write_dlc defined in qomutil.py.
+    # Constraints can either be provided in the form of cartesians or primitive internal coordinates.
+    # If used, constraint details are written to fortinput using the function cons_write_cart or cons_write_prim defined in qomutil.py.
     # For cartesians, the old format of defining constraints will still work, but this will be removed in future versions.
-    if ncon > 0:
+    if ncon_cart > 0:
         if (icoordtyp == 0):
             fd.write('Constrain details - cartesian')
             fd.write('\n')
@@ -184,15 +200,20 @@ def fortinp():
             else:
                 fd.write((constrain.lstrip()))     
                 qomutil.qomlog('''Note, to provide constrain details try to use 'constrain_lst' option (see manual), instead of 'constrain'. Since 'constrain' option will be removed in the next version of QoMMMa.''', usrdir)
-        elif (icoordtyp == 1):
-            fd.write('Constrain details - DLC')
+        else:
+            qomutil.qomend('ERROR: you cannot mix coordinate systems and constraint types.', cwd, usrdir)
+    elif ncon_prim > 0:
+        if (icoordtyp == 1):
+            fd.write('Constrain details - primitive internal coordinates')
             fd.write('\n')
-            if dlc_constrain_lst != 'None':
+            if prim_constrain_lst != 'None':
                 fd.close()
-                qomutil.cons_write_dlc(dlc_constrain_lst, usrdir)  
-                fd = open('fortinput', 'a')      
+                qomutil.cons_write_prim(prim_constrain_lst, usrdir)  
+                fd = open('fortinput', 'a')
+        else:
+            qomutil.qomend('ERROR: you cannot mix coordinate systems and constraint types.', cwd, usrdir)
     else:
-        qomutil.qomlog('No constrain is taken into account, since ncon=0.', usrdir)
+        qomutil.qomlog('No constrain is taken into account, since ncon_cart=0 and ncon_prim=0', usrdir)
     
     # The charge dispersion in the MM region required by the inclusion of link atoms is written to fortinput using the function newcha_write defined in qomutil.py.
     # If the old format of defining modified charges is used, then it will still work, but this will be removed in future versions.
@@ -221,13 +242,7 @@ def fortinp():
        qomutil.qomlog('No atom is set as inactive', usrdir)
        fd.close()
    
-    # The file converg.data is created and set to filename variable 'fc'.  
-    # All convergence criteria are written to converg.data as it is used in later Fortran calculations.
-    
-    #########################################
-    # GSM CONVERGENCE CRITERIA WILL GO HERE #
-    #########################################
-    
+    # The file converg.data is created and all convergence criteria are written to converg.data as it is used in later Fortran calculations.  
     fc = open('converg.data', 'w')
     fc.write('change in energy')
     fc.write('\n')
@@ -253,10 +268,14 @@ def fortinp():
     fc.write('\n')
     fc.write(str(dGper))
     fc.write('\n')
+    fc.write('Tolerence in Perpendicular Gradient for the growth phase of GSM')
+    fc.write('\n')
+    fc.write(str(dGper_grow))
+    fc.write('\n')
     fc.close()
     
 
-def mmjob(mjob):
+def mmjob(mjob,usrdir):
     """
     
     // Function which performs a series of operations for the first and second Tinker jobs. //
@@ -266,6 +285,8 @@ def mmjob(mjob):
     ----------
     mjob : string
         If mjob is 'initial', then it executes the initial Tinker calculation, and if 'initial2', then it prepares for subsequent QoMMMa cycles.
+    usrdir : string
+        The user directory - in this case it is the directory containing the files qommma.in and init_geom1.xyz.
 
     """
     
@@ -357,15 +378,15 @@ def mmjob(mjob):
         
 
 
-def qminitial():
+def qminitial(usrdir):
     """
     
     // Function which creates the initial inputs for a QM job. //
-    // This function takes no arguments as they have been read in through default and user input files. //
     
     Arguments
     ----------
-    NONE
+    usrdir : string
+        The user directory - in this case it is the directory containing the files qommma.in and init_geom1.xyz.
 
     """
     
@@ -518,7 +539,7 @@ def qminitial():
         qomutil.qomend('Unknown QM code: ' + qmcode, cwd, usrdir) 
 
 
-def qmmm():
+def qmmm(usrdir):
     """
     
     // Function which performs a QoMMMa cycle. The steps of a QoMMMa cycle are as follows... //
@@ -530,11 +551,11 @@ def qmmm():
         5. If the option of a frequency calculation is selected, start the frequency calculation.
         
     // This cycle continues until convergence is achieved or the maximum number of cycles has been reached. //
-    // This function takes no arguments as they have been read in through default and user input files. //
     
     Arguments
     ----------
-    NONE
+    usrdir : string
+        The user directory - in this case it is the directory containing the files qommma.in and init_geom1.xyz.
 
     """
       
@@ -698,50 +719,24 @@ def qmmm():
         qomutil.qomend('Error, while rearranging the files after QoMMMa post-processing  job at cycle :' + str(cln), cwd, usrdir)  
             
 
-################
-# MAIN PROGRAM #
-################
-if __name__ == "__main__":
-    # User directory is set.
-    usrdir = os.getcwd()
+
+def QoMMMa_opt(usrdir):
+    """
     
-    # Files from previous runs of QoMMMa are renamed and retained.
-    if os.path.exists(usrdir + '/QoMMMa8.log'):
-        shutil.copy(usrdir + '/QoMMMa8.log', usrdir + '/QoMMMa8.log_')
-        os.remove(usrdir + '/QoMMMa8.log')
-        qomutil.qomlog('Note, log file, QoMMMa8.log of your previous QoMMMa run was moved as QoMMMa8.log_; before submitting next QoMMMa job if you need this file rename it since it will be deleted', usrdir)
+    // Function which executes a QoMMMa optimisation for a given input. //
+    // This did not used to be contained within a function, but was placed into one for each of GSM implementation. //
+    
+    Arguments
+    ----------
+    usrdir : string
+        The user directory - in this case it is the directory containing the files qommma.in and init_geom1.xyz.
+        
+    """
     
     # The time that the job starts is written to the log file.
     hlp = asctime()
     hlp1 = platform.uname()
     qomutil.qomlog('QoMMMa job starts at   ' + str(hlp) + '\n' + '  and running in node  ' + str(hlp1), usrdir)
-    
-    # The base directory is set.
-    try:
-        qommmadir = os.environ['QOMMMA']
-    except:
-        qomutil.qomlog('Environment variable QOMMMA is not set. Set QOMMMA to the base directory of QoMMMa', usrdir)
-        sys.exit()
-    
-    # Default parameters are read such that the parameters are saved as variables.
-    try:
-        exec(open(qommmadir + '/lib/default.in').read())
-    except:
-        qomutil.qomlog('Could not be able to open default file: ' + qommmadir + '/lib/default.in', usrdir)
-        sys.exit()
-    
-    # The user input file is the second command line argument, so it is set as the variable inpf.
-    if len(sys.argv) < 2:
-        qomutil.qomlog('Usage: ' + sys.argv[0] + ' <file.in>', usrdir)
-        sys.exit()
-    inpf = sys.argv[1]
-    
-    # The input file is read such that the parameters are saved as variables.
-    try:
-        exec(open(inpf).read())
-    except:
-        qomutil.qomlog('Could not be able to open input file: ' + inpf + '  This may be due to error in user input file. Check for necessary inputs and its formats, see manual', usrdir)
-        sys.exit()
     
     # The directory 'qmmm_*' is created at TMPDIR. Typically, this will be a scratch directory on a node.
     try:
@@ -757,11 +752,11 @@ if __name__ == "__main__":
     cwd = os.getcwd()
     
     # The initial MM job is performed.
-    mmjob('initial')
+    mmjob('initial', usrdir)
     
     # The primary file which communicates between Python and Fortran, fortinput, is generated.
     try:
-        fortinp()		
+        fortinp(usrdir)		
     except:
         qomutil.qomend('Error while creating input file (fortinput or converg.data) for QoMMMa, check for necessary input and its format, see manual', cwd, usrdir)
     
@@ -772,13 +767,13 @@ if __name__ == "__main__":
         qomutil.qomend('QoMMMa initial setup program fails', cwd, usrdir) 
     
     # Initial QM input files are prepared.
-    qminitial()	
-	
+    qminitial(usrdir)	
+    
     # Results from the QoMMMa setup program are moved.
     qomutil.setini(cwd, nimg, usrdir) 	
-	   
+       
     # New MM key files are creates using results from the QoMMMa setup program.
-    mmjob('initial2')
+    mmjob('initial2', usrdir)
     
     # Main QM/MM run. The variable 'cln' is the QM/MM cycle number.
     # Performing simply a frequency calculation.
@@ -796,7 +791,7 @@ if __name__ == "__main__":
         cln = 0			
         for ic in range(maxcycle): 		
             cln = cln + 1
-            qmmm()
+            qmmm(usrdir)
         if maxcycle == 1 and job.lower() == 'freq':
             qomutil.qomlog('Frequency job is started after first QoMMMa run, Frequency job will be performed with the geometry given in ' + inpgeom_prefix + '*.xyz file, here qmcode used is Gaussian', usrdir) 
             from qomfreq import freqmain
@@ -805,3 +800,309 @@ if __name__ == "__main__":
         # For the case where the calculation does not converge in the maximum number of cycles, the program is stopped.
         elif cln == maxcycle: 
             qomutil.qomend('QoMMMa run reaches maxcycle :' + str(cln), cwd, usrdir)
+
+################
+# MAIN PROGRAM #
+################
+if __name__ == "__main__":
+    # Regardless of the calculation, the base working directory is set.
+    basedir = os.getcwd()
+    
+    # If any directories from previous GSM runs are found, these are copied and retained.
+    # The reactant and product (only nodeR for SE-GSM) side nodes are NOT copied and retained as these should be obtained and minimised prior to GSM.
+    for file in os.listdir(basedir):
+        dir = os.path.join(basedir, file)
+        if ((os.path.isdir(dir)) and ('node' in file) and ('nodeP' not in file) and ('nodeR' not in file) and ('_' not in file)):
+            shutil.copytree(basedir + '/' + file, basedir + '/' + file + '_')
+            shutil.rmtree(basedir + '/' + file)
+            gsmutil.gsmlog('Note, node directories from previous GSM QoMMMa runs have been moved to /nodei_; before submitting next QoMMMa job if you need this directory rename it since it will be deleted', basedir)
+    
+    # Files from previous runs of QoMMMa are renamed and retained.
+    if os.path.exists(basedir + '/QoMMMa8.log'):
+        shutil.copy(basedir + '/QoMMMa8.log', basedir + '/QoMMMa8.log_')
+        os.remove(basedir + '/QoMMMa8.log')
+        qomutil.qomlog('Note, log file, QoMMMa8.log of your previous QoMMMa run was moved as QoMMMa8.log_; before submitting next QoMMMa job if you need this file rename it since it will be deleted', basedir)
+
+    # The base directory for the program is set.
+    try:
+        qommmadir = os.environ['QOMMMA']
+    except:
+        qomutil.qomlog('Environment variable QOMMMA is not set. Set QOMMMA to the base directory of QoMMMa', basedir)
+        sys.exit()
+    
+    # Default parameters are read such that the parameters are saved as variables.
+    try:
+        exec(open(qommmadir + '/lib/default.in').read())
+    except:
+        qomutil.qomlog('Could not open default file: ' + qommmadir + '/lib/default.in', basedir)
+        sys.exit()
+    
+    # The user input file is the second command line argument, so it is set as the variable inpf.
+    if len(sys.argv) < 2:
+        qomutil.qomlog('Usage: ' + sys.argv[0] + ' <file.in>', basedir)
+        sys.exit()
+    inpf = sys.argv[1]
+    
+    # The input file is read such that the parameters are saved as variables.
+    # In this way, any parameters which are chosen by the user overwrite the default parameters.
+    try:
+        exec(open(inpf).read())
+    except:
+        qomutil.qomlog('Could not be able to open input file: ' + inpf + '  This may be due to error in user input file. Check for necessary inputs and its formats, see manual', basedir)
+        sys.exit()
+        
+    # Normal QoMMMa run. 
+    if gsmtype =/ 1 or 2:  
+        # The directory for the input files is simply the base user directory.
+        QoMMMa_opt(basedir)
+        
+    # GSM job. 
+    elif gsmtype == 1 or 2:
+            
+        # The time that the GSM run starts is written to the GSM log file.
+        hlp = asctime()
+        hlp1 = platform.uname()
+        gsmutil.gsmlog('GSM QoMMMa job starts at   ' + str(hlp) + '\n' + '  and all calculation are running in node  ' + str(hlp1), basedir)
+        
+        # Details of GSM job.
+        gsmutil.gsmlog('You have selected to use GSM type: ' + str(gsmtype) + '  (1 for double-ended, 2 for single-ended)', basedir)
+        if gsmtype == 1:
+            gsmutil.gsmlog('With the GSM type: ' + str(gsmtype) + '  you have chosen to use ' + total_nodes + '  nodes in total', basedir)
+        elif gsmtype == 2:
+            gsmutil.gsmlog('With the GSM type: ' + str(gsmtype) + '   the driving coordinate(s) are as below...', basedir)
+            #write driving coordinates somehow?
+        
+        # The growth phase commences.
+        gsmutil.gsmlog('        /// Growing the string... ///       ', basedir)
+        all_nodes = []
+        while is_grown == False:
+        
+            # The double-ended variant...
+            if gsmtype == 1:
+                
+                # Initialising product and reactant node directories.
+                nodeR_dir = basedir + '/nodeR'
+                if (os.path.exists(nodeR_dir)) is not True:
+                    gsmutil.gsmend(gsmutil.gsmlog('Error: for a double-ended GSM calculation, a (preferentially well-optimised) reactant directory called ''nodeR'' within the working directory must exist.', basedir)
+                nodeP_dir = basedir + '/nodeP'
+                if (os.path.exists(nodeP_dir)) is not True:
+                    gsmutil.gsmend(gsmutil.gsmlog('Error: for a double-ended GSM calculation, a (preferentially well-optimised) product directory called ''nodeP'' within the working directory must exist.', basedir)
+                all_nodes.append(nodeR_dir)
+                all_nodes.append(nodeP_dir)
+                
+                # Now begin the loop of adding nodes. The current number of nodes is initially 2 due to reactant and product nodes.
+                current_nodes = 2
+                
+                # Normal node addition scheme.
+                for (i,j) in zip(range(2, total_nodes, 1), range(total_nodes - 1, math.ceil(total_nodes / 2), -1)):
+                    # Creating new directories for new nodes.
+                    work_dirs = []
+                    frontierR_dir = basedir + '/node' + i
+                    frontierP_dir = basedir + '/node' + j
+                    work_dirs.append(frontierR_dir)
+                    work_dirs.append(frontierP_dir)
+                    all_nodes.append(frontierR_dir)
+                    all_nodes.append(frontierP_dir)
+                    os.mkdir(frontierR_dir)
+                    os.mkdir(frontierP_dir)
+                    gsmutil.gsmlog('Node ' + str(i) + '   has been added to the string (reactant side)...', basedir)
+                    gsmutil.gsmlog('Node ' + str(j) + '   has been added to the string (product side)...', basedir)
+                    current_nodes += 2
+                    
+                    # To define the coordinates of the new nodes, obtain the difference in primitive internal coordinates between the reactant and product side frontier nodes.
+                    # New nodes are then added along this tangent.
+                    tangent = gsmutil.DE_get_tangent(work_dirs, basedir)
+                    
+                    # Now create two new qommma.in files for these new nodes and copy the geometries of the previous nodes over.
+                    # The generation of new geometries (mathematically intensive) is handled by the Fortran code.
+                    gsmutil.DE_add_nodes(work_dirs, tangent, basedir)
+                
+                    # Now, the new nodes can be optimised subject to the conditions of a growth phase calculation.
+                    # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
+                    for dir in work_dirs:
+                        try:
+                            exec(open(qommmadir + '/lib/default.in').read())
+                        except:
+                            qomutil.qomend('Could not open default file: ' + qommmadir + '/lib/default.in', basedir)
+                        inpf = dir + '/qommma.in'
+                        try:
+                            exec(open(inpf).read())
+                        except:
+                            gsmutil.gsmend('Could not open input file for node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
+                        QoMMMa_opt(dir) # performing QoMMMa growth-phase optimisation.
+                        gsmutil.gsmlog('Optimising node (growth-phase): ' + inpf + '........', basedir)
+                        
+                    # Whenever new nodes are added, the string is reparameterised.
+                    # This is to say that it is ensured that the nodes are evenly spaced along the reaction path tangent.
+                    gsmutil.DE_reparam_g(all_nodes, basedir)
+                    gsmutil.gsmlog('Reparameterising the string... All nodes should be evenly spaced', basedir)
+                        
+                # For an odd number of nodes, one final node from the reactant side must be added and then the growing terminated.
+                if current_nodes < total_nodes:
+                    # Creating new directory for the central node.
+                    frontier_dir = basedir + '/node' + math.ceil(total_nodes / 2)
+                    all_nodes.append(frontier_dir)
+                    os.mkdir(frontier_dir)
+                    gsmutil.gsmlog('The final central node ' + str(math.ceil(total_nodes / 2)) + '   has been added to the string...', basedir)
+                    current_nodes += 1
+                    
+                    # To define the coordinates of the central node, obtain the difference in primitive internal coordinates between the reactant and product side frontier nodes.
+                    # The node is then added along this tangent.
+                    gsmutil.DE_get_tangent_central(all_nodes, basedir)
+                    
+                    # Now create two new qommma.in files for these new nodes and copy the geometries of the previous nodes over.
+                    # The generation of new geometries (mathematically intensive) is handled by the Fortran code.
+                    gsmutil.DE_add_node_central(all_nodes, tangent, basedir)
+                
+                    # Now, the central node can be optimised subject to the conditions of a growth phase calculation.
+                    # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
+                    try:
+                        exec(open(qommmadir + '/lib/default.in').read())
+                    except:
+                        qomutil.qomend('Could not open default file: ' + qommmadir + '/lib/default.in', basedir)
+                    inpf = frontier_dir + '/qommma.in'
+                    try:
+                        exec(open(inpf).read())
+                    except:
+                        gsmutil.gsmend('Could not open input file for central node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
+                    QoMMMa_opt(frontier_dir) # performing QoMMMa growth-phase optimisation.
+                    gsmutil.gsmlog('Optimising node (growth-phase): ' + inpf + '........', basedir)
+                    
+                    # Finally, the string is reparameterised.
+                    # This is to say that it is ensured that the nodes are evenly spaced along the reaction path tangent.
+                    gsmutil.DE_reparam_g(all_nodes, basedir)
+                    gsmutil.gsmlog('Reparameterising the string... All nodes should be evenly spaced', basedir)
+                        
+                # Growth phase complete!
+                if current_nodes == total_nodes:
+                    gsmutil.gsmlog('The growth phase is complete! There is now a total (including reactant and product) of: ' + str(current_nodes) + '   nodes...', basedir)
+                    is_grown = True
+                    
+            # The single-ended variant...   
+            elif gsmtype == 2: 
+           
+                # Initialising reactant node directory.
+                nodeR_dir = basedir + '/nodeR'
+                if (os.path.exists(nodeR_dir)) is not True:
+                    gsmutil.gsmend(gsmutil.gsmlog('Error: for a single-ended GSM calculation, a (preferentially well-optimised) reactant directory called ''nodeR'' within the working directory must exist.', basedir)
+                all_nodes.append(nodeR_dir)
+                
+                # Now begin the loop of adding nodes. The node counter is one ahead of the current state so that the final number reflects the current number.
+                current_nodes = 2
+                
+                while SP_found == False:
+                    # Creating directory for new node.
+                    frontier_dir = basedir + '/node' + str(current_nodes)
+                    all_nodes.append(frontier_dir)
+                    os.mkdir(frontier_dir)
+                    gsmutil.gsmlog('Node ' + str(current_nodes) + '   has been added to the string...', basedir)
+                    current_nodes += 1
+                    #get driving coordinates from qommma.in.
+                    #error could not find driving coordinates.
+                    
+                    # To define the coordinates of the new nodes, create tangent along the user-specified driving coordinates.
+                    # New nodes are then added along this tangent.
+                    tangent = gsmutil.SE_get_tangent(frontier_dir, driving_coord, basedir)
+                    
+                    # Now create a new qommma.in file for the new node and copy the geometry of the previous node over.
+                    # The generation of the new geometry (mathematically intensive) is handled by the Fortran code.
+                    gsmutil.SE_add_node(nodeR_dir, frontier_dir, tangent, basedir)
+                    
+                    # Now, the new node can be optimised subject to the conditions of a growth phase calculation.
+                    # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
+                    try:
+                        exec(open(qommmadir + '/lib/default.in').read())
+                    except:
+                        qomutil.qomend('Could not open default file: ' + qommmadir + '/lib/default.in', basedir)
+                    inpf = frontier_dir + '/qommma.in'
+                    try:
+                        exec(open(inpf).read())
+                    except:
+                        gsmutil.gsmend('Could not open input file for new node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
+                    QoMMMa_opt(frontier_dir) # performing QoMMMa growth-phase optimisation.
+                    gsmutil.gsmlog('Optimising node (growth-phase): ' + inpf + '........', basedir)
+                    
+                    # Lastly, check if the current node is lower in energy than the previous node.
+                    # If so, then the stationary point (SP) has been found and the main part of the growth phase is over.
+                    #check if energy of new node is lower than old node
+                    #SP_found = True
+                
+                # When the stationary point (SP) has been surpassed, 2 - 4 new nodes with large steps are created - hopefully finding the minimum on the other side.
+                # The large steps are defined based on the total primitive internal coordinate change from the pre-SP nodes.
+                # This is based on the assumption that the drop off in energy after the SP will be approximately at the same rate as pre-SP.
+                tangent = gsmutil.SE_get_last_tangent(nodeR_dir, frontier_dir, driving_coord, basedir)
+                
+                # Based on the magnitude of the tangent, new directories can be created. 
+                # The criteria for these magnitudes are essentially based on trial and error, but can be easily modified.
+                #create dirs for new nodes.
+                #add new node directories to work_dirs
+                #add new node directories to all_nodes.
+                #current_nodes += 2 to 4
+                              
+                # Now create new qommma.in files for the new nodes and copy the geometries of the previous nodes over.
+                # In this case, the starting geometry for all 2-4 nodes is the same and is the current frontier node.
+                # The generation of the new geometries (mathematically intensive) is handled by the Fortran code.
+                gsmutil.SE_add_last_nodes(work_dirs, frontier_dir, tangent, basedir)
+                
+                # Lastly, the new nodes can be optimised subject to the conditions of a growth phase calculation.
+                # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
+                for dir in work_dirs:
+                    try:
+                        exec(open(qommmadir + '/lib/default.in').read())
+                    except:
+                        qomutil.qomend('Could not open default file: ' + qommmadir + '/lib/default.in', basedir)
+                    inpf = dir + '/qommma.in'
+                    try:
+                        exec(open(inpf).read())
+                    except:
+                        gsmutil.gsmend('Could not open input file for node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
+                    QoMMMa_opt(dir) # performing QoMMMa growth-phase optimisation.
+                    gsmutil.gsmlog('Optimising node (growth-phase): ' + inpf + '........', basedir)
+                
+                # Growth phase complete!
+                gsmutil.gsmlog('The growth phase is complete! There is now a total (including reactant) of: ' + str(current_nodes) + '   nodes...', basedir)
+                is_grown = True
+                
+        # The optimisation phase commences.
+        # In the optimisation phase, the single- and double-ended variant reduce to the same procedure.
+        gsmutil.gsmlog('        /// Optimising the string... ///       ', basedir)
+        while is_optimised == False:
+            # First, generate a list of all the tangents for ease of working.
+            # Tangents are defined between neighbouring nodes. and the string optimised with stricter convergence criteria than in the growth phase.
+            tangent_list = gsmutil.get_tangents_opt(all_nodes, basedir)
+            
+            # Now, optimise each node with stricter convergence criteria than in the growth phase.
+            # This starts with creating the qommma.in files for every node and then optimising each.
+            gsmutil.gen_input_opt(all_nodes, tangent_list, max_opt_steps, basedir)
+            for dir in all_nodes:
+                try:
+                    exec(open(qommmadir + '/lib/default.in').read())
+                except:
+                    qomutil.qomend('Could not open default file: ' + qommmadir + '/lib/default.in', basedir)
+                inpf = dir + '/qommma.in'
+                try:
+                    exec(open(inpf).read())
+                except:
+                    gsmutil.gsmend('Could not open input file for node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
+                QoMMMa_opt(dir) # performing QoMMMa optimisation-phase optimisation.
+                gsmutil.gsmlog('Optimising node (optimisation-phase): ' + inpf + '........', basedir)
+            
+            # Now, check for convergence of all nodes.
+            # If all are converged, then perform a final reparameterisation of the string and the optimisation-phase is complete.
+            # Otherwise, reparameterise the string and optimise all nodes again.
+            if gsmutil.check_convergence(all_nodes, basedir) is True:
+                gsmutil.final_reparam(all_nodes, basedir)
+                gsmutil.gsmlog('The optimisation phase is complete!', basedir)
+                is_optimised = True
+            else:
+                gsmutil.reparam_opt(all_nodes, basedir)
+                
+        # Finally, the transition state can be located by way of an exact TS search.
+        #not implemented but planned...
+        
+        
+        
+        
+        
+        
+        

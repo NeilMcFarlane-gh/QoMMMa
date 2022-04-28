@@ -210,40 +210,6 @@ contains
 	end function ATOM_DIHEDRAL
 	
 	
-	function ATOM_DIHEDRAL2(coords_i, coords_j, coords_k, coords_l) result(phi)
-	! Here, three sets of cartesian coordinates are taken, and the dihedral torsion between the points is calculated.
-	! This is used to obtain an internal coordinate set.
-	!
-	! ARGUMENTS:	coords_i : 1D array containing the x,y,z coordinates of atom i.
-	!				coords_j : 1D array containing the x,y,z coordinates of atom j.	
-	!				coords_k : 1D array containing the x,y,z coordinates of atom k.	
-	!				coords_l : 1D array containing the x,y,z coordinates of atom l.	
-	
-	implicit none
-	integer(i4b) :: i
-	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3), coords_l(3)
-	real(sp) :: phi, v1(3), v2(3), v3(3), w(3), ew(3), a1(3), a2(3), c1(3), c2(3)
-	real(sp) :: det_array(3,3), sgn, deter, dot_prod, arg1, arg2
-
-	! First, evaluate the vectors between coordinates i and j, l and k, and k and j.
-	v1 = 0.0
-	v2 = 0.0
-	v3 = 0.0
-	do i = 1, 3
-		v1(i) = coords_j(i) - coords_i(i)
-		v2(i) = coords_k(i) - coords_j(i)
-		v3(i)  = coords_l(i) - coords_k(i) 
-	end do
-
-    c1 = CROSS_PRODUCT(v2,v3)
-    c2 = CROSS_PRODUCT(v1,v2)
-    arg1 = INNER_PRODUCT(v1,c1,SIZE(v1)) * SQRT(SUM(v2**2))
-    arg2 = INNER_PRODUCT(c1,c2,SIZE(c1))
-    phi = ATAN(arg1,arg2)
-	
-	end function ATOM_DIHEDRAL2
-	
-	
 	function ATOM_DIHEDRAL_GRAD(coords_i, coords_j, coords_k, coords_l) result(grad_phi)
 	! Here, four sets of cartesian coordinates are taken, and the first derivatives for the dihedral torsion between the points is calculated.
 	! This is used to obtain an internal coordinate set.
@@ -332,73 +298,6 @@ contains
 	end function ATOM_DIHEDRAL_GRAD	
 	
 	
-	function ATOM_DIHEDRAL_GRAD2(coords_i, coords_j, coords_k, coords_l) result(grad_phi)
-	! Here, four sets of cartesian coordinates are taken, and the first derivatives for the dihedral torsion between the points is calculated.
-	! This is used to obtain an internal coordinate set.
-	!
-	! ARGUMENTS:	coords_i : 1D array containing the x,y,z coordinates of atom i.
-	!				coords_j : 1D array containing the x,y,z coordinates of atom j.	
-	!				coords_k : 1D array containing the x,y,z coordinates of atom k.	
-	!				coords_l : 1D array containing the x,y,z coordinates of atom l.	
-	
-	implicit none
-	integer(i4b) :: i
-	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3), coords_l(3)
-	real(sp) :: phi, v1(3), v2(3), w(3), ew(3), a1(3), a2(3), g(3), A, B, grad_phi(3,4)
-	real(sp) :: det_array(3,3), sgn, deter, dot_prod, v1_norm, v2_norm, v3_norm, v3(3)
-	real(sp) :: term1(3), term2(3), term3(3), term4(3), v1_unit(3), v2_unit(3), v3_unit(3)
-	
-	! First, evaluate the vectors between coordinates i and j, l and k, and k and j.
-	v1 = 0.0
-	v2 = 0.0
-	v3 = 0.0
-	do i = 1, 3
-		v1(i) = coords_i(i) - coords_j(i)
-		v2(i) = coords_k(i) - coords_j(i)
-		v3(i)  = coords_l(i) - coords_k(i) 
-	end do
-	
-	v1_norm = NORM2(v1)
-	v2_norm = NORM2(v2)
-	v3_norm = NORM2(v3)
-	
-	v1_unit = UNIT_VECTOR(v1,SIZE(v1))
-	v2_unit = UNIT_VECTOR(v2,SIZE(v2))
-	v3_unit = UNIT_VECTOR(v3,SIZE(v3))
-	
-	term1 = 0.0
-	term2 = 0.0
-	term3 = 0.0
-	term4 = 0.0
-	if ((1 - INNER_PRODUCT(v1_unit,v2_unit,SIZE(v1_unit))**2) .lt. 1E-6) then
-		term1 = CROSS_PRODUCT(v1_unit,v2_unit) * 0
-		term3 = CROSS_PRODUCT(v1_unit,v2_unit) * 0
-	else
-		term1 = CROSS_PRODUCT(v1_unit,v2_unit) / (v1_norm * (1 - INNER_PRODUCT(v1_unit,v2_unit,SIZE(v1_unit))**2))
-		term3 = (CROSS_PRODUCT(v1_unit,v2_unit) * INNER_PRODUCT(v1_unit,v2_unit,SIZE(v1_unit))) / &
-				(v2_norm * (1 - INNER_PRODUCT(v1_unit,v2_unit,SIZE(v1_unit))**2))
-	end if
-	if ((1 - INNER_PRODUCT(v3_unit,v2_unit,SIZE(v3_unit))**2) .lt. 1E-6) then
-		term2 = CROSS_PRODUCT(v3_unit,v2_unit) * 0
-		term4 = CROSS_PRODUCT(v3_unit,v2_unit) * 0
-	else
-		term2 = CROSS_PRODUCT(v3_unit,v2_unit) / (v3_norm * (1 - INNER_PRODUCT(v3_unit,v2_unit,SIZE(v3_unit))**2))
-		term4 = (CROSS_PRODUCT(v3_unit,v2_unit) * INNER_PRODUCT(v3_unit,v2_unit,SIZE(v3_unit))) / &
-				(v2_norm * (1 - INNER_PRODUCT(v3_unit,v2_unit,SIZE(v3_unit))**2))
-	end if
-	print *, term1
-	print *, term2
-	print *, term3
-	print *, term4
-	print *, '_____'
-	grad_phi(:,1) = term1
-	grad_phi(:,2) = -term2
-    grad_phi(:,3) = -term1 + term3 - term4
-    grad_phi(:,4) = term2 - term3 + term4
-
-	end function ATOM_DIHEDRAL_GRAD2
-	
-	
 	function VECTOR_PROJECT(vec1, vec2, length) result(proj_vec)
 	! Here, the first vector taken is projected onto the second vector taken.
 	! In this case, the vectors must of necessity be of the same dimensions.
@@ -437,6 +336,76 @@ contains
 
 	end function UNIT_VECTOR
 	
+	
+	function INNER_PRODUCT(vec1, vec2, length) result(inner)
+	! Here, the inner product of two 1D vectors is calculated.
+	!
+	! ARGUMENTS:	vec1   : 1D array containing vector 1.
+	!				vec2   : 1D array containing vector 2.
+	!               length : integer which represents the number of elements in both vectors.
+	
+	implicit none
+	integer(i4b), intent(in) :: length
+	integer(i4b) :: i
+	real(sp) :: temp, inner
+	real(sp), intent(in) :: vec1(length), vec2(length)
+	
+	! The inner product is calculated simply as:
+	! [a1, a2, a3] * [b1, b2, b3] = SUM[a1*b1, a2*b2, a3*b3]
+	inner = 0.0
+	temp = 0.0
+	do i=1, length
+		temp = vec1(i) * vec2(i)
+		inner = inner + temp
+	end do
+	
+	end function INNER_PRODUCT
+	
+	
+	function OUTER_PRODUCT(vec1, vec2, n1, n2) result(outer)
+	! Here, the outer product of two 1D vectors is calculated.
+	!
+	! ARGUMENTS:	vec1   : 1D array containing vector 1.
+	!				vec2   : 1D array containing vector 2.
+	!               n1     : integer which represents the number of elements in vector 1.
+	!               n2     : integer which represents the number of elements in vector 2.	
+	
+	implicit none
+	integer(i4b), intent(in) :: n1, n2
+	integer(i4b) :: i, j
+	real(sp) :: outer(n1,n2)
+	real(sp), intent(in) :: vec1(n1), vec2(n2)
+	
+	! The outer product is simply calculated by the usual formula.
+	outer = 0.0
+	do i=1, n1
+		do j=1, n2
+			outer(i,j) = vec1(i) * vec2(j)
+		end do
+	end do
+	outer = TRANSPOSE(outer)
+	
+	end function OUTER_PRODUCT
+	
+	
+	function CROSS_PRODUCT(vec1, vec2) result(cross)
+	! Here, the cross product of two 1D vectors of length 3 is calculated.
+	!
+	! ARGUMENTS:	vec1   : 1D array containing vector 1.
+	!				vec2   : 1D array containing vector 2.
+	
+	implicit none
+	real(sp) :: cross(3)
+	real(sp), intent(in) :: vec1(3), vec2(3)
+	
+	! The cross product is simply calculated by the usual forumla.
+	cross = 0.0
+	cross(1) = (vec1(2) * vec2(3)) - (vec1(3) * vec2(2))
+	cross(2) = (vec1(3) * vec2(1)) - (vec1(1) * vec2(3))
+	cross(3) = (vec1(1) * vec2(2)) - (vec1(2) * vec2(1))
+	
+	end function CROSS_PRODUCT
+		
 	
 	function SVD_INVERSE(A, rows, cols) result(A_inv)
 	! Here, a square matrix is taken as input and the generalised inverse is calculated by using singlular value decomposition (SVD).
@@ -609,7 +578,7 @@ contains
 	INFO = 0
 	
 	! Allocating working array...
-	LWORK = MAX(1, (3 * n) -1)
+	LWORK = MAX(1, (3 * n) - 1)
 	allocate(WORK(LWORK))
 	WORK(:) = 0.0
 	
@@ -648,7 +617,7 @@ contains
 	INFO = 0
 	
 	! Allocating working array....
-	LWORK = MAX(1, (3 * n) -1)
+	LWORK = MAX(1, (3 * n) - 1)
 	allocate(WORK(LWORK))
 	WORK(:) = 0.0
 
@@ -798,85 +767,6 @@ contains
 	RMSD = SQRT((SUM((x_n - x)**2)) / n)
 	
 	end function RMSD_CALC
-	
-	
-	function INNER_PRODUCT(vec1, vec2, length) result(inner)
-	! Here, the inner product of two 1D vectors is calculated.
-	!
-	! ARGUMENTS:	vec1   : 1D array containing vector 1.
-	!				vec2   : 1D array containing vector 2.
-	!               length : integer which represents the number of elements in both vectors.
-	
-	implicit none
-	integer(i4b), intent(in) :: length
-	integer(i4b) :: i
-	real(sp) :: temp, inner
-	real(sp), intent(in) :: vec1(length), vec2(length)
-	
-	! The inner product is calculated simply as:
-	! [a1, a2, a3] * [b1, b2, b3] = SUM[a1*b1, a2*b2, a3*b3]
-	inner = 0.0
-	temp = 0.0
-	do i=1, length
-		temp = vec1(i) * vec2(i)
-		inner = inner + temp
-	end do
-	
-	end function INNER_PRODUCT
-	
-	
-	function OUTER_PRODUCT(vec1, vec2, n1, n2) result(outer)
-	! Here, the outer product of two 1D vectors is calculated.
-	!
-	! ARGUMENTS:	vec1   : 1D array containing vector 1.
-	!				vec2   : 1D array containing vector 2.
-	!               n1     : integer which represents the number of elements in vector 1.
-	!               n2     : integer which represents the number of elements in vector 2.	
-	
-	implicit none
-	integer(i4b), intent(in) :: n1, n2
-	integer(i4b) :: i, j
-	real(sp) :: outer(n1,n2)
-	real(sp), intent(in) :: vec1(n1), vec2(n2)
-	
-	! The outer product is simply calculated by the usual formula.
-	outer = 0.0
-	do i=1, n1
-		do j=1, n2
-			outer(i,j) = vec1(i) * vec2(j)
-		end do
-	end do
-	outer = TRANSPOSE(outer)
-	
-	end function OUTER_PRODUCT
-	
-	
-	function CROSS_PRODUCT(vec1, vec2) result(cross)
-	! Here, the cross product of two 1D vectors of length 3 is calculated.
-	!
-	! ARGUMENTS:	vec1   : 1D array containing vector 1.
-	!				vec2   : 1D array containing vector 2.
-	
-	implicit none
-	real(sp) :: cross(3)
-	real(sp), intent(in) :: vec1(3), vec2(3)
-	
-	! The cross product is simply calculated by the usual forumla.
-	cross = 0.0
-	cross(1) = (vec1(2) * vec2(3)) - (vec1(3) * vec2(2))
-	cross(2) = (vec1(3) * vec2(1)) - (vec1(1) * vec2(3))
-	cross(3) = (vec1(1) * vec2(2)) - (vec1(2) * vec2(1))
-	
-	end function CROSS_PRODUCT
-	
-		
-	!function GRAM_SCHMIDT(vecs) result(res)
-	! Here, an array of vectors is orthonormalised by the Gram Schmidt methodology.
-	! The first vector in the array is taken as the first, and thus it will not change, and the last vector will drop out.
-	
-	! TO-DO : Will write later when it comes to programming the constrained optimisation process.
-	
-	!end function GRAM_SCHMIDT
 	
 	
 END MODULE math

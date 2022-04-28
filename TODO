@@ -1,0 +1,18 @@
+URGENT:
+Include options for BOTH gsmtype and gsmphase
+Change driving coords to prim_constraints (or similar)
+Change convergence criteria for gsmphase (specifically for growth)
+Edit report file so that it includes the correct convergence criteria for the correct phase
+Make bin file for reparameterisation of string (work for both growth and opt)
+Make ndlc actually 3N-6, and use ndlc throughout program (NOT IN MODULES)
+Change names of dlc constraint arrays etc. to prim constraint arrays etc.
+Change names of driving arrays etc. to prim constraint arrays etc.
+In main program files (NOT IN MODULES) stop using SIZE(x,1) etc.
+Save primitive definitions in scratch through file write_prim_coord.f90
+Fix initialize_step.f90 so that it creates a full array of dq (including those which are zero)
+Fix check_constrained_atoms.f90 so that it actually works for both primitive and cartesians
+Edit report file so that it includes the constraint details for primitive constraints
+
+
+LATER:
+Integrate all the DLC work into MECP code?

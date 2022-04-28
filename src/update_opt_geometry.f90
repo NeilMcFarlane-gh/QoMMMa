@@ -191,7 +191,7 @@ else if (coordtype .eq. 1) then
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
 		x_copy = xopt
-
+		print *, "ENERGY DIFFERENCE: ", e - oe
 		! Generating DLC for the given coordinate set.
 	    call refresh_dlc(ndlc, xopt)
 		
@@ -255,8 +255,6 @@ else if (coordtype .eq. 1) then
 			temp_x(:) = xopt(:)
 			call DLC_to_cart(ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
 			ChgeX = newx(:) - temp_x(:)
-			
-			call sleep(1)
 		else
 			!###############
 			! Quasi newton.#
@@ -289,10 +287,8 @@ else if (coordtype .eq. 1) then
 			! To ensure continuity, a new set of primitive internal coordinates is calculated for newx.
 			call calc_prims(ndlc, nprim, prims, newx, prim_list)
 			call update_bfgs_p(ndlc, nprim, h_p, optg_p, og_p, prims, old_prims)
-
-			call sleep(1)
 		end if
-
+		
 		! evaluate convergence tests
 		convs = " NO"
 		converged=.false.

@@ -23,15 +23,13 @@ do img_num=1,nimg
 	converged=fullconverged(img_num)
 	qe_no_disp=fullqend(img_num)
 
-	if (ncon.gt.0) then
-		if (coordtype .eq. 0) then
-			totcnsen=fulltotcnsen(img_num)
-			cnsval(:)=fullcnsval(img_num,:)
-			cnsen(:)=fullcnsen(img_num,:)
-			cnsg(:)=fullcnsg(img_num,:)
-		else if (coordtype .eq. 1) then
-			!placeholder
-		end if
+	if (ncon_cart.gt.0) then
+		totcnsen=fulltotcnsen(img_num)
+		cnsval(:)=fullcnsval(img_num,:)
+		cnsen(:)=fullcnsen(img_num,:)
+		cnsg(:)=fullcnsg(img_num,:)
+	else if (ncon_prim.gt.0) then
+		!placeholder
 	end if
 
 	open(unit=8,file=("add_to_report"//trim(img_string(img_num))),status="replace")
@@ -53,17 +51,15 @@ do img_num=1,nimg
 	if (disp.eq.1) then
 	   write (unit=8,fmt='(A,1X,F13.6)') "QM energy without dispersion:",qe_no_disp
 	end if
-	if (ncon.gt.0) then
-	   if (coordtype .eq. 0) then
-		   write (unit=8,fmt='(A,1X,2F13.6)') "Constr. energy, Constraint-free energy:",totcnsen,e-totcnsen
-		   write (unit=8,fmt='(A)') "Constr. no.;  Value  ; Ideal val. ; Energy contrib. ; Gradient"
-		   do i=1,ncon
-			   write (unit=8,fmt='(2X,I4,6X,F8.4,3X,F8.4,7X,F10.6,4X,F10.6)') i,cnsval(i),cnsidl(i), &
-				& cnsen(i),cnsg(i)
-		   end do
-	   else if (coordtype .eq. 1) then
-			!placeholder
-	   end if
+	if (ncon_cart.gt.0) then
+		write (unit=8,fmt='(A,1X,2F13.6)') "Constr. energy, Constraint-free energy:",totcnsen,e-totcnsen
+	    write (unit=8,fmt='(A)') "Constr. no.;  Value  ; Ideal val. ; Energy contrib. ; Gradient"
+		do i=1,ncon_cart
+			write (unit=8,fmt='(2X,I4,6X,F8.4,3X,F8.4,7X,F10.6,4X,F10.6)') i,cnsval(i),cnsidl(i), &
+			& cnsen(i),cnsg(i)
+		end do
+	else if (ncon_prim.gt.0) then
+		!placeholder
 	end if
 
 	if (climbing(img_num)) then
