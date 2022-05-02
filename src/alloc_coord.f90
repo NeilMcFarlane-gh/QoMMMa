@@ -23,7 +23,7 @@ read(8,*) dummy
 read(8,*) disp
 read(8,*) dummy
 read(8,*) ncon_cart, kcnstyp 
-if ((ncon_cart .lt. 0).or.(ncon.gt.nconsmax_cart)) then
+if ((ncon_cart .lt. 0).or.(ncon_cart.gt.nconsmax_cart)) then
       write (*,*) "Too few/many constraints. ERROR"
       stop
 else if ((kcnstyp.ne.1).and.(kcnstyp.ne.2)) then
@@ -55,14 +55,10 @@ nqx=3*nq
 nlx=3*nl
 noptx=3*nopt
 
-! The number of atoms to be delocalised is initialised, if required.
+! The number of atoms delocalised internal coordinates (if used) is initialised.
+! By definition, this is 3N-6 (with N representing the number of atoms in the QM region - including link atoms!!)
 if (coordtype .eq. 1) then
-	ndlc = nopt
-end if
-
-! Driving coordinate arrays are initialised if needed.
-if (ndriv .gt. 0) then
-	allocate(driving_coords(ndriv,4), drive_dq(ndriv))
+	ndlc = (nopt * 3) - 6
 end if
 
 allocate(qm(nq),nbonds(n),chg(n),bonds(n,maxbond),bonds_xopt(nopt,maxbond),attyp(n),modchg(n),inact(n),opt(nopt)) 

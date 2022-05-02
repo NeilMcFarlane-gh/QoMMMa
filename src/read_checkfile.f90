@@ -78,7 +78,7 @@ do img_num=1,nimg
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) ncon_cart,kcnstyp
 	read(unit=8,fmt=*) dummy
-	read(unit=8,fmt=*) ncon_prim,kcnstyp
+	read(unit=8,fmt=*) ncon_prim
 
 	! Now read list of QM atoms.
 	read(unit=8,fmt=*) dummy

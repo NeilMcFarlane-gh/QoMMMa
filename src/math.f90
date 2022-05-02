@@ -51,7 +51,7 @@ contains
 	end do
 	
 	! Calculating analytical first derivatives.
-	unit_vec = unit_vector(v1, SIZE(v1))
+	unit_vec = unit_vector(v1,3)
 	grad_r = 0.0
 	grad_r(:,1) = unit_vec
 	grad_r(:,2) = -1 * unit_vec
@@ -81,7 +81,7 @@ contains
 	! Now, the angle theta can be calculated by the usual scalar product cosine relationship.
 	! It is possible that the value within the cosine evaluation is either <-1 or >1.
 	! This is unlikely, but in the event that is the case then theta is set manually.
-	cos_val = INNER_PRODUCT(v1,v2,SIZE(v1)) / (NORM2(v1) * NORM2(v2))
+	cos_val = INNER_PRODUCT(v1,v2,3) / (NORM2(v1) * NORM2(v2))
 	theta = 0.0
 	if (cos_val .le. -1) then
 		theta = PI
@@ -119,7 +119,7 @@ contains
 	! It is possible that the value within the cosine evaluation is either <-1 or >1.
 	! This is unlikely, but in the event that is the case then theta is set manually.
 	cos_val = 0.0
-	cos_val = INNER_PRODUCT(v1,v2,SIZE(v1)) / (NORM2(v1) * NORM2(v2))
+	cos_val = INNER_PRODUCT(v1,v2,3) / (NORM2(v1) * NORM2(v2))
 	theta = 0.0
 	if (cos_val .le. -1) then
 		theta = PI
@@ -178,8 +178,8 @@ contains
 	a1 = 0.0
 	a2 = 0.0
     ew = w / NORM2(w)
-    a1 = v1 - INNER_PRODUCT(v1,ew,SIZE(v1)) * ew
-    a2 = v2 - INNER_PRODUCT(v2,ew,SIZE(v1)) * ew	
+    a1 = v1 - INNER_PRODUCT(v1,ew,3) * ew
+    a2 = v2 - INNER_PRODUCT(v2,ew,3) * ew	
 	
 	! Now, the determinant of the normal vectors is calculated as its sign is used to evaluate the sign of the dihedral angle.
 	det_array = 0.0
@@ -187,7 +187,7 @@ contains
 	det_array(2,:) = v1
 	det_array(3,:) = w
 	deter = 0.0
-	deter = DETERMINANT(det_array, SIZE(det_array,1))
+	deter = DETERMINANT(det_array,3)
 	if (deter .le. 0.0) then 
 		sgn = 1
 	else if (deter .gt. 0.0) then 
@@ -196,7 +196,7 @@ contains
 	
 	! To ensure that the dihedral angle stays in the range -PI < 0 < PI, some conditions are enforced on its value.
 	dot_prod = 0.0
-	dot_prod = INNER_PRODUCT(a1,a2,SIZE(a1)) / (NORM2(a1) * NORM2(a2))
+	dot_prod = INNER_PRODUCT(a1,a2,3) / (NORM2(a1) * NORM2(a2))
 	if (dot_prod .lt. -1.0) then
 		dot_prod = -1.0
 	else if (dot_prod .gt. 1.0) then
@@ -240,8 +240,8 @@ contains
 	a1 = 0.0
 	a2 = 0.0
     ew = w / NORM2(w)
-    a1 = v1 - INNER_PRODUCT(v1,ew,SIZE(v1)) * ew
-    a2 = v2 - INNER_PRODUCT(v2,ew,SIZE(v1)) * ew	
+    a1 = v1 - INNER_PRODUCT(v1,ew,3) * ew
+    a2 = v2 - INNER_PRODUCT(v2,ew,3) * ew	
 	
 	! Now, the determinant of the normal vectors is calculated as its sign is used to evaluate the sign of the dihedral angle.
 	det_array = 0.0
@@ -249,7 +249,7 @@ contains
 	det_array(2,:) = v1
 	det_array(3,:) = w
 	deter = 0.0
-	deter = DETERMINANT(det_array, SIZE(det_array,1))
+	deter = DETERMINANT(det_array,3)
 	if (deter .le. 0.0) then 
 		sgn = 1
 	else if (deter .gt. 0.0) then 
@@ -258,7 +258,7 @@ contains
 	
 	! To ensure that the dihedral angle stays in the range -PI < 0 < PI, some conditions are enforced on its value.
 	dot_prod = 0.0
-	dot_prod = INNER_PRODUCT(a1,a2,SIZE(a1)) / (NORM2(a1) * NORM2(a2))
+	dot_prod = INNER_PRODUCT(a1,a2,3) / (NORM2(a1) * NORM2(a2))
 	if (dot_prod .lt. -1.0) then
 		dot_prod = -1.0
 	else if (dot_prod .gt. 1.0) then
@@ -274,8 +274,8 @@ contains
 	! These terms are shamelessly ripped from PyBerny...
     g = CROSS_PRODUCT(w,a1)
     g = g / NORM2(g)
-    A = INNER_PRODUCT(v1,ew,SIZE(v1)) / NORM2(w)
-    B = INNER_PRODUCT(v2,ew,SIZE(v1)) / NORM2(w)
+    A = INNER_PRODUCT(v1,ew,3) / NORM2(w)
+    B = INNER_PRODUCT(v2,ew,3) / NORM2(w)
 	if (ABS(phi) .gt. (PI - 1E-6)) then
         grad_phi(:,1) = g / (NORM2(g) * NORM2(a1))
         grad_phi(:,2) = -((1 - A) / NORM2(a1) - B / NORM2(a2)) * g
@@ -312,7 +312,7 @@ contains
 	real(sp) :: proj_vec(length), unit_vec(length)
 	
 	! The projection space is normalised.
-    unit_vec = UNIT_VECTOR(vec2, SIZE(vec2))
+    unit_vec = UNIT_VECTOR(vec2,length)
     
     ! The vector is projected by the usual formula.
     proj_vec = DOT_PRODUCT(vec1, unit_vec) * unit_vec
@@ -441,14 +441,14 @@ contains
 	call DGESVD('A', 'A', rows, cols, A, LDA, S, U, LDU, VT, LDVT, WORK, LWORK, INFO)
 
 	! To calculate the inverse of matrix A, the vector S must first be inverted.
-	do i=1, SIZE(S, 1)
+	do i=1, SIZE(S,1)
 		if (INT(S(i)) .ne. 0) then
 			S(i) = 1 / S(i)
 		end if
 	end do
 
 	! Next, the vector S must be converted to a diagonal matrix.
-	do j=1, SIZE(S_inv, 1)
+	do j=1, SIZE(S_inv,1)
 		S_inv(j,j) = S(j)
 	end do
 	
@@ -650,8 +650,8 @@ contains
 	
 	! Firstly, the output array, combos_2, must be allocated.
 	combo_alloc = 0
-	j = SIZE(integers_work) - 1
-	do i=1, SIZE(integers_work)
+	j = n - 1
+	do i=1, n
 		combo_alloc = combo_alloc + j
 		j = j - 1
 	end do
@@ -659,9 +659,9 @@ contains
 	
 	! The 2-integer combinations are generated.
 	combos_counter = 1
-	do i=1, SIZE(integers_save)
+	do i=1, n
 		k = integers_save(i)
-		do j=1, SIZE(integers_work)
+		do j=1, n
 			l = integers_work(j)
 			
 			! If the integer is 0 (which is set below) or the integers are the same, then the cycle is skipped.
@@ -697,7 +697,7 @@ contains
 	
 	! Firstly, the output array, combos_2, must be allocated.
 	combo_alloc = 0
-	do i=1, SIZE(integers)
+	do i=1, n
 		combo_alloc = combo_alloc + (1 * (n-1))
 	end do
 	allocate(combos_2(combo_alloc, 2))

@@ -6,11 +6,10 @@ implicit none
 ! Specially Adapted BFGS routine from Numerical Recipes
 
 integer(i4b) :: I,j, img_num
-real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS((ndlc * 3) - 6), DelX(noptx), w(noptx)
-real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, maxchgx, temp_x(noptx), temp_dlc
+real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS(ndlc), DelX(noptx), w(noptx)
+real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, stpmx, maxchgx, temp_x(noptx), temp_dlc
 real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
 real(sp),parameter :: minstep = 0.1
-stpmax = STPMX * REAL(noptx,sp)
 
 line_search=.false.
 if ((nebtype.eq.4).or.(nebtype.eq.3).or.(nebtype.eq.5)) then
@@ -21,7 +20,10 @@ else
 
 if (coordtype .eq. 0) then	
 	do img_num=1,nimg
-
+		! Initialise the maximum step.
+		stpmax = stpmax_cart
+		stpmx = stpmax_cart * REAL(noptx,sp)
+		
 		! Copy data first
 		oe=fulloe(img_num)
 		e=fulle(img_num)
@@ -181,7 +183,10 @@ if (coordtype .eq. 0) then
 	
 else if (coordtype .eq. 1) then
 	do img_num=1,nimg
-	
+		! Initialise the maximum step.
+		stpmax = stpmax_dlc
+		stpmx = stpmax_dlc * REAL(noptx,sp)
+		
 		! Copy data first
 		oe=fulloe(img_num)
 		e=fulle(img_num)
@@ -193,23 +198,23 @@ else if (coordtype .eq. 1) then
 		x_copy = xopt
 		print *, "ENERGY DIFFERENCE: ", e - oe
 		! Generating DLC for the given coordinate set.
-	    call refresh_dlc(ndlc, xopt)
+	    call refresh_dlc(nopt, ndlc, xopt)
 		
 		! A selection of values are preserved as they are used in the BFGS update.
 		if (.not. ALLOCATED(old_prims)) allocate(old_prims(nprim))
 		old_prims(:) = prims(:)
-		if (.not. ALLOCATED(old_Bmat_dlc)) allocate(old_Bmat_dlc((3 * ndlc), (3 * ndlc) - 6))
+		if (.not. ALLOCATED(old_Bmat_dlc)) allocate(old_Bmat_dlc((3 * nopt), ndlc))
 		old_Bmat_dlc(:,:) = Bmat_dlc(:,:)
-		if (.not. ALLOCATED(old_Bmat_p)) allocate(old_Bmat_p((ndlc * 3), nprim))
+		if (.not. ALLOCATED(old_Bmat_p)) allocate(old_Bmat_p((nopt * 3), nprim))
 		old_Bmat_p(:,:) = Bmat_p(:,:)
 
 		! Now, the BFGS algorithm can be used to generate the change in DLC from the calculated gradient.
 		! Firstly, the gradients from both the current and previous step must be updated to DLC subspace.
 		! In addition, the gradients are updated to primitive subspace as these are used in the updating of the hessian matrix.
-		call gen_grad_cart_to_DLC(ndlc, nprim, Bmat_dlc, optg, optg_dlc)
-		call gen_grad_cart_to_DLC(ndlc, nprim, old_Bmat_dlc, og, og_dlc)
-		call gen_grad_cart_to_prim(ndlc, nprim, Bmat_p, optg, optg_p)
-		call gen_grad_cart_to_prim(ndlc, nprim, old_Bmat_p, og, og_p)
+		call gen_grad_cart_to_DLC(nopt, ndlc, nprim, Bmat_dlc, optg, optg_dlc)
+		call gen_grad_cart_to_DLC(nopt, ndlc, nprim, old_Bmat_dlc, og, og_dlc)
+		call gen_grad_cart_to_prim(nopt, nprim, Bmat_p, optg, optg_p)
+		call gen_grad_cart_to_prim(nopt, nprim, old_Bmat_p, og, og_p)
 
 		! To avoid the repeated matrix diagonalisation that would be necessary to continually update the hessian matrix in DLC subspace, we update the primitive hessian.
 		! However, on the first optimisation step, the initial matrix is generated simply as a weighted unit matrix.
@@ -240,7 +245,7 @@ else if (coordtype .eq. 1) then
 			ChgeS = optg_dlc * 0.7 * (-1)
 			
 			! The change is DLC is scaled using the maximum step length.
-			stpl = RMSD_CALC(ChgeS, dlc, ((ndlc * 3) - 6))
+			stpl = RMSD_CALC(ChgeS, dlc, ndlc)
 			IF (stpl .gt. stpmax) THEN
 				ChgeS = ChgeS / stpl * stpmax
 				write (*,*) "Changing (1) Step Length"
@@ -253,7 +258,7 @@ else if (coordtype .eq. 1) then
 			
 			!The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart(ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
 			ChgeX = newx(:) - temp_x(:)
 		else
 			!###############
@@ -261,13 +266,13 @@ else if (coordtype .eq. 1) then
 			!###############
 			
 			! The hessian matrix is updated to DLC subspace.
-			call gen_hess_prim_to_DLC(ndlc, nprim, Umat, h_p, h_dlc)
+			call gen_hess_prim_to_DLC(nopt, ndlc, nprim, Umat, h_p, h_dlc)
 
 			! The change in DLC can now be evaluated using a quasi-Newton methodology.
 			ChgeS = MATMUL(h_dlc, optg_dlc) * (-1)
 		
 			! The change is DLC is scaled using the maximum step length.
-			stpl = RMSD_CALC(ChgeS, dlc, ((ndlc * 3) - 6))
+			stpl = RMSD_CALC(ChgeS, dlc, ndlc)
 			IF (stpl .gt. stpmax) THEN
 				ChgeS = ChgeS / stpl * stpmax
 				write (*,*) "Changing (1) Step Length"
@@ -280,13 +285,13 @@ else if (coordtype .eq. 1) then
 		
 			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart(ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
 			ChgeX = newx(:) - temp_x(:)
 			
 			! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.
 			! To ensure continuity, a new set of primitive internal coordinates is calculated for newx.
-			call calc_prims(ndlc, nprim, prims, newx, prim_list)
-			call update_bfgs_p(ndlc, nprim, h_p, optg_p, og_p, prims, old_prims)
+			call calc_prims(nopt, nprim, prims, newx, prim_list)
+			call update_bfgs_p(nopt, nprim, h_p, optg_p, og_p, prims, old_prims)
 		end if
 		
 		! evaluate convergence tests
@@ -296,11 +301,6 @@ else if (coordtype .eq. 1) then
 		conv(1)=e-oe
 		conv(2)=maxval(abs(ChgeX))
 		conv(3)=sqrt(sum(chgex**2)/real(noptx,sp))
-		!conv(4)=maxval(abs(optg))
-		!conv(5)=sqrt(sum(optg**2)/real(noptx,sp))
-		!conv(1)=e-oe
-		!conv(2)=maxval(abs(ChgeS))
-		!conv(3)=sqrt(sum(chgeS**2)/real(((ndlc * 3) - 6),sp))
 		conv(4)=maxval(abs(optg_dlc))
 		conv(5)=sqrt(sum(optg_dlc**2)/real(((ndlc * 3) - 6),sp))
 
@@ -320,6 +320,23 @@ else if (coordtype .eq. 1) then
 			end if
 			if (conv(5) .lt. tolgrms) then
 				convs(5)="YES" ; i=i+1
+			end if
+		! When in the growth phase of the string, the convergence criteria are loosened by a factor of 10.
+		else if (gsmphase .eq. 1) then
+			if (abs(conv(1)) .lt. (tolde * 10)) then
+				 convs(1)="YES" ; i=i+1
+			end if
+			if (conv(2) .lt. (toldxmax * 10)) then
+				 convs(2)="YES" ; i=i+1
+			end if
+			if (conv(3) .lt. (toldxrms * 10)) then
+				 convs(3)="YES" ; i=i+1
+			end if
+			if (conv(4) .lt. (tolgmax * 10)) then
+				 convs(4)="YES" ; i=i+1
+			end if
+			if (conv(5) .lt. (tolgrms * 10)) then
+				 convs(5)="YES" ; i=i+1
 			end if
 		else
 			if (abs(conv(1)) .lt. tolde) then
@@ -348,13 +365,13 @@ else if (coordtype .eq. 1) then
 		fullconvs(img_num,:)=convs(:)
 
 		open(unit=8,file=("add_to_update"//trim(img_string(img_num))),status="replace")
-		!write (unit=8,fmt='(A,4F9.6,3F12.6)') " DelX,Delg, DelX*Delg, maxChgX, fac, fad, fae: ", sum(DelX), sum(DelG), sum(DelX*DelG), maxval(abs(ChgeX)), fac, fad, fae
 		write (unit=8,fmt='(A,3F9.6, F13.6)') " DelX, Delg, DelX*Delg, maxChgX: ", sum(DelX), sum(DelG), sum(DelX*DelG), maxchgx
 		close(8)
 
 	!End of loop over images
 	end do
 end if	
+
 ! increment nstep
 nstep=nstep + 1
 

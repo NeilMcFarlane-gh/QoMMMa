@@ -40,8 +40,8 @@ do img_num=1,nimg
 	write(unit=8,fmt='(2I6, F10.2)') primtype
 	if (coordtype .eq. 1) then
 		write(unit=8,fmt='(A)') "Then the number of primitive internal coordinates and their definition."
-		write(unit=8,fmt='(2I6, F10.2)') SIZE(prim_list,1)
-		do i = 1, SIZE(prim_list,1)
+		write(unit=8,fmt='(2I6, F10.2)') nprim
+		do i = 1, nprim
 			write (unit=8,fmt='(4I6,3X)') (prim_list(i,j),j=1,4)
 		end do
 	end if

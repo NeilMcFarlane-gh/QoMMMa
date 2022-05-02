@@ -18,24 +18,23 @@ contains
 	integer(i4b), allocatable :: prim_list(:,:)
 
 	! The list of primitive internal coordinates is rather simple to define when every atom is connected to every atom.
-	prim_list = COMBINATIONS_2(to_generate, SIZE(to_generate))
+	prim_list = COMBINATIONS_2(to_generate, atom_num)
 	
 	! The global integer, nprim, is also initialised here.
 	nprim = SIZE(prim_list, 1)
 
 	end subroutine define_prims_TC
 	
-	subroutine define_prims_full(atom_num, nlinks, to_generate, coords, prim_list) 
+	subroutine define_prims_full(atom_num, to_generate, coords, prim_list) 
 	! Here, the primitive internal coordinates are defined for a given cartesian coordinate set using bond lengths, angles and dihedral torsions.
 	!
 	! ARGUMENTS:    atom_num      : Integer which represents the total number of atoms to generate primitive internal coordinates for.
-	!               nlinks        : Integer which represents the total number of link atoms.	
 	!               to_generate   : 1D array containing the list of atom indices which primitive internal coordinates are to be generated for.
 	!               coords        : 1D array containing all the cartesian coordinates of the system.
 	!               prim_list     : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3,4],[2,3,4,5] etc..).
 
 	implicit none
-	integer(i4b) :: i, j, k, m, atom_num, nlinks, to_generate(atom_num), neigh_pos
+	integer(i4b) :: i, j, k, m, atom_num, to_generate(atom_num), neigh_pos
 	integer(i4b) :: coord_counter_1, coord_counter_2, opt_id, neighbours(atom_num,maxbond), total_prims
 	integer(i4b) :: actual_bond(2), actual_bond2(2), actual_ang(3), actual_ang2(3), possible_di(4), possible_di2(4)
 	integer(i4b) :: atom_1, atom_2, prim_counter, ang_counter, di_atom, temp_prim(4), temp_prim_1(4), temp_prim_2(4)
@@ -48,7 +47,7 @@ contains
 
 	! This algorithm starts very similarly to define_prims_TC, where every atom is connected to every atom.
 	! Then, the distances between every atom can be calculated so that the bonding can be established.
-	TC_list = COMBINATIONS_2_DUPE(to_generate, SIZE(to_generate))
+	TC_list = COMBINATIONS_2_DUPE(to_generate, atom_num)
 	allocate(distances(SIZE(TC_list,1)))
 	do i=1, SIZE(TC_list,1)
 		! Stashing coordinates.
@@ -355,7 +354,7 @@ contains
 	
 	! The Wilson B matrix is populated with the relevant second derivative terms.
 	number_reset = 1
-	do j=1, SIZE(prim_list,1)
+	do j=1, n_prims
 		! First, decide which kind of primitive internal coordinate we are dealing with.
 		zero_count = 0
 		work_prim = prim_list(j,:)
@@ -518,7 +517,7 @@ contains
 	
 	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
 	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, SIZE(Gmat,1), SIZE(Gmat,1)), TRANSPOSE(Bmat_p))
+	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
 	g_p = MATMUL(g, TRANSPOSE(BT_Ginv))
 
 	end subroutine gen_grad_cart_to_prim
@@ -550,7 +549,7 @@ contains
     ! Instead, an iterative transformation procedure must be used.
     ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
 	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, SIZE(Gmat,1), SIZE(Gmat,1)), TRANSPOSE(Bmat_p))
+	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
 
 	! Stashing some values for convergence criteria.
 	convergence = .FALSE.
@@ -565,7 +564,7 @@ contains
 		dx = MATMUL(TRANSPOSE(BT_Ginv), dq)
 		
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
-		xyz_rms_2 = RMSD_CALC(dx, x_1, SIZE(x_1))
+		xyz_rms_2 = RMSD_CALC(dx, x_1, (atom_num * 3))
 		
 		! The new cartesian geometry is evaluated, and the new primitive internal coordinate set and Wilson B matrix are obtained.
 		x_2 = x_1 + dx
@@ -575,14 +574,14 @@ contains
 			deallocate(temp_q)
 		end if
 		call calc_prims(atom_num, n_prims, temp_q, x_2, prim_list) 
-		call gen_Bmat_prims(atom_num, n_prims, x_2, prim_list, Bmat_p)
+		!call gen_Bmat_prims(atom_num, n_prims, x_2, prim_list, Bmat_p)
 		q(:) = temp_q(:)
 		
 		! The Moore-Penrose inverse is constructed for the next iteration.
-		BT_Ginv(:,:) = 0.0
-		Gmat(:,:) = 0.0
-		Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-		BT_Ginv = MATMUL(SVD_INVERSE(Gmat, SIZE(Gmat,1), SIZE(Gmat,1)), TRANSPOSE(Bmat_p))
+		!BT_Ginv(:,:) = 0.0
+		!Gmat(:,:) = 0.0
+		!Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
+		!BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
 
         ! The change in primitive internals for the next iteration is evaluated, and any which do not change in the original change in primitive internals is set to zero.
 		! This mitigates any risk of primitive internal coordinates changing which should remain constant, thus making the interpolation linear.

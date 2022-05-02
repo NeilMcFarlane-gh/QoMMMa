@@ -27,7 +27,7 @@ if (ncon_cart.gt.0) then
     & ncnsat(ncon_cart),cnsidl(ncon_cart),cnsen(ncon_cart),cnsg(ncon_cart), & 
     & fullcnsen(nimg,ncon_cart),fullcnsg(nimg,ncon_cart),fullcnsval(nimg,ncon_cart))
 else if (ncon_prim.gt.0) then
-	allocate(cnsat_p(ncon_prim,maxcnsat_dlc),cnsdq_p(ncon_prim))
+	allocate(cnsat_p(ncon_prim,maxcnsat_dlc),cnsdq_p(ncon_prim),cnspos_p(ncon_prim))
 end if
 
 ! Assign values for convergence tests 

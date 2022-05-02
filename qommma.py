@@ -268,10 +268,6 @@ def fortinp(usrdir):
     fc.write('\n')
     fc.write(str(dGper))
     fc.write('\n')
-    fc.write('Tolerence in Perpendicular Gradient for the growth phase of GSM')
-    fc.write('\n')
-    fc.write(str(dGper_grow))
-    fc.write('\n')
     fc.close()
     
 
@@ -378,7 +374,7 @@ def mmjob(mjob,usrdir):
         
 
 
-def qminitial(usrdir):
+def qminitial(usrdir, cwd):
     """
     
     // Function which creates the initial inputs for a QM job. //
@@ -387,6 +383,8 @@ def qminitial(usrdir):
     ----------
     usrdir : string
         The user directory - in this case it is the directory containing the files qommma.in and init_geom1.xyz.
+    cwd : string
+        The current working directory.
 
     """
     
@@ -539,7 +537,7 @@ def qminitial(usrdir):
         qomutil.qomend('Unknown QM code: ' + qmcode, cwd, usrdir) 
 
 
-def qmmm(usrdir):
+def qmmm(usrdir, cwd, cln):
     """
     
     // Function which performs a QoMMMa cycle. The steps of a QoMMMa cycle are as follows... //
@@ -556,6 +554,10 @@ def qmmm(usrdir):
     ----------
     usrdir : string
         The user directory - in this case it is the directory containing the files qommma.in and init_geom1.xyz.
+    cwd : string
+        The current working directory.    
+    cln : integer
+        The current QoMMMa cycle number.
 
     """
       
@@ -767,7 +769,7 @@ def QoMMMa_opt(usrdir):
         qomutil.qomend('QoMMMa initial setup program fails', cwd, usrdir) 
     
     # Initial QM input files are prepared.
-    qminitial(usrdir)	
+    qminitial(usrdir, cwd)	
     
     # Results from the QoMMMa setup program are moved.
     qomutil.setini(cwd, nimg, usrdir) 	
@@ -791,7 +793,7 @@ def QoMMMa_opt(usrdir):
         cln = 0			
         for ic in range(maxcycle): 		
             cln = cln + 1
-            qmmm(usrdir)
+            qmmm(usrdir, cwd, cln)
         if maxcycle == 1 and job.lower() == 'freq':
             qomutil.qomlog('Frequency job is started after first QoMMMa run, Frequency job will be performed with the geometry given in ' + inpgeom_prefix + '*.xyz file, here qmcode used is Gaussian', usrdir) 
             from qomfreq import freqmain
@@ -852,7 +854,7 @@ if __name__ == "__main__":
         sys.exit()
         
     # Normal QoMMMa run. 
-    if gsmtype =/ 1 or 2:  
+    if gsmtype != 1 or 2:  
         # The directory for the input files is simply the base user directory.
         QoMMMa_opt(basedir)
         
@@ -885,10 +887,10 @@ if __name__ == "__main__":
                 # Initialising product and reactant node directories.
                 nodeR_dir = basedir + '/nodeR'
                 if (os.path.exists(nodeR_dir)) is not True:
-                    gsmutil.gsmend(gsmutil.gsmlog('Error: for a double-ended GSM calculation, a (preferentially well-optimised) reactant directory called ''nodeR'' within the working directory must exist.', basedir)
+                    gsmutil.gsmend('Error: for a double-ended GSM calculation, a (preferentially well-optimised) reactant directory called ''nodeR'' within the working directory must exist.', basedir)
                 nodeP_dir = basedir + '/nodeP'
                 if (os.path.exists(nodeP_dir)) is not True:
-                    gsmutil.gsmend(gsmutil.gsmlog('Error: for a double-ended GSM calculation, a (preferentially well-optimised) product directory called ''nodeP'' within the working directory must exist.', basedir)
+                    gsmutil.gsmend('Error: for a double-ended GSM calculation, a (preferentially well-optimised) product directory called ''nodeP'' within the working directory must exist.', basedir)
                 
                 # For the first cycle, the frontier nodes are the reactant and product nodes.
                 frontierR_dir = nodeR_dir
@@ -1007,7 +1009,7 @@ if __name__ == "__main__":
                 # Initialising reactant node directory.
                 nodeR_dir = basedir + '/nodeR'
                 if (os.path.exists(nodeR_dir)) is not True:
-                    gsmutil.gsmend(gsmutil.gsmlog('Error: for a single-ended GSM calculation, a (preferentially well-optimised) reactant directory called ''nodeR'' within the working directory must exist.', basedir)
+                    gsmutil.gsmend('Error: for a single-ended GSM calculation, a (preferentially well-optimised) reactant directory called ''nodeR'' within the working directory must exist.', basedir)
                 
                 # For the first cycle, the frontier node is the reactant node.
                 frontier_dir = nodeR_dir

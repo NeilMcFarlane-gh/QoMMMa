@@ -35,6 +35,7 @@ call write_checkfile()
 call update_full_geometry()
 call det_sm_coord()
 call write_sm_coord()
+call write_prim_coord()
 call write_hessgeom()
 call write_mulliken()
 

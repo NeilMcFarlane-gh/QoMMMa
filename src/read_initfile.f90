@@ -173,8 +173,8 @@ if (ncon_cart.gt.0) then
 	call check_constrained_atoms()
 else if (ncon_prim .gt. 0) then
 	do i=1,ncon_prim
-		read(unit=8,fmt=*) cnsidl_dlc(i)
-		read(unit=8,fmt=*) (cnsat_dlc(i,j),j=1,4)
+		read(unit=8,fmt=*) cnsdq_p(i)
+		read(unit=8,fmt=*) (cnsat_p(i,j),j=1,4)
 	end do
 	! Check that all constrained atoms are QM, Link or HessOpt
 	call check_constrained_atoms()

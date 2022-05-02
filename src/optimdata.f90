@@ -16,7 +16,7 @@ real(sp), allocatable :: fulle(:), fulloe(:), fullte(:), fullqe(:), fulltotcnsen
 
 real(sp), allocatable :: tg(:), qg(:), g(:), optg(:), og(:), h(:,:), oh(:,:), &
      &  ox(:), newx(:), mull(:), kcns(:), cnsidl(:), cnsval(:), cnsen(:), cnsg(:), &
-	 & cnsdq_p(:)
+	 & cnsdq_p(:), cnspos_p(:)
 real(sp), allocatable :: fullog(:,:), fulloh(:,:,:), fullox(:,:), fulltg(:,:), &
      &  fullqg(:,:), fullmull(:,:), fulloptg(:,:), fullh(:,:,:), fullnewx(:,:), norm_per_force(:)
 	 
@@ -34,7 +34,8 @@ real(sp),allocatable :: fulloptga(:,:),fulloptgb(:,:)
 real(sp) :: qea,qeb,ea,eb,oea,oeb
 
 real(sp), parameter :: hart_kcal = 627.5095d0
-real(sp), parameter :: stpmx = 0.5
+real(sp), parameter :: stpmax_dlc = 0.5
+real(sp), parameter :: stpmax_cart = 0.1
 integer(i4b), parameter :: maxcnsat_cart = 10
 integer(i4b), parameter :: maxcnsat_dlc = 4
 

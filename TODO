@@ -1,23 +1,26 @@
 URGENT:
-Change driving coords to prim_constraints (or similar)
-Change names of driving arrays etc. to prim constraint arrays etc.
-Fix initialize_step.f90 so that it creates a full array of dq (including those which are zero)
-
-Change convergence criteria for gsmphase (specifically for growth)
-Edit report file so that it includes the correct convergence criteria for the correct phase
-Edit report file so that it includes the constraint details for primitive constraints
-
-Make bin file for reparameterisation of string (work for both growth and opt)
-Save primitive definitions in scratch through file write_prim_coord.f90
-
-Make ndlc actually 3N-6, and use ndlc throughout program (NOT IN MODULES)
-In main program files (NOT IN MODULES) stop using SIZE(x,1) etc.
-
-Fix check_constrained_atoms.f90 so that it actually works for both primitive and cartesians
 
 
+// F90 //
+
+Make /bin file for reparameterisation of string (work for both growth and opt)
+
+Improve dlc_constraint.f90 subroutines
+
+Fix prim_to_cart in primitive.f90 regarding moore penrose inverse
+
+
+
+// PYTHON //
+
+Create Python input for driving coords, GSM type, number of nodes, max SE-GSM nodes
+
+Complete gsmutil.py functions
 
 
 
 LATER:
+Fix check_constrained_atoms.f90 so that it actually works for primitive
 Integrate all the DLC work into MECP code?
+Integrate all the DLC work into NEB code?
+Allow for GSM with cartesian coordinates?

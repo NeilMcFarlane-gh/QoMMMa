@@ -21,11 +21,10 @@ inpgeom_prefix='init_geom'
 # QoMMMa Convergence
 dEmax=1.E-4
 dGmax=5.E-3
-dGrms=3.E-3
+dGrms=2.E-3
 dXmax=7.E-3
 dXrms=4.E-3
 dGper=2.E-3 #for NEB
-dGper_grow=1.5E-1 #for GSM
 
 # for QoMMMa input
 qm_lst='None'

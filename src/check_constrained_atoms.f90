@@ -7,10 +7,11 @@ implicit none
 integer(i4b) :: i, j, k, cnsok
 
 cnsok=1
-! TO-DO : This is not perfect...
+! TO-DO : Make it work for prims
 ! Checked only for one image, as all images have the same constraints
-do i = 1, ncon
-	if (coordtype .eq. 0) then
+
+if (coordtype .eq. 0) then
+	do i = 1, ncon_cart
 		do j = 1, ncnsat(i)
 			cnsok=0
 			do k=1,nopt
@@ -24,7 +25,9 @@ do i = 1, ncon
 				stop
 			end if
 		end do
-	else if (coordtype .eq. 1) then
+	end do
+else if (coordtype .eq. 1) then
+	!do i = 1, ncon_prim
 		!do j = 1, 4
 			!cnsok=0
 			!do k=1,nopt
@@ -41,8 +44,9 @@ do i = 1, ncon
 				!stop
 			!end if
 		!end do
-	end if
-end do
+	!end do
+end if
+
 return
 END SUBROUTINE check_constrained_atoms
 

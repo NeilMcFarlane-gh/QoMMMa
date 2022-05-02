@@ -12,7 +12,7 @@ do img_num=1,nimg
 	! Check whether update necessary
 	if (update_geom(img_num)) then
 	! Copies coordinates of QM and link atoms into single-image array
-	xq(:)=fullxq(img_num,:)
+	!xq(:)=fullxq(img_num,:)
 	xl(:)=fullxl(img_num,:)
 
 	! Then Start to Write the file

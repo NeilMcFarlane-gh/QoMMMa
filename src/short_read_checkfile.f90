@@ -70,7 +70,7 @@ do img_num=1,nimg
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) ncon_cart,kcnstyp
 	read(unit=8,fmt=*) dummy
-	read(unit=8,fmt=*) ncon_prim,kcnstyp
+	read(unit=8,fmt=*) ncon_prim
 
 	! Now read through list of QM atoms.
 	read(unit=8,fmt=*) dummy
@@ -159,7 +159,7 @@ do img_num=1,nimg
 		end do
 		! Check that all constrained atoms are QM, Link or HessOpt
 		call check_constrained_atoms()
-	else if (ncon_dlc.gt.0) then
+	else if (ncon_prim.gt.0) then
 		cnsat_p=0
 		do i=1,ncon_prim
 			read(unit=8,fmt=*) cnsdq_p(i)

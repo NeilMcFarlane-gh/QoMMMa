@@ -215,8 +215,9 @@ def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, usrdir):
     
 def SE_check_delE():
     # not sure, yet...
+    return
     
-def get_tangents_opt(node_dirs, usrdir)
+def get_tangents_opt(node_dirs, usrdir):
     """
     
     // Function which generates the set of primitive internal coordinate tangents which describe the reaction pathway. //
@@ -233,7 +234,7 @@ def get_tangents_opt(node_dirs, usrdir)
     
     return tangent_list
     
-def gen_input_opt(node_dirs, tangent_list, usrdir)
+def gen_input_opt(node_dirs, tangent_list, usrdir):
     """
     
     // Function which creates a series of new qommma.in files for all the nodes. //
