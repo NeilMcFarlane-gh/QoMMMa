@@ -5,6 +5,9 @@
 """
 # Global imports.
 from time import asctime
+import numpy as np
+import os
+import shutil
 
 
 def gsmlog(s, usrdir):
@@ -61,6 +64,19 @@ def read_driving(usrdir):
 
     """
     
+    # Opening the input file and reading in all lines.
+    with open('driving_coords.in', 'r') as file:
+        lines = file.read().splitlines()
+
+    # Now, a list of lists is created containing each of the driving coordinates.
+    # The first four integers define the coordinate, and the final integer defines the direction (1 for increase, -1 for decrease).
+    driving_coords = []
+    for i in lines:
+        driving_temp = i.split()
+        map_object = map(int, driving_temp)
+        driving_lst = list(map_object)
+        driving_coords.append(driving_lst)
+
     return driving_coords
     
 def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
@@ -82,6 +98,36 @@ def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
 
     """
     
+    # First, read in the primitive internal coordinates from the frontier node directories.
+    prims_r = []
+    prims_p = []
+    for dir in frontier_dirs:
+        os.chdir(dir)
+        with open("prims", 'r') as file:
+            n_prims = int(file.readline())
+            for i in range(1,n_prims):
+                if "nodeR" in dir:
+                    prims_r[i] = float(file.readline())
+                elif "nodeP" in dir:
+                    prims_p[i] = float(file.readline())
+                    
+    # Now, the tangent can be calculated simply as the difference between these primitive internal coordinates.
+    tangent = prims_p - prims_r
+
+    # The magnitude of the stepsize is scaled based on the current number of nodes.
+    if (total_nodes - current_nodes) > 1:
+        stepsize = 1./float(total_nodes - current_nodes)
+    else:
+        stepsize = 0.5
+    tangent *= stepsize
+        
+    # If a given primitive is below a certain threshold, then it is set to zero and hence not constrained in the Fortran optimisation.
+    for i in tangent:
+        if (i < 1E-4):
+            tangent[i] = 0.0  
+    # to-do: modify tangent so that it is of the correct length.
+    # it should only be values which are not zero, and the primitive coordinate definitions corresponding to these terms should be retained.
+        
     return tangent
     
 def DE_add_nodes(frontier_dirs, new_frontier_dirs, tangent, usrdir, to_add=2):
@@ -105,7 +151,26 @@ def DE_add_nodes(frontier_dirs, new_frontier_dirs, tangent, usrdir, to_add=2):
 
     """
     
-    #returns nothing, but makes and moves files.
+    # First, copy over the qommma.in and geometry files from the previous frontier nodes to the new frontier nodes.
+    source = frontier_dirs[1]
+    inpf_s = source + '/qommma.in'
+    geom_s = source + '/geom.xyz'
+    destination = new_frontier_dirs[1]
+    inpf_d = destination + '/qommma.in'
+    geom_d = destination + '/geom.xyz'  
+    shutil.copy(source, destination)        
+    if (to_add == 2):
+        source = frontier_dirs[2]
+        inpf_s = source + '/qommma.in'
+        geom_s = source + '/geom.xyz'
+        destination = new_frontier_dirs[2]
+        inpf_d = destination + '/qommma.in'
+        geom_d = destination + '/geom.xyz'  
+        shutil.copy(source, destination)
+    
+    # Now, the new qommma.in files in the new directories are modified to include the new tangent.
+    # to-do.....
+            
     
 def DE_reparam_g(node_dirs, current_nodes, total_nodes, usrdir):   
     """
@@ -146,6 +211,29 @@ def SE_get_tangent(frontier_dir, driving_coords, usrdir):
 
     """
     
+    # Iterate through each driving coordinate and scale each driving coordinate.
+    # The step sizes for these driving coordinates are essentially arbitrary.
+    # They are made large enough that the step is reasonable, but not too large that the difference between nodes is too great.
+    # In driving_coords, the first four integers define the coordinate, and the final integer defines the direction (1 for increase, -1 for decrease).
+    tangent = []
+    for indice in range(1,len(driving_coords)):
+        i = driving_coords[indice]
+        driving = i[0:3]
+        direction = i[4]
+        
+        # Now, find out what type of primitive internal coordinate each driving coordinate is by counting the number of zeroes.
+        zero_count = 0
+        for j in driving:
+            if (j == 0):
+                zero_count += 1
+        
+        if (zero_count == 2): # Bond
+            tangent[indice] = 0.1 * direction # Angstroms...
+        elif (zero_count == 1): # Angle
+            tangent[indice] = 0.0872665 * direction # Radians...
+        elif (zero_count == 0): # Dihedral torsion
+            tangent[indice] = 0.0872665 * direction # Radians...
+           
     return tangent
 
 def SE_get_final_tangent(nodeR_dir, frontier_dir, driving_coords, usrdir):
@@ -171,7 +259,7 @@ def SE_get_final_tangent(nodeR_dir, frontier_dir, driving_coords, usrdir):
     
     return tangent
     
-def SE_add_node(frontier_dir, new_frontier_dir, tangent, usrdir):
+def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir):
     """
     
     // Function which creates a new qommma.in files which essentially represents the new frontier node. //
@@ -185,18 +273,48 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, usrdir):
         String of the new frontier node directory which is about to be added.
     tangent : list
         The primitive internal coordinate tangent which is used to define the geometry and constraints applied to the new node.
+    driving_coords : list
+        The primitive internal coordinates which the user has specified to be likely involved in the reaction pathway.
     usrdir : string
         The user directory.
 
     """
     
-    #returns nothing, but makes and moves files.
+    # First, copy over the qommma.in and geometry file from the previous frontier node to the new frontier node.
+    source = frontier_dir
+    inpf_s = source + '/qommma.in'
+    geom_s = source + '/geom.xyz'
+    destination = new_frontier_dir
+    inpf_d = destination + '/qommma.in'
+    geom_d = destination + '/geom.xyz'  
+    shutil.copy(source, destination)  
+
+    # Now, prepare the new input prim_constrain_lst for qommma.in using the tangent and the primitive driving coordinates.
+    prim_constrain_lst = []
+    for indice in range(1,len(driving_coords)):
+        i = driving_coords[indice]
+        driving = i[0:3]
+        dq = tangent[indice]
+        to_append = [dq] + driving
+        prim_constrain_lst.append(to_append)
+    
+    # Now, the new qommma.in file in the new directory is modified to include the new tangent.
+    with open(inpf_d, 'r') as file:
+        inp_data = file.readlines()
+    line_num = 0
+    for line in inp_data:
+        line_num += 1
+        if "prim_constrain_lst" in line:
+            inp_data[line_num] = prim_constrain_lst
+    with open(inpf_d, 'w') as file:
+        file.writelines(inp_data)
+        
 
 def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, usrdir):
     """
     
-    // Function which creates a new qommma.in files which essentially represents the new frontier node. //
-    // The geometry from the previous frontier node is also copied over to the new directory. //
+    // Function which creates a news qommma.in files for the final nodes which essentially represent the new frontier nodes. //
+    // The geometry from the previous frontier node is used as the starting point for all the new nodes and also copied over to the new directories. //
     
     Arguments
     ----------

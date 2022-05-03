@@ -872,9 +872,12 @@ if __name__ == "__main__":
             gsmutil.gsmlog('With the GSM type: ' + str(gsmtype) + '  you have chosen to use ' + total_nodes + '  nodes in total', basedir)
         elif gsmtype == 2:
             gsmutil.gsmlog('With the GSM type: ' + str(gsmtype) + '   the driving coordinate(s) are as below...', basedir)
-            #driving_coords = gsmutil.read_driving(workdir)
-            #write driving coordinates somehow?
-            #error driving coordinates not found in file driving_coords.in
+            driving_coords = gsmutil.read_driving(basedir)
+            if (len(driving_coords) == 0):
+                gsmutil.gsmend('Error: for a single-ended GSM calculation, you must provide at least 1 driving coordinate in the file driving_coords.in', basedir)
+            else:
+                for driv in driving_coords:
+                    gsmutil.gsmlog(str(driv), basedir)
         
         # The growth phase commences.
         gsmutil.gsmlog('        /// Growing the string... ///       ', basedir)
@@ -1032,7 +1035,7 @@ if __name__ == "__main__":
                     
                     # Now create a new qommma.in file for the new node and copy the geometry of the previous node over.
                     # The generation of the new geometry (mathematically intensive) is handled by the Fortran code.
-                    gsmutil.SE_add_node(frontier_dir, new_frontier_dir, tangent, basedir)
+                    gsmutil.SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, basedir)
                     
                     # Update the frontier directory to represent the new node.
                     frontier_dir = new_frontier_dir

@@ -37,12 +37,6 @@ if (nimg.eq.1) then
    tolgrms=tolgrms_org 
    toldxmax=toldxmax_org 
    toldxrms=toldxrms_org
-else if (coordtype .eq. 1) then
-   tolde=tolde_org*2
-   tolgmax=tolgmax_org*2
-   tolgrms=tolgrms_org*2
-   toldxmax=toldxmax_org*2
-   toldxrms=toldxrms_org*2
 else
    tolde=tolde_org*2
    tolgmax=tolgmax_org*2

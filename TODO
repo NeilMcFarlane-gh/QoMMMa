@@ -3,17 +3,14 @@ URGENT:
 
 // F90 //
 
-Make /bin file for reparameterisation of string (work for both growth and opt)
-
 Improve dlc_constraint.f90 subroutines
 
 Fix prim_to_cart in primitive.f90 regarding moore penrose inverse
 
-
-
 // PYTHON //
 
-Create Python input for driving coords, GSM type, number of nodes, max SE-GSM nodes
+
+Create Python input for number of nodes, max SE-GSM nodes, additional prims
 
 Complete gsmutil.py functions
 

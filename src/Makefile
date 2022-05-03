@@ -53,8 +53,18 @@ update_full_geometry.o evaluate_spring_force.o check_constrained_atoms.o \
 evaluate_constraint.o write_gradcorrection.o write_report_mecp.o write_checkfile_mecp.o \
 det_sm_coord.o  write_sm_coord.o  write_hessgeom.o  write_mulliken.o \
 
+GSM_REPARAM=$(BIN)/gsm_reparam.x
+GSM_REPARAM_OBJ= \
+nrtype.o  coordinates.o  optimdata.o \
+math.o primitive.o delocalised.o \
+reparam_string.o \
+alloc_coord.o alloc_optim.o read_expl_coord.o \
+short_read_checkfile.o initialize_step.o update_step_geometry.o \
+write_prim_coord.o check_constrained_atoms.o \
 
-all:	$(QOMMMA) $(POSTMICRO) $(SETUP)
+
+
+all:	$(QOMMMA) $(POSTMICRO) $(SETUP) $(GSM_REPARAM)
 
 $(QOMMMA) : $(QOMMMA_OBJ)
 	$(LD) $(LFLAGS) -o $@ $^ $(LIBS)
@@ -67,6 +77,9 @@ $(SETUP) : $(SETUP_OBJ)
 
 #$(QOMMMA_MECP) : $(QOMMMA_MECP_OBJ)
 	#$(LD) $(LFLAGS) -o $@ $^ $(LIBS)
+
+$(GSM_REPARAM) : $(GSM_REPARAM_OBJ)
+	$(LD) $(LFLAGS) -o $@ $^ $(LIBS)
 
 %.o : %.f90
 	$(FF) $(FFLAGS) -c  $< -o $@ 

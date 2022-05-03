@@ -20,42 +20,6 @@ real(sp) :: temp_coord(3), qm_coord(3), dq
 real(sp), allocatable :: complete_dq(:)
 
 if (ncon_prim .gt. 0) then
-	! The first part is relatively simple. The coordinates in xopt are compared to the indices of the QM atoms.
-	! After comparison, the numbers can simply be reset to their relative indice starting from 1.
-	
-	! First, get the QM region coordinates.
-	do l=1, nq
-		j = (3 * (l-1)) + 1
-		k = (3 * (qm(l)-1)) + 1
-		xq(j:j+2) = x(k:k+2)
-	end do
-
-	! Now, a series of loops and if-statements compares coordinates to generate the reordered coordinate steps.
-	cons_work(:,:) = cnsat_p(:,:)
-	do i=1, ncon_prim
-		do j=1, 4
-			cons_temp = cons_work(i,j)
-			if (cons_temp .ne. 0) then
-				k = (3 * (cons_temp-1)) + 1
-				temp_coord = x(k:k+2)
-				do l=1, nq
-					qm_temp = qm(l)
-					if (cons_temp .eq. qm_temp) then
-						do m=1, nq
-							ii = (3 * (m-1)) + 1
-							qm_coord = xq(ii:ii+2)
-							if (MAXVAL(temp_coord - qm_coord) .eq. 0) then
-								cons_work(i,j) = l
-							end if
-						end do
-					end if
-				end do
-			else 
-				cycle
-			end if
-		end do
-	end do	
-	
 	! If there are any primitive internal coordinates which were not automatically generated, then these are added to prim_list.
 	! First the new version of prim_list must be allocated.
 	prim_list_work = prim_list
