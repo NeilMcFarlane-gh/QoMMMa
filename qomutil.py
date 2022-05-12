@@ -65,6 +65,21 @@ def qomend(s, cwd, usrdir):
     
     # Ending QoMMMa job.
     sys.exit()
+    
+def qomsave(cwd, usrdir):
+    # The jobfiles from the QoMMMa run are retained for diagnostic purposes.
+    # If the jobfiles directory is found from a previous QoMMMa run, then it is copied and renamed to jobfiles_old.
+    if os.path.exists(usrdir + '/jobfiles'):
+        if os.path.exists(usrdir + '/jobfiles_old'):
+            shutil.rmtree(usrdir + '/jobfiles_old')
+        shutil.copytree(usrdir + '/jobfiles', usrdir + '/jobfiles_old') 
+        shutil.rmtree(usrdir + '/jobfiles')
+        qomlog('Note, jobfiles directory is renamed as jobfiles_old if you want to keep this directory rename it with different name before submitting next QoMMMa job', usrdir)
+    shutil.copytree(cwd, usrdir + '/jobfiles')
+    if not os.path.exists(usrdir + '/geom1.xyz'):
+        shutil.copy(usrdir + '/jobfiles/geom1.xyz', usrdir + '/geom1.xyz')
+    shutil.rmtree(cwd) 
+    
 
 def addatmnum(imn):
     """

@@ -172,6 +172,7 @@ if (ncon_cart.gt.0) then
 	! Check that all constrained atoms are QM, Link or HessOpt
 	call check_constrained_atoms()
 else if (ncon_prim .gt. 0) then
+	read(unit=8,fmt=*) dummy
 	do i=1,ncon_prim
 		read(unit=8,fmt=*) cnsdq_p(i)
 		read(unit=8,fmt=*) (cnsat_p(i,j),j=1,4)

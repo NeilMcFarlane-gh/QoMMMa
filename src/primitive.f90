@@ -255,7 +255,7 @@ contains
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 	
 	implicit none
-	integer(i4b) :: j, k, atom_num, n_prims, zero_count, temp_int
+	integer(i4b) :: i,j, k, atom_num, n_prims, zero_count, temp_int
 	integer(i4b) :: coord_counter_1, coord_counter_2, coord_counter_3, coord_counter_4
 	integer(i4b) :: prim_list(n_prims, 4), work_prim(4)
 	real(sp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
@@ -562,7 +562,7 @@ contains
 		! The change in cartesian coordinates associated with the change in primitive internal coordinates is calculated.
 		dx(:) = 0.0
 		dx = MATMUL(TRANSPOSE(BT_Ginv), dq)
-		
+
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
 		xyz_rms_2 = RMSD_CALC(dx, x_1, (atom_num * 3))
 		
@@ -621,6 +621,9 @@ contains
 			exit
 		end if
 	end do
+	
+	! The new cartesian coordinates are saved.
+	x_2(:) = x_1(:)
 
 	end subroutine prims_to_cart
 	

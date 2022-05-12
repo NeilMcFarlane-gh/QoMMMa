@@ -10,7 +10,9 @@ Fix prim_to_cart in primitive.f90 regarding moore penrose inverse
 // PYTHON //
 
 
-Create Python input for number of nodes, max SE-GSM nodes, additional prims
+Create Python input for number of nodes, max SE-GSM nodes, 
+
+Allow additional prims in input 
 
 Complete gsmutil.py functions
 

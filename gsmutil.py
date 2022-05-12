@@ -8,7 +8,7 @@ from time import asctime
 import numpy as np
 import os
 import shutil
-
+import sys
 
 def gsmlog(s, usrdir):
     """
@@ -47,37 +47,38 @@ def gsmend(s, usrdir):
  
     # The time the program ends is recorded along with an error message.
     hlp = asctime()
-    qomlog(s + '\n' + '  QoMMMa job ends at ' + str(hlp), usrdir)
+    gsmlog(s + '\n' + '  QoMMMa GSM job ends at ' + str(hlp), usrdir)
     
     # Ending QoMMMa GSM job.
     sys.exit()
     
-def read_driving(usrdir):
+def read_gsm_inp(usrdir, gsmtype):
     """
     
-    // Function which generates the array of driving coordinates from the user-specified file driving_coords.in. //
+    // Function which reads the user-specified file gsm.in. //
+    // This file contains details which are only required by the growing string method. //
     
     Arguments
     ----------
     usrdir : string
         The user directory.
+    gsmtype :
+        Integer which represents which mode of GSM is being used (1 for double-ended, and 2 for single-ended).
 
     """
     
-    # Opening the input file and reading in all lines.
-    with open('driving_coords.in', 'r') as file:
-        lines = file.read().splitlines()
+    # Reading the data from the input file...
+    print(usrdir + '/gsm.in')
+    try:
+        exec(open(usrdir + '/gsm.in').read())
+    except:
+        gsmend('Could not open GSM input file, which is required to run the growing string method.', usrdir)
+        sys.exit()
 
-    # Now, a list of lists is created containing each of the driving coordinates.
-    # The first four integers define the coordinate, and the final integer defines the direction (1 for increase, -1 for decrease).
-    driving_coords = []
-    for i in lines:
-        driving_temp = i.split()
-        map_object = map(int, driving_temp)
-        driving_lst = list(map_object)
-        driving_coords.append(driving_lst)
-
-    return driving_coords
+    if gsmtype.lower() == 'de_gsm':
+        return total_nodes
+    elif gsmtype.lower() == 'se_gsm':
+        return max_nodes, driving_coords
     
 def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
     """
@@ -100,16 +101,20 @@ def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
     
     # First, read in the primitive internal coordinates from the frontier node directories.
     prims_r = []
+    prim_list_r = []
     prims_p = []
-    for dir in frontier_dirs:
+    prim_list_p = []
+    for indice,dir in enumerate(frontier_dirs):
         os.chdir(dir)
-        with open("prims", 'r') as file:
-            n_prims = int(file.readline())
+        with open("prims", 'r') as pr, open("prim_list", 'r') as pr_ls:
+            n_prims = int(pr.readline())
             for i in range(1,n_prims):
-                if "nodeR" in dir:
-                    prims_r[i] = float(file.readline())
-                elif "nodeP" in dir:
-                    prims_p[i] = float(file.readline())
+                if (indice == 1):
+                    prims_r[i] = float(pr.readline())
+                    prim_list_r[i] = float(pr_ls.readline())
+                elif (indice == 2):
+                    prims_p[i] = float(pr.readline())
+                    prim_list_p[i] = float(pr_ls.readline())
                     
     # Now, the tangent can be calculated simply as the difference between these primitive internal coordinates.
     tangent = prims_p - prims_r
@@ -216,11 +221,10 @@ def SE_get_tangent(frontier_dir, driving_coords, usrdir):
     # They are made large enough that the step is reasonable, but not too large that the difference between nodes is too great.
     # In driving_coords, the first four integers define the coordinate, and the final integer defines the direction (1 for increase, -1 for decrease).
     tangent = []
-    for indice in range(1,len(driving_coords)):
-        i = driving_coords[indice]
-        driving = i[0:3]
-        direction = i[4]
-        
+    for indice,drive in enumerate(driving_coords):
+        driving = drive[0:4]
+        direction = drive[4]
+
         # Now, find out what type of primitive internal coordinate each driving coordinate is by counting the number of zeroes.
         zero_count = 0
         for j in driving:
@@ -228,11 +232,11 @@ def SE_get_tangent(frontier_dir, driving_coords, usrdir):
                 zero_count += 1
         
         if (zero_count == 2): # Bond
-            tangent[indice] = 0.1 * direction # Angstroms...
+            tangent.append(2 * direction) # Angstroms...
         elif (zero_count == 1): # Angle
-            tangent[indice] = 0.0872665 * direction # Radians...
+            tangent.append(0.0872665 * direction) # Radians (5 deg)...
         elif (zero_count == 0): # Dihedral torsion
-            tangent[indice] = 0.0872665 * direction # Radians...
+            tangent.append(0.0872665 * direction) # Radians (5 deg)...
            
     return tangent
 
@@ -256,6 +260,8 @@ def SE_get_final_tangent(nodeR_dir, frontier_dir, driving_coords, usrdir):
         The user directory.
 
     """
+    
+    
     
     return tangent
     
@@ -283,37 +289,58 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
     # First, copy over the qommma.in and geometry file from the previous frontier node to the new frontier node.
     source = frontier_dir
     inpf_s = source + '/qommma.in'
-    geom_s = source + '/geom.xyz'
+    geom_s = source + '/geom1.xyz'
     destination = new_frontier_dir
     inpf_d = destination + '/qommma.in'
-    geom_d = destination + '/geom.xyz'  
-    shutil.copy(source, destination)  
+    geom_d = destination + '/init_geom1.xyz'  
+    shutil.copy(inpf_s, inpf_d)  
+    shutil.copy(geom_s, geom_d)  
 
     # Now, prepare the new input prim_constrain_lst for qommma.in using the tangent and the primitive driving coordinates.
     prim_constrain_lst = []
-    for indice in range(1,len(driving_coords)):
-        i = driving_coords[indice]
-        driving = i[0:3]
+    for indice,drive in enumerate(driving_coords):
         dq = tangent[indice]
-        to_append = [dq] + driving
+        to_append = (dq,) + (drive[0:4],)
         prim_constrain_lst.append(to_append)
     
-    # Now, the new qommma.in file in the new directory is modified to include the new tangent.
+    # Now, the new qommma.in file in the new directory is modified to include the new tangent, the max number of steps, and the gsmphase.
+    first_node_cons = True
+    first_node_type = True
+    first_node_ncon = True
     with open(inpf_d, 'r') as file:
         inp_data = file.readlines()
-    line_num = 0
-    for line in inp_data:
-        line_num += 1
+    for line_num,line in enumerate(inp_data):
         if "prim_constrain_lst" in line:
-            inp_data[line_num] = prim_constrain_lst
+            inp_data[line_num] = "prim_constrain_lst=" + str(prim_constrain_lst) + '\n'
+            first_node_cons = False
+        if "maxcycle" in line:
+            inp_data[line_num] = 'maxcycle=5\n'
+        if "gsmphase" in line: 
+            inp_data[line_num] = "gsmphase='growth'\n"
+        if "gsmtype" in line:
+            inp_data[line_num] = "gsmtype='se_gsm'\n"
+            first_node_type = False
+        if "ncon_prim" in line:
+            inp_data[line_num] = "ncon_prim=" + str(len(tangent)) + '\n'
+            first_node_ncon = False
     with open(inpf_d, 'w') as file:
         file.writelines(inp_data)
-        
+        if first_node_cons == True:
+            file.write('\n')
+            file.write("prim_constrain_lst=" + str(prim_constrain_lst) + '\n')
+        if first_node_type == True:
+            file.write('\n')
+            file.write("gsmtype='se_gsm'\n")
+        if first_node_ncon == True:
+            file.write('\n')
+            file.write("ncon_prim=" + str(len(tangent)) + '\n')            
+            
+       
 
 def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, usrdir):
     """
     
-    // Function which creates a news qommma.in files for the final nodes which essentially represent the new frontier nodes. //
+    // Function which creates new qommma.in files for the final nodes which essentially represent the new frontier nodes. //
     // The geometry from the previous frontier node is used as the starting point for all the new nodes and also copied over to the new directories. //
     
     Arguments
@@ -331,9 +358,52 @@ def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, usrdir):
     
     #returns nothing, but makes and moves files.
     
-def SE_check_delE():
-    # not sure, yet...
-    return
+def SE_check_delE(old_frontier_dir, frontier_dir):
+    """
+    
+    // Function which checks the difference in energy between the current and previous frontier nodes. //
+    // If the energy of the new frontier node is lower, then a stationary point has been passed and we can move on. //
+    
+    Arguments
+    ----------
+    old_frontier_dir : string
+        String of the old frontier node directory.
+    frontier_dir : string
+        String of the current frontier node directory.
+
+    """
+    
+    # The relevant energies are most easily found in the report files.
+    old_report = old_frontier_dir + '/report1'
+    cur_report = frontier_dir + '/report1'
+    
+    # Now, open the reports and reverse the order to find the last energy evaluation.
+    with open(old_report, 'r') as old_f:
+        lines = old_f.readlines()
+        for line in reversed(lines):
+            if 'Present, previous energy' in line:
+                split_line = line.split()
+                old_E = float(split_line[3])
+                break
+    with open(cur_report, 'r') as cur_f:
+        lines = cur_f.readlines()
+        for line in reversed(lines):
+            if 'Present, previous energy' in line:
+                split_line = line.split()
+                cur_E = float(split_line[3])
+                break
+    
+    # Now, evaluate the difference and decide if a stationary point has been surpassed.
+    del_E = cur_E - old_E
+    if del_E < -0.05:
+        SP_found = True
+    else:
+        SP_found = False
+    
+    print(str(del_E * 627.5))
+    print(str(SP_found))
+    
+    return SP_found
     
 def get_tangents_opt(node_dirs, usrdir):
     """

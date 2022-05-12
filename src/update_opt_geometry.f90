@@ -196,7 +196,7 @@ else if (coordtype .eq. 1) then
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
 		x_copy = xopt
-		print *, "ENERGY DIFFERENCE: ", e - oe
+
 		! Generating DLC for the given coordinate set.
 	    call refresh_dlc(nopt, ndlc, xopt)
 		
