@@ -68,7 +68,6 @@ def read_gsm_inp(usrdir, gsmtype):
     """
     
     # Reading the data from the input file...
-    print(usrdir + '/gsm.in')
     try:
         exec(open(usrdir + '/gsm.in').read())
     except:
@@ -232,7 +231,7 @@ def SE_get_tangent(frontier_dir, driving_coords, usrdir):
                 zero_count += 1
         
         if (zero_count == 2): # Bond
-            tangent.append(2 * direction) # Angstroms...
+            tangent.append(0.2 * direction) # Angstroms...
         elif (zero_count == 1): # Angle
             tangent.append(0.0872665 * direction) # Radians (5 deg)...
         elif (zero_count == 0): # Dihedral torsion
@@ -240,7 +239,7 @@ def SE_get_tangent(frontier_dir, driving_coords, usrdir):
            
     return tangent
 
-def SE_get_final_tangent(nodeR_dir, frontier_dir, driving_coords, usrdir):
+def SE_get_final_tangent(current_nodes, driving_coords, usrdir):
     """
     
     // Function which generates the primitive internal coordinate driving coordinate which describes the reaction pathway. //
@@ -250,10 +249,8 @@ def SE_get_final_tangent(nodeR_dir, frontier_dir, driving_coords, usrdir):
     
     Arguments
     ----------
-    frontier_dir : string
-        String containing the initial reactant node directory.
-    frontier_dir : string
-        String containing the node (called frontier node) 'closest' to the stationary point.
+    current_nodes : integer
+        The current number of nodes, including the reactant directory.
     driving_coords : list
         The primitive internal coordinates which the user has specified to be likely involved in the reaction pathway.
     usrdir : string
@@ -261,9 +258,35 @@ def SE_get_final_tangent(nodeR_dir, frontier_dir, driving_coords, usrdir):
 
     """
     
+    # This is relatively similar to the function SE_get_tangent, except that it returns a total tangent for 2-4 nodes.
+    tangent = []
+    for indice,drive in enumerate(driving_coords):
+        driving = drive[0:4]
+        direction = drive[4]
+
+        # Now, find out what type of primitive internal coordinate each driving coordinate is by counting the number of zeroes.
+        zero_count = 0
+        for j in driving:
+            if (j == 0):
+                zero_count += 1
+        
+        if (zero_count == 2): # Bond
+            tangent.append(0.2 * direction * current_nodes) # Angstroms...
+        elif (zero_count == 1): # Angle
+            tangent.append(0.0872665 * direction * current_nodes) # Radians (5 deg)...
+        elif (zero_count == 0): # Dihedral torsion
+            tangent.append(0.0872665 * direction * current_nodes) # Radians (5 deg)...
     
-    
-    return tangent
+    # Now the different bit, decide how many new nodes (2-4) are to be added given the number of nodes currently on the string.
+    if current_nodes <= 5:
+        total_new = 2
+        return tangent, total_new
+    elif current_nodes <= 10:
+        total_new = 3
+        return tangent, total_new   
+    else:
+        total_new = 4
+        return tangent, total_new              
     
 def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir):
     """
@@ -314,7 +337,7 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             inp_data[line_num] = "prim_constrain_lst=" + str(prim_constrain_lst) + '\n'
             first_node_cons = False
         if "maxcycle" in line:
-            inp_data[line_num] = 'maxcycle=5\n'
+            inp_data[line_num] = 'maxcycle=50\n'
         if "gsmphase" in line: 
             inp_data[line_num] = "gsmphase='growth'\n"
         if "gsmtype" in line:
@@ -356,7 +379,44 @@ def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, usrdir):
 
     """
     
-    #returns nothing, but makes and moves files.
+    # First, initialise the source directory.
+    source = frontier_dir
+    inpf_s = source + '/qommma.in'
+    geom_s = source + '/geom1.xyz'
+    
+    # Now, iterate through each of the new frontier node directories and copy the files appropriately.
+    for dir in new_frontier_dirs:
+        # First, prepare the directory and copy over files.
+        destination = dir
+        inpf_d = destination + '/qommma.in'
+        geom_d = destination + '/init_geom1.xyz'  
+        shutil.copy(inpf_s, inpf_d)  
+        shutil.copy(geom_s, geom_d)  
+    
+        # Prepare the new input prim_constrain_lst for the given qommma.in using the tangent and the primitive driving coordinates.
+        # In this case, the tangent is scaled based on the number of new frontier nodes.
+        prim_constrain_lst = []
+        for indice,drive in enumerate(driving_coords):
+            dq = tangent[indice] * (1 / len(new_frontier_dirs))
+            to_append = (dq,) + (drive[0:4],)
+            prim_constrain_lst.append(to_append)
+        
+        # Now, the new qommma.in file in the new directory is modified to include the new tangent, the max number of steps, and the gsmphase.
+        with open(inpf_d, 'r') as file:
+            inp_data = file.readlines()
+        for line_num,line in enumerate(inp_data):
+            if "prim_constrain_lst" in line:
+                inp_data[line_num] = "prim_constrain_lst=" + str(prim_constrain_lst) + '\n'
+            if "maxcycle" in line:
+                inp_data[line_num] = 'maxcycle=50\n'
+            if "gsmphase" in line: 
+                inp_data[line_num] = "gsmphase='growth'\n"
+            if "gsmtype" in line:
+                inp_data[line_num] = "gsmtype='se_gsm'\n"
+            if "ncon_prim" in line:
+                inp_data[line_num] = "ncon_prim=" + str(len(tangent)) + '\n'
+        with open(inpf_d, 'w') as file:
+            file.writelines(inp_data)
     
 def SE_check_delE(old_frontier_dir, frontier_dir):
     """
@@ -376,7 +436,7 @@ def SE_check_delE(old_frontier_dir, frontier_dir):
     # The relevant energies are most easily found in the report files.
     old_report = old_frontier_dir + '/report1'
     cur_report = frontier_dir + '/report1'
-    
+    print('Checking delE')
     # Now, open the reports and reverse the order to find the last energy evaluation.
     with open(old_report, 'r') as old_f:
         lines = old_f.readlines()
@@ -395,14 +455,12 @@ def SE_check_delE(old_frontier_dir, frontier_dir):
     
     # Now, evaluate the difference and decide if a stationary point has been surpassed.
     del_E = cur_E - old_E
+    print(del_E)
     if del_E < -0.05:
         SP_found = True
     else:
         SP_found = False
-    
-    print(str(del_E * 627.5))
-    print(str(SP_found))
-    
+
     return SP_found
     
 def get_tangents_opt(node_dirs, usrdir):

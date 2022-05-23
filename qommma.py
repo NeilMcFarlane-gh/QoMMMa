@@ -668,9 +668,11 @@ def qmmm(usrdir, cwd, cln):
         converg_achieved = True
         if gsmtype.lower() == 'none':
             qomutil.qomend('Congratulations,', cwd, usrdir)
-        elif gsmtype.lower() == 'de_gsm' or 'se_gsm':
-            qomutil.qomsave(cwd, usrdir)
-            return converg_achieved
+            
+    if (gsmtype.lower() == 'de_gsm' or 'se_gsm') and (cln == maxcycle):
+        converg_achieved = True
+        qomutil.qomsave(cwd, usrdir)
+        return converg_achieved
             
     try:   			# rearranging files 
         qomutil.rearrange(nimg, cwd, qmjob_prefix, cln)	 
@@ -775,7 +777,7 @@ def QoMMMa_opt(usrdir, node):
         os.system(qommmadir + '/bin/setup8.x')
     except:
         qomutil.qomend('QoMMMa initial setup program fails', cwd, usrdir) 
-    
+
     # Initial QM input files are prepared.
     qminitial(usrdir, cwd)	
     
@@ -804,11 +806,10 @@ def QoMMMa_opt(usrdir, node):
             if gsmtype.lower() == 'none':
                 qmmm(usrdir, cwd, cln)
             elif gsmtype.lower() == 'se_gsm' or 'de_gsm':
+                # For the case in GSM, converg_achieved is used to decide when to exit the given calculation.
                 converg_achieved = qmmm(usrdir, cwd, cln)
-                
-            # For the case in GSM, converg_achieved is used to decide when to exit the given calculation.
-            if converg_achieved == True:
-                return
+                if converg_achieved == True:
+                    return
         if maxcycle == 1 and job.lower() == 'freq':
             qomutil.qomlog('Frequency job is started after first QoMMMa run, Frequency job will be performed with the geometry given in ' + inpgeom_prefix + '*.xyz file, here qmcode used is Gaussian', usrdir) 
             from qomfreq import freqmain
@@ -936,8 +937,8 @@ if __name__ == "__main__":
                     # Creating new directories for new nodes.
                     new_dirs = []
                     frontier_dirs = []
-                    new_frontierR_dir = basedir + '/node' + i
-                    new_frontierP_dir = basedir + '/node' + j
+                    new_frontierR_dir = basedir + '/node' + str(i)
+                    new_frontierP_dir = basedir + '/node' + str(j)
                     new_dirs.append(new_frontierR_dir)
                     new_dirs.append(new_frontierP_dir)
                     frontier_dirs.append(frontierR_dir)
@@ -993,7 +994,7 @@ if __name__ == "__main__":
                     # Creating new directory for the central node.
                     new_dirs = []
                     frontier_dirs = []
-                    new_frontier_dir = basedir + '/node' + math.ceil(total_nodes / 2)
+                    new_frontier_dir = basedir + '/node' + str(math.ceil(total_nodes / 2))
                     new_dirs.append(new_frontier_dir)
                     frontier_dirs.append(frontierR_dir)
                     frontier_dirs.append(frontierP_dir)
@@ -1097,23 +1098,30 @@ if __name__ == "__main__":
                 # When the stationary point (SP) has been surpassed, 2 - 4 new nodes with large steps are created - hopefully finding the minimum on the other side.
                 # The large steps are defined based on the total primitive internal coordinate change from the pre-SP nodes.
                 # This is based on the assumption that the drop off in energy after the SP will be approximately at the same rate as pre-SP.
-                tangent = gsmutil.SE_get_final_tangent(nodeR_dir, frontier_dir, driving_coords, basedir)
+                tangent, total_new = gsmutil.SE_get_final_tangent(current_nodes, driving_coords, basedir)
                 
                 # Based on the magnitude of the tangent, new directories can be created. 
                 # The criteria for these magnitudes are essentially based on trial and error, but can be easily modified.
-                #create dirs for new nodes.
-                #add new node directories to new_dirs
-                #add new node directories to all_nodes.
-                #current_nodes += 2 to 4
+                new_dirs = []
+                for i in range(1,total_new):
+                    new_frontier_dir = basedir + '/node' + str(current_nodes + i)
+                    new_dirs.append(new_frontier_dir)
+                    all_nodes.append(new_frontier_dir)
+                    os.mkdir(new_frontier_dir)
+                    gsmutil.gsmlog('Node ' + str(current_nodes + i) + '   has been added to the string...', basedir)
                               
                 # Now create new qommma.in files for the new nodes and copy the geometries of the previous nodes over.
                 # In this case, the starting geometry for all 2-4 nodes is the same and is the current frontier node.
                 # The generation of the new geometries (mathematically intensive) is handled by the Fortran code.
                 gsmutil.SE_add_final_nodes(frontier_dir, new_dirs, tangent, basedir)
+                
+                # Update the frontier directories to represent the new nodes.
+                frontier_dirs = []
+                frontier_dirs = new_dirs                  
 
                 # Lastly, the new nodes can be optimised subject to the conditions of a growth phase calculation.
                 # To give correct input, re-read default.in to reset the variables and read in the new qommma.in.
-                for dir in new_dirs:
+                for counter,dir in enumerate(frontier_dirs):
                     try:
                         exec(open(qommmadir + '/lib/default.in').read())
                     except:
@@ -1123,8 +1131,9 @@ if __name__ == "__main__":
                         exec(open(inpf).read())
                     except:
                         gsmutil.gsmend('Could not open input file for node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
-                    QoMMMa_opt(dir, i) # performing QoMMMa growth-phase optimisation.
                     gsmutil.gsmlog('Optimising node (growth-phase): ' + inpf + '........', basedir)
+                    QoMMMa_opt(dir, (current_nodes + counter)) # performing QoMMMa growth-phase optimisation.
+                current_nodes += total_new
                 
                 # Growth phase complete!
                 gsmutil.gsmlog('The growth phase is complete! There is now a total (including reactant) of: ' + str(current_nodes) + '   nodes...', basedir)
@@ -1152,8 +1161,9 @@ if __name__ == "__main__":
                     exec(open(inpf).read())
                 except:
                     gsmutil.gsmend('Could not open input file for node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
-                QoMMMa_opt(dir) # performing QoMMMa optimisation-phase optimisation.
                 gsmutil.gsmlog('Optimising node (optimisation-phase): ' + inpf + '........', basedir)
+                QoMMMa_opt(dir) # performing QoMMMa optimisation-phase optimisation.
+                
             
             # Now, check for convergence of all nodes.
             # If all are converged, then perform a final reparameterisation of the string and the optimisation-phase is complete.

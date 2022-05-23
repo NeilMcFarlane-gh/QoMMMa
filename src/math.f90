@@ -426,7 +426,7 @@ contains
 	LDU = rows
 	LDVT = cols
 	
-	! Zero the arrays used in this function.
+	! Zero out the arrays used in this function.
 	S = 0.0
 	VT = 0.0
 	U = 0.0

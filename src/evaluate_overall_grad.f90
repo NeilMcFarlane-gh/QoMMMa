@@ -77,7 +77,7 @@ do img_num=1,nimg
 	if (ncon_cart.gt.0) then
 		totcnsen=0.d0
 		do i=1,ncon_cart
-			call evaluate_constraint(i)
+			call evaluate_constraint_cart(i)
 			fullcnsval(img_num,i)=cnsval(i)
 			fullcnsg(img_num,i)=cnsg(i)
 			fullcnsen(img_num,i)=cnsen(i)
@@ -86,8 +86,7 @@ do img_num=1,nimg
 			fulltotcnsen(img_num)=totcnsen
 			e = e + totcnsen
 	else if (ncon_prim.gt.0) then
-		! TO-DO : Implement prim/DLC constraint here?
-		!placeholder
+		call evaluate_constraint_dlc()
 	end if
 
 

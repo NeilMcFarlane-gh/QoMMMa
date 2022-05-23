@@ -10,6 +10,7 @@ real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS(ndlc), DelX(noptx), w
 real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, stpmx, maxchgx, temp_x(noptx), temp_dlc
 real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
 real(sp),parameter :: minstep = 0.1
+logical :: is_cons
 
 line_search=.false.
 if ((nebtype.eq.4).or.(nebtype.eq.3).or.(nebtype.eq.5)) then
@@ -198,8 +199,8 @@ else if (coordtype .eq. 1) then
 		x_copy = xopt
 
 		! Generating DLC for the given coordinate set.
-	    call refresh_dlc(nopt, ndlc, xopt)
-		
+	    call refresh_dlc(nopt, ndlc, xopt, cdat)
+
 		! A selection of values are preserved as they are used in the BFGS update.
 		if (.not. ALLOCATED(old_prims)) allocate(old_prims(nprim))
 		old_prims(:) = prims(:)
@@ -215,7 +216,7 @@ else if (coordtype .eq. 1) then
 		call gen_grad_cart_to_DLC(nopt, ndlc, nprim, old_Bmat_dlc, og, og_dlc)
 		call gen_grad_cart_to_prim(nopt, nprim, Bmat_p, optg, optg_p)
 		call gen_grad_cart_to_prim(nopt, nprim, old_Bmat_p, og, og_p)
-
+		
 		! To avoid the repeated matrix diagonalisation that would be necessary to continually update the hessian matrix in DLC subspace, we update the primitive hessian.
 		! However, on the first optimisation step, the initial matrix is generated simply as a weighted unit matrix.
 		! Subsequent iterations of the optimisation will use the BFGS scheme to update this primitive hessian matrix.
@@ -236,13 +237,24 @@ else if (coordtype .eq. 1) then
 			allocate(h_p(nprim, nprim))
 			h_p(:,:) = oh_p(:,:)
 		end if
-		
-		if (Nstep .le. 5) then
+
+		! Checking if there are any constraints...
+		is_cons = .False.
+		if (allocated(cdat) .eqv. .True.) then
+			is_cons = .True.
+		end if
+
+		if (Nstep .le. 0) then
 			!###################
 			! Steepest descent.#
 			!###################
 			
 			ChgeS = optg_dlc * 0.7 * (-1)
+
+			! Now, if there are any constraints, given elements of the DLC should not change.
+			if (is_cons .eqv. .True.) then
+				ChgeS(ndlc - (ncon_prim - 1):ndlc) = 0.0
+			end if
 			
 			! The change is DLC is scaled using the maximum step length.
 			stpl = RMSD_CALC(ChgeS, dlc, ndlc)
@@ -258,7 +270,8 @@ else if (coordtype .eq. 1) then
 			
 			!The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call DLC_to_cart2(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call calc_prims(nopt, nprim, prims, newx, prim_list)
 			ChgeX = newx(:) - temp_x(:)
 		else
 			!###############
@@ -269,7 +282,13 @@ else if (coordtype .eq. 1) then
 			call gen_hess_prim_to_DLC(nopt, ndlc, nprim, Umat, h_p, h_dlc)
 
 			! The change in DLC can now be evaluated using a quasi-Newton methodology.
-			ChgeS = MATMUL(h_dlc, optg_dlc) * (-1)
+			ChgeS = MATMUL(TRANSPOSE(h_dlc), optg_dlc) * (-8)
+			!TO-DO: implement adaptive step algorithm...
+			
+		    ! Now, if there are any constraints, given elements of the DLC should not change.
+			if (is_cons .eqv. .True.) then
+				ChgeS(ndlc - (ncon_prim - 1):ndlc) = 0.0
+			end if
 		
 			! The change is DLC is scaled using the maximum step length.
 			stpl = RMSD_CALC(ChgeS, dlc, ndlc)
@@ -285,7 +304,7 @@ else if (coordtype .eq. 1) then
 		
 			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call DLC_to_cart2(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
 			ChgeX = newx(:) - temp_x(:)
 			
 			! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.

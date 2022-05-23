@@ -69,6 +69,9 @@ if (ncon_prim .gt. 0) then
 		end do
 	end do
 	
+	! Updating the constrained atom array with the correct integers.
+	cnsat_p(:,:) = cons_work(:,:)
+	
 	! If there are any primitive internal coordinates which were not automatically generated, then these are added to prim_list.
 	! First the new version of prim_list must be allocated.
 	prim_list_work = prim_list
@@ -123,11 +126,10 @@ if (ncon_prim .gt. 0) then
 		j = cnspos_p(i)
 		complete_dq(j) = cnsdq_p(i)
 	end do
-
+	
 	! Lastly, the primitive internal coordinates have been integrated into prim_list, so the step(s) can be taken.
 	! If the constrained coordinate is to be kept fixed at its current value, then the value of dq is zero and nothing changes.
-	call calc_prims(nopt, nprim, prims, xq, prim_list)
-	call gen_Bmat_prims(nopt, nprim, xopt, prim_list, Bmat_p)
+	call calc_prims(nopt, nprim, prims, xopt, prim_list)
 	call prims_to_cart(nopt, nprim, complete_dq, prims, xopt, newx, Bmat_p, prim_list)
 
 	! Remember to copy over the new cartesian coordinates to the cartesian region!

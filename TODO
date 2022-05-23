@@ -3,18 +3,16 @@ URGENT:
 
 // F90 //
 
-Improve dlc_constraint.f90 subroutines
-
-Fix prim_to_cart in primitive.f90 regarding moore penrose inverse
+Fix DLC_to_cart2() - probably to do with B matrix, or evaluation of new dq at each cycle.
+(LINKED WITH ***) When in optimisation phase, primitive internal coordinates don't need to be renumbered in initialise_prims.f90. ***
+Check where unproj_cons() should be used...
+Integrate a step-halving type algorithm in update_opt_geometry() so that large/small steps can be taken where necessary.
 
 // PYTHON //
 
-
-Create Python input for number of nodes, max SE-GSM nodes, 
+(LINKED WITH ***) When in optimisation phase, read in primitives from the files prim_list & prims. ***
 
 Allow additional prims in input 
-
-Complete gsmutil.py functions
 
 
 

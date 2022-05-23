@@ -12,7 +12,7 @@ disp=0
 maxcycle=200
 maxcycle_grow=5 #for GSM
 
-max_nodes=10 #for SE-GSM
+max_nodes=20 #for SE-GSM
 
 # output option
 qomout='None'

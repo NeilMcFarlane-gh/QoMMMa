@@ -300,6 +300,11 @@ def qomreport(nimg, usrdir, cwd, cln, qomout):
     if result=='TRUE':
         fc=open(cwd+'/convergence_ok','w')
         fc.close() 
+        
+    # For GSM, sometimes the convergence is not achieved, but the file convergence_ok must be created to continue with growth.
+#    if ((gsmtype.lower() == 'se_gsm') and (cln == maxcycle)):
+#        fc=open(cwd+'/convergence_ok','w')
+#        fc.close()         
  
 def setini(cwd, nimg, usrdir):
     """

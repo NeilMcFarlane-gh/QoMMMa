@@ -259,7 +259,6 @@ do img_num=1,nimg
 		k=3*(opt(i)-1)+1
 		xopt(j:j+2)=x(k:k+2)
 	end do
-
 	if (nstep .eq. 0) then
 		do i = 1, noptx
 			oh(i,i) = 0.7d0

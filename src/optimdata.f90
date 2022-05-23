@@ -16,7 +16,7 @@ real(sp), allocatable :: fulle(:), fulloe(:), fullte(:), fullqe(:), fulltotcnsen
 
 real(sp), allocatable :: tg(:), qg(:), g(:), optg(:), og(:), h(:,:), oh(:,:), &
      &  ox(:), newx(:), mull(:), kcns(:), cnsidl(:), cnsval(:), cnsen(:), cnsg(:), &
-	 & cnsdq_p(:), cnspos_p(:)
+	 & cnsdq_p(:), cnspos_p(:), cdat(:,:), cdat_unproj(:,:)
 real(sp), allocatable :: fullog(:,:), fulloh(:,:,:), fullox(:,:), fulltg(:,:), &
      &  fullqg(:,:), fullmull(:,:), fulloptg(:,:), fullh(:,:,:), fullnewx(:,:), norm_per_force(:)
 	 

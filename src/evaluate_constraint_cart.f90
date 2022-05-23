@@ -1,4 +1,4 @@
-SUBROUTINE evaluate_constraint(c)
+SUBROUTINE evaluate_constraint_cart(c)
 use nrtype ; use coordinates ; use optimdata
 implicit none
 
@@ -6,9 +6,9 @@ implicit none
 !    including the contribution to the gradient
 !    This latter term is then added to the overall gradient.
 
-integer(i4b), parameter :: maxcns=maxcnsat/2
+integer(i4b), parameter :: maxcns=maxcnsat_cart/2
 integer(i4b), intent(in) :: c
-integer(i4b) :: i, j, k, kk, l(maxcnsat)
+integer(i4b) :: i, j, k, kk, l(maxcnsat_cart)
 real(sp) :: vecs(maxcns,3), cg(maxcns,3), lvec(maxcns), kcnsau
 
 ! Reminder of the constraint types:
@@ -92,7 +92,7 @@ end do
 
 return
 
-END SUBROUTINE evaluate_constraint
+END SUBROUTINE evaluate_constraint_cart
 
 
 SUBROUTINE calc_constraint(en,grad,typ,x,k)

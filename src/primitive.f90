@@ -347,7 +347,7 @@ contains
 	real(sp) :: grad_r(3,2), grad_theta(3,3), grad_phi(3,4)
 	real(sp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
 	real(sp), allocatable :: Bmat_p(:,:)
-	
+
 	! The Wilson B matrix is allocated. By definition, its dimensions are (number of prims) x (3N), where N is the number of atoms.
 	if (.not. ALLOCATED(Bmat_p)) allocate(Bmat_p((3 * atom_num), n_prims))
 	Bmat_p(:,:) = 0.0
@@ -467,8 +467,8 @@ contains
 	! First, initialise the values that may be scaled.
 	dgdq = INNER_PRODUCT(dg, dq, n_prims)
 	dqHdq = INNER_PRODUCT(MATMUL(dq, hess), dq, n_prims)
-	if (dgdq < 0.001) dgdq = 0.001
-	if (dqHdq < 0.001) dqHdq = 0.001
+	if (dgdq < 0.0001) dgdq = 0.0001
+	if (dqHdq < 0.0001) dqHdq = 0.0001
 
 	! The change in the hessian can now be calculated.
 	dhess = ((OUTER_PRODUCT(dg, dg, n_prims, n_prims)) / dgdq) &
@@ -480,8 +480,8 @@ contains
 	! When this is the case, the change in the given Hessian element is simply set to zero.
 	do i=1, n_prims
 		do j=1, n_prims
-			if (ABS(dhess(i,j)) .lt. 0.05) then
-				dhess(i,j) = dhess(i,j) * 2
+			if (ABS(dhess(i,j)) .lt. 0.1) then
+				dhess(i,j) = dhess(i,j) * 4
 			else if (ABS(dhess(i,j)) .gt. 2) then
 				dhess(i,j) = 0.0
 			end if
@@ -490,8 +490,6 @@ contains
 
 	! Lastly, the newly updated hessian is obtained.
 	hess = hess + dhess
-	prims_1(:) = 0.0
-	prims_2(:) = 0.0
 	
 	end subroutine update_bfgs_p
 		
@@ -539,15 +537,16 @@ contains
 	implicit none
 	integer(i4b) :: atom_num, n_prims, i, iter_counter, prim_list(n_prims, 4)
 	real(sp) :: dq(n_prims), q(n_prims), q_2(n_prims), x_1(3 * atom_num), x_2(3 * atom_num)
-	real(sp) :: BT_Ginv(n_prims, (3 * atom_num)), Bmat_p((3 * atom_num), n_prims)
+	real(sp) :: BT_Ginv(n_prims, (3 * atom_num))
 	real(sp) :: dq_actual(n_prims), check(n_prims), temp_check, xyz_rms_1, xyz_rms_2
 	real(sp) :: init_dq(n_prims), target_q(n_prims), dx(3 * atom_num), Gmat(n_prims, n_prims)
-	real(sp), allocatable :: temp_q(:)
+	real(sp), allocatable :: temp_q(:), Bmat_p(:,:)
 	logical :: convergence
 	
     ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
     ! Instead, an iterative transformation procedure must be used.
     ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
+	call gen_Bmat_prims(atom_num, n_prims, x_1, prim_list, Bmat_p)
 	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
 	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
 
@@ -574,25 +573,20 @@ contains
 			deallocate(temp_q)
 		end if
 		call calc_prims(atom_num, n_prims, temp_q, x_2, prim_list) 
-		!call gen_Bmat_prims(atom_num, n_prims, x_2, prim_list, Bmat_p)
+		call gen_Bmat_prims(atom_num, n_prims, x_2, prim_list, Bmat_p)
 		q(:) = temp_q(:)
 		
 		! The Moore-Penrose inverse is constructed for the next iteration.
-		!BT_Ginv(:,:) = 0.0
-		!Gmat(:,:) = 0.0
-		!Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-		!BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
+		BT_Ginv(:,:) = 0.0
+		Gmat(:,:) = 0.0
+		Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
+		BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
 
         ! The change in primitive internals for the next iteration is evaluated, and any which do not change in the original change in primitive internals is set to zero.
 		! This mitigates any risk of primitive internal coordinates changing which should remain constant, thus making the interpolation linear.
 		dq(:) = 0.0
 		dq = (target_q - q)
-		do i=1, SIZE(dq)
-			if (init_dq(i) .eq. 0.0) then
-				dq(i) = 0.0
-			end if
-		end do
-		
+
 		! Now, the three exit conditions should be checked...
 		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
         ! The second ending condition for this transformation is when the difference in root-mean-square change in cartesians between iteration i and i+1 is less than 10^-12.

@@ -306,12 +306,15 @@ implicit none
 
 real(sp) :: Change(nimg,noptx)
 real(sp) :: new_weight
-real(sp) :: stpl, lstep, stpmax
+real(sp) :: stpl, lstep, stpmax, stpmx
 
 ! I can't allocate it
 !allocate(Change(nimg,noptx))
 
-stpmax = STPMX * REAL(noptx,sp)
+! Initialise the maximum step.
+stpmax = stpmax_cart
+stpmx = stpmax_cart * REAL(noptx,sp)
+		
 
     stpl = SQRT(SUM(change**2))
     IF (stpl .gt. stpmax) THEN
