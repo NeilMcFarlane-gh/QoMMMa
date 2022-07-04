@@ -24,7 +24,7 @@ contains
 	if (.not. ALLOCATED(Gmat)) allocate(Gmat(n_prims, n_prims))
 	Gmat(:,:) = 0.0
 	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-	
+
 	! By definition, the G matrix must have a determinant of zero. 
 	! This criteria is checked to mitigate errors down the line.
 	deter = DETERMINANT(Gmat, n_prims)
@@ -99,7 +99,7 @@ contains
 	! The Wilson B matrix in DLC subspace is allocated. By definition, its dimensions are (3N-6) x (3N), where N is the number of atoms.
 	if (.not. ALLOCATED(Bmat_dlc)) allocate(Bmat_dlc((3 * atom_num), n_dlc))
 	Bmat_dlc(:,:) = 0.0
-	
+
 	! The calculation of the B matrix in DLC subspace is a straightforward multiplication.	
 	Bmat_dlc = MATMUL(Bmat_p, TRANSPOSE(U_V_mat))
 
@@ -166,8 +166,8 @@ contains
 	end if
 	
 	! Now, all the DLC subroutines can be called to reallocate the arrays.
-	call calc_prims(atom_num, nprim, prims, coords, prim_list)
-	call gen_Bmat_prims(atom_num, nprim, coords, prim_list, Bmat_p)
+	call calc_prims(atom_num, nprim, prims, opt, coords, prim_list)
+	call gen_Bmat_prims(atom_num, nprim, opt, coords, prim_list, Bmat_p)
 	call gen_Gmat(atom_num, n_dlc, nprim, Bmat_p, Gmat)
 	call diag_Gmat(atom_num, n_dlc, nprim, Gmat, Umat, Rmat)
 
@@ -287,6 +287,12 @@ contains
 	init_dS(:) = dS(:)
 	init_dlc(:) = dlc(:)
 	target_dlc(:) = dlc(:) + init_dS(:)
+	
+	print *,'_____________________'
+	print *, 'Expected dS...'
+	do k=1, n_dlc
+		print *, init_dS(k)
+	end do
 
 	! In the original implementation by Baker, the transformation procedure is iterative using the equation above.
 	! However, this procedure is rather unstable when it comes to large changes in DLC, or near 180 dihedral angles.
@@ -321,7 +327,12 @@ contains
 
 	! The new DLC set (which should be close to init_dlc) and the new cartesian coordinates are saved.
 	x_2 = x_1 + dx_save
-
+	print *, '_____________________'
+	print *, 'Actual dS...'
+	do k=1, n_dlc
+		print *,dS_save(k)
+	end do	
+	
 	end subroutine DLC_to_cart
 	
 	subroutine DLC_to_cart2(atom_num, n_dlc, n_prims, dq, q, x_1, x_2, Bmat_dlc)
@@ -341,9 +352,9 @@ contains
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 	
 	implicit none
-	integer(i4b) :: atom_num, n_dlc, n_prims, i,k, iter_counter
+	integer(i4b) :: atom_num, n_dlc, n_prims, i, k, iter_counter, counter
 	real(sp) :: dq(n_dlc), q(n_dlc), q_2(n_dlc), x_1(3 * atom_num), x_2(3 * atom_num)
-	real(sp) :: BT_Ginv(n_dlc, (3 * atom_num))
+	real(sp) :: BT_Ginv(n_dlc, (3 * atom_num)), temp_vec1(n_dlc), temp_vec2(n_dlc), temp_real
 	real(sp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2
 	real(sp) :: init_dq(n_dlc), target_q(n_dlc), dx(3 * atom_num), Gmat(n_dlc,n_dlc)
 	real(sp), allocatable :: temp_q(:), Bmat_dlc(:,:)
@@ -355,7 +366,6 @@ contains
 	call refresh_DLC(atom_num, n_dlc, x_1, cdat)
 	Gmat = MATMUL(TRANSPOSE(Bmat_dlc), Bmat_dlc)
 	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_dlc, n_dlc), TRANSPOSE(Bmat_dlc))
-	print *, 'NORMS...', norm2(Gmat), norm2(Bmat_dlc), norm2(BT_Ginv)
 
 	! Stashing some values for convergence criteria.
 	convergence = .FALSE.
@@ -363,9 +373,7 @@ contains
 	xyz_rms_2 = 0
 	init_dq(:) = dq(:)
 	target_q(:) = q(:) + init_dq(:)
-	print *, 'Initial dS: ', init_dq
-	print *, 'Initial dlc: ', q
-	print *, '_____________________'
+	iter_counter = 0
 	
 	! Checking if there are any constraints...
 	is_cons = .False.
@@ -373,37 +381,57 @@ contains
 		is_cons = .True.
 	end if
 
-	!do while (convergence .eqv. .FALSE.) 
-	do k=1, 50
+	do while (convergence .eqv. .FALSE.) 
 		! The change in cartesian coordinates associated with the change in primitive internal coordinates is calculated.
 		dx(:) = 0.0
-		dx = MATMUL(TRANSPOSE(BT_Ginv), dq)
-
+		!dx = MATMUL(TRANSPOSE(BT_Ginv), dq)
+		temp_vec1 = dq
+		do i=1, atom_num*3
+			temp_vec2 = BT_Ginv(:,i)
+			temp_real = INNER_PRODUCT(temp_vec1, temp_vec2, n_prims)
+			dx(i) = temp_real
+		end do
+		print *, '____________________________'		
+		print *, SIZE(BT_Ginv,1), SIZE(BT_Ginv,2), SIZE(dq)
+		counter = 1
+		do i=1, atom_num
+			print *, dx(counter:counter+2)
+			counter = counter + 3
+		end do
+		print *, '____________________________'
+		do i=1, n_dlc
+			print *, SUM(BT_Ginv(:,i)), init_dq(i), dq(i)
+		end do
+		print *, '__________________________'
+		print *, 'Magnitudes of BT_Ginv and dq'
+		print *, NORM2(BT_Ginv), NORM2(dq)
+		print *, '__________________________'
+		print *, dq
+		print *, '__________________________'
+		
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
 		xyz_rms_2 = RMSD_CALC(dx, x_1, (atom_num * 3))
 		
-		! The new cartesian geometry is evaluated, and the new primitive internal coordinate set and Wilson B matrix are obtained.
+		! The new cartesian geometry is evaluated, the new primitive internal coordinate set, Wilson B matrix, and DLC are obtained.
 		x_2 = x_1 + dx
+		call refresh_DLC(atom_num, n_dlc, x_2, cdat)
 		
 		! The Moore-Penrose inverse is constructed for the next iteration.
 		BT_Ginv(:,:) = 0.0
 		Gmat(:,:) = 0.0
-		call refresh_DLC(atom_num, n_dlc, x_2, cdat)
 		Gmat = MATMUL(TRANSPOSE(Bmat_dlc), Bmat_dlc)
 		BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_dlc, n_dlc), TRANSPOSE(Bmat_dlc))
-		print *, 'NORMS...', norm2(Gmat), norm2(Bmat_dlc), norm2(BT_Ginv)
-        ! The change in primitive internals for the next iteration is evaluated, and any which do not change in the original change in primitive internals is set to zero.
-		! This mitigates any risk of primitive internal coordinates changing which should remain constant, thus making the interpolation linear.
+
+        ! The change in primitive internals for the next iteration is evaluated.
 		dq(:) = 0.0
 		dq = (target_q - dlc)
+		print *, 
 		
-		! Now, if there are any constraints, given elements of the DLC should not change.
+		! Now, if there are any constraints, the appropriate elements of the DLC should not change.
 		if (is_cons .eqv. .True.) then
 			dq(n_dlc - (ncon_prim - 1):n_dlc) = 0.0
 		end if
-		print *, "new dx: ", dx
-		print *, 'New dq: ', dq
-		print *, '_____________________'
+
 		! Now, the three exit conditions should be checked...
 		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
         ! The second ending condition for this transformation is when the difference in root-mean-square change in cartesians between iteration i and i+1 is less than 10^-12.
@@ -427,7 +455,7 @@ contains
 
 		! In some cases, cartesians cannot be solved, so an exit condition must exist for this case.
 		iter_counter = iter_counter + 1
-		if (iter_counter == 50) then
+		if (iter_counter == 2) then
 			print *, "Error; could not solve cartesians from the change in primitive internal coordinates."
 			exit
 		end if
@@ -435,7 +463,7 @@ contains
 
 	! The new cartesian coordinates are saved.
 	x_2(:) = x_1(:)
-
+	stop
 	end subroutine DLC_to_cart2
 	
 	

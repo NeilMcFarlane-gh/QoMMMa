@@ -14,14 +14,14 @@ contains
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 
 	implicit none
-	integer(i4b) :: atom_num, nprim, to_generate(atom_num)
+	integer(i4b) :: atom_num, to_generate(atom_num)
 	integer(i4b), allocatable :: prim_list(:,:)
 
 	! The list of primitive internal coordinates is rather simple to define when every atom is connected to every atom.
 	prim_list = COMBINATIONS_2(to_generate, atom_num)
-	
+
 	! The global integer, nprim, is also initialised here.
-	nprim = SIZE(prim_list, 1)
+	nprim = SIZE(prim_list,1)
 
 	end subroutine define_prims_TC
 	
@@ -34,7 +34,9 @@ contains
 	!               prim_list     : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3,4],[2,3,4,5] etc..).
 
 	implicit none
-	integer(i4b) :: i, j, k, m, atom_num, to_generate(atom_num), neigh_pos
+	integer(i4b) :: i, j, k, kk, m, atom_num, to_generate(atom_num), indices_save(atom_num,2), neigh_pos
+	integer(i4b) :: temp_indice, temp_indice2, temp_indice3, temp_indice4, temp_indice5
+	integer(i4b) :: coord_indice1, coord_indice2, coord_indice3, coord_indice4
 	integer(i4b) :: coord_counter_1, coord_counter_2, opt_id, neighbours(atom_num,maxbond), total_prims
 	integer(i4b) :: actual_bond(2), actual_bond2(2), actual_ang(3), actual_ang2(3), possible_di(4), possible_di2(4)
 	integer(i4b) :: atom_1, atom_2, prim_counter, ang_counter, di_atom, temp_prim(4), temp_prim_1(4), temp_prim_2(4)
@@ -44,16 +46,32 @@ contains
 	real(sp), allocatable :: distances(:)
 	logical :: is_dupe = .FALSE.
 	logical :: is_allocated = .FALSE.
+	
+	! In order to get the appropriate coordinates, save an array which gives the list of indices for which primitives are to be generated accompanied with numerical order indices.
+	indices_save(:,1) = to_generate(:)
+	indices_save(:,2) = (/(i,i=1,atom_num,1)/)
 
 	! This algorithm starts very similarly to define_prims_TC, where every atom is connected to every atom.
 	! Then, the distances between every atom can be calculated so that the bonding can be established.
 	TC_list = COMBINATIONS_2_DUPE(to_generate, atom_num)
 	allocate(distances(SIZE(TC_list,1)))
 	do i=1, SIZE(TC_list,1)
+		! Getting the correct numerical indice...
+		temp_indice = TC_list(i,1)
+		temp_indice2 = TC_list(i,2)
+		do j=1, atom_num
+			temp_indice3 = indices_save(j,1)
+			if (temp_indice == temp_indice3) then
+				coord_indice1 = indices_save(j,2)
+			else if (temp_indice2 == temp_indice3) then
+				coord_indice2 = indices_save(j,2)
+			end if	
+		end do 
+		
 		! Stashing coordinates.
-		coord_counter_1 = (TC_list(i,1) - 1) * 3
+		coord_counter_1 = (coord_indice1 - 1) * 3
 		coord_counter_1 = coord_counter_1 + 1
-		coord_counter_2 = (TC_list(i,2) - 1) * 3
+		coord_counter_2 = (coord_indice2 - 1) * 3
 		coord_counter_2 = coord_counter_2 + 1
 		coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
 		coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
@@ -70,11 +88,20 @@ contains
 	do i=1, SIZE(TC_list,1)
 		dist = distances(i)
 		if (dist .lt. cut_off) then
-			opt_id = TC_list(i,1)
+			! Getting the correct numerical indice...
+			temp_indice = TC_list(i,1)
+			do m=1, atom_num
+				temp_indice2 = indices_save(m,1)
+				if (temp_indice == temp_indice2) then
+					coord_indice1 = indices_save(m,2)
+				end if
+			end do
+				
+			! If less than cut-off, then adding the neighbour...
 			do j=1, maxbond
-				neigh_pos = neighbours(opt_id,j)
+				neigh_pos = neighbours(coord_indice1,j)
 				if (neigh_pos .eq. 0) then
-					neighbours(opt_id,j) = TC_list(i,2)
+					neighbours(coord_indice1,j) = TC_list(i,2)
 					exit
 				end if
 			end do
@@ -83,13 +110,21 @@ contains
 
 	! Due to the fact that the number of primitive internal coordinates is unknown at initial execution, the algorithm must be performed twice.
 	! Indeed, this is not computationally efficient, but this avoids problems with memory allocation.
-	do m=1, 2
+	do kk=1, 2
 		! The primitive counter is reset.
 		prim_counter = 1
 		
 		! First, define all bonds. This is simple as it has already been defined in the array neighbours.
 		do i=1, atom_num
-			atom_1 = i
+			! Getting the correct numerical indice...
+			temp_indice = i
+			do m=1, atom_num
+				temp_indice2 = indices_save(m,2)
+				if (temp_indice == temp_indice2) then
+					atom_1 = indices_save(m,1)
+				end if
+			end do
+			
 			do j=1, maxbond
 				atom_2 = neighbours(i,j)
 				if (atom_2 .ne. 0) then
@@ -106,12 +141,20 @@ contains
 				end if
 			end do
 		end do
-		
+
 		! Now, the angles and dihedral torsions can can be defined.
 		! Angles are relatively easily to define as they are essentially given in the array neighbours.
 		! Dihedrals are not directly defined in neighbours but angles are used as for a dihedral to exist, three atoms must be bonded already.
 		do i=1, atom_num
-			atom_1 = i
+		
+			! Getting the correct numerical indice...
+			temp_indice = i
+			do m=1, atom_num
+				temp_indice2 = indices_save(m,2)
+				if (temp_indice == temp_indice2) then
+					atom_1 = indices_save(m,1)
+				end if
+			end do
 			
 			! Firstly, place all the atoms that atom i is bonded to into the array angle_atoms.
 			ang_counter = 0
@@ -129,43 +172,93 @@ contains
 					angle_atoms(ang_counter) = neighbours(i,j)
 				end if
 			end do
-			
-			! If there is only one or zero atom bonded to atom i, then no angles are possible so the loop is exited.
+
+			! If there is only one or zero atoms bonded to atom i, then no angles are possible so the loop is exited.
 			if (SIZE(angle_atoms) .le. 1) then
-				exit
+				cycle
 			end if
 			
 			! Rather like defining a total connectivity scheme, we can use COMBINATIONS_2 of the atoms which atom_i is bonded to and generate the possible angles.
 			combo_list = COMBINATIONS_2(angle_atoms, SIZE(angle_atoms))
-			
+
 			! Lastly, we can generate each angle definition by iterating through combo_list.
 			! For the calculation of the angle, atom i is placed in the middle of the definition.
 			do j=1, SIZE(combo_list,1)
 				actual_ang(1) = combo_list(j,1)
 				actual_ang(2) = atom_1
 				actual_ang(3) = combo_list(j,2)
+				
+				! Getting the correct numerical indices...
+				temp_indice = combo_list(j,1)
+				temp_indice2 = atom_1
+				temp_indice3 = combo_list(j,2)
+				do k=1, atom_num
+					temp_indice5 = indices_save(k,1)
+					if (temp_indice == temp_indice5) then
+						coord_indice1 = indices_save(k,2)
+					else if (temp_indice2 == temp_indice5) then
+						coord_indice2 = indices_save(k,2)
+					else if (temp_indice3 == temp_indice5) then
+						coord_indice3 = indices_save(k,2)
+					end if	
+				end do 					
+				
 				if (is_allocated .eqv. .FALSE.) then
+					! Counting a new primitive for the angle.
 					prim_counter = prim_counter + 1
 					
 					! Now checking if any dihedral torsions exist for this angle.
 					do k=1, maxbond
-						di_atom = neighbours(actual_ang(1),k)
+						! Getting the correct numerical indice...
+						di_atom = neighbours(coord_indice1,k)
+						temp_indice4 = neighbours(coord_indice1,k)
+						do m=1, atom_num
+							temp_indice5 = indices_save(m,1)
+							if (temp_indice4 == temp_indice5) then
+								coord_indice4 = indices_save(m,2)
+							end if
+						end do
+
+						! Now, adding a dihedral if appropriate
 						if ((di_atom .ne. 0) .AND. (di_atom .ne. actual_ang(2)) .AND. (di_atom .ne. actual_ang(3))) then
 							prim_counter = prim_counter + 1
-						di_atom = neighbours(actual_ang(3),k)
-						else if ((di_atom .ne. 0) .AND. (di_atom .ne. actual_ang(1)) .AND. (di_atom .ne. actual_ang(2))) then
+						end if
+						
+						! Getting the correct numerical indice...						
+						di_atom = neighbours(coord_indice3,k)
+						temp_indice4 = neighbours(coord_indice3,k)
+						do m=1, atom_num
+							temp_indice5 = indices_save(m,1)
+							if (temp_indice4 == temp_indice5) then
+								coord_indice4 = indices_save(m,2)
+							end if
+						end do
+
+						! Now, adding a dihedral if appropriate
+						if ((di_atom .ne. 0) .AND. (di_atom .ne. actual_ang(2)) .AND. (di_atom .ne. actual_ang(1))) then
 							prim_counter = prim_counter + 1
 						end if
 					end do
 				else
+					! Adding the angle to the primitive internal coordinates.
 					prim_list_temp(prim_counter,1:3) = actual_ang
 					actual_ang2 = ASCEND_ORDER(actual_ang, 3)
 					prim_list_ordered(prim_counter,1:3) = actual_ang2
 					prim_counter = prim_counter + 1
 					
-					! Now checking if any dihedral torsions exist for this angle.
+					! Adding the dihedral to the primitive internal coordinates.
 					do k=1, maxbond
-						di_atom = neighbours(actual_ang(1),k)
+						! Getting the correct numerical indice...
+						di_atom = neighbours(coord_indice1,k)
+						temp_indice4 = neighbours(coord_indice1,k)
+						do m=1, atom_num
+							temp_indice5 = indices_save(m,1)
+							if (temp_indice4 == temp_indice5) then
+								coord_indice4 = indices_save(m,2)
+							end if
+						end do
+						
+						! Now, adding a dihedral if appropriate
 						if ((di_atom .ne. 0) .AND. (di_atom .ne. actual_ang(2)) .AND. (di_atom .ne. actual_ang(3))) then
 							possible_di(1) = di_atom
 							possible_di(2) = actual_ang(1)
@@ -178,7 +271,17 @@ contains
 						end if
 					end do
 					do k=1, maxbond
-						di_atom = neighbours(actual_ang(3),k)
+						! Getting the correct numerical indice...						
+						di_atom = neighbours(coord_indice3,k)
+						temp_indice4 = neighbours(coord_indice3,k)
+						do m=1, atom_num
+							temp_indice5 = indices_save(m,1)
+							if (temp_indice4 == temp_indice5) then
+								coord_indice4 = indices_save(m,2)
+							end if
+						end do
+						
+						! Now, adding a dihedral if appropriate
 						if ((di_atom .ne. 0) .AND. (di_atom .ne. actual_ang(2)) .AND. (di_atom .ne. actual_ang(1))) then
 							possible_di(1) = actual_ang(1)
 							possible_di(2) = actual_ang(2)
@@ -196,16 +299,15 @@ contains
 		
 		! Now, the primitive interal coordinate arrays can be allocated and the second iteration of the cycle performed.
 		if (is_allocated .eqv. .FALSE.) then
-			allocate(prim_list_temp(prim_counter-1,4))
-			allocate(prim_list_ordered(prim_counter-1,4))
+			allocate(prim_list_temp(prim_counter,4))
+			allocate(prim_list_ordered(prim_counter,4))
 			prim_list_temp = 0
 			prim_list_ordered = 0
 			is_allocated = .TRUE.
 		end if
 	end do
 
-	! The algorithm is not perfect, so can produce duplicates. These are first located.
-	total_prims = SIZE(prim_list_temp,1)
+	! The algorithm is not perfect, so can produce duplicates. These are first located and set to zero.
 	do i=1, SIZE(prim_list_temp,1)
 		temp_prim_1(:) = prim_list_ordered(i,:)
 		do j=1, SIZE(prim_list_temp,1)
@@ -223,18 +325,25 @@ contains
 				if (is_dupe .eqv. .TRUE.) then
 					prim_list_ordered(j,:) = 0
 					prim_list_temp(j,:) = 0
-					total_prims = total_prims - 1
 				end if
 			end if
 		end do
 	end do
-
+	
+	! Now, any zero terms are located and the total_prims counter is updated.
+	total_prims = SIZE(prim_list_temp,1)
+	do i=1, SIZE(prim_list_temp,1)
+		if (SUM(prim_list_temp(i,:)) .eq. 0) then
+			total_prims = total_prims - 1
+		end if
+	end do
+	
 	! Lastly, the final set of primitive internal coordinates is placed in an array.
 	allocate(prim_list(total_prims,4))
 	prim_list = 0
 	prim_counter = 1
 	do i=1, SIZE(prim_list_temp,1)
-		if (prim_list_temp(i,1) .ne. 0) then
+		if (SUM(prim_list_temp(i,:)) .ne. 0) then
 			prim_list(prim_counter,:) = prim_list_temp(i,:)
 			prim_counter = prim_counter + 1
 		end if
@@ -245,22 +354,29 @@ contains
 
 	end subroutine define_prims_full
 	
-	subroutine calc_prims(atom_num, n_prims, prims, coords, prim_list) 
+	subroutine calc_prims(atom_num, n_prims, prims, to_generate, coords, prim_list) 
 	! Here, the primitive internal coordinates are calculated from a given primitive coordinate set.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
 	!               prims       : 1D array containing all the primitive internal coordinates associated with this input.
+	!               to_generate : 1D array containing the list of atom indices which primitive internal coordinates are to be generated for.
 	!               coords      : 1D array containing all the cartesian coordinates of the system.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 	
 	implicit none
-	integer(i4b) :: i,j, k, atom_num, n_prims, zero_count, temp_int
+	integer(i4b) :: i,j, k, atom_num, n_prims, zero_count, temp_int, indices_save(atom_num,2)
+	integer(i4b) :: temp_indice, temp_indice2, temp_indice3, temp_indice4, temp_indice5
+	integer(i4b) :: coord_indice1, coord_indice2, coord_indice3, coord_indice4, to_generate(atom_num)
 	integer(i4b) :: coord_counter_1, coord_counter_2, coord_counter_3, coord_counter_4
 	integer(i4b) :: prim_list(n_prims, 4), work_prim(4)
 	real(sp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
 	real(sp) :: r, theta, phi
 	real(sp), allocatable :: prims(:)
+
+	! In order to get the appropriate coordinates, save an array which gives the list of indices for which primitives are to be generated accompanied with numerical order indices.
+	indices_save(:,1) = to_generate(:)
+	indices_save(:,2) = (/(i,i=1,atom_num,1)/)
 
 	! First, allocate (if necessary) and zero the primitive internal coordinates.
 	if (.not. ALLOCATED(prims)) allocate(prims(n_prims))
@@ -278,10 +394,22 @@ contains
 			end if
 		end do
 		if (zero_count .eq. 2) then
+			! Getting the correct numerical indice...
+			temp_indice = prim_list(j,1)
+			temp_indice2 = prim_list(j,2)
+			do k=1, atom_num
+				temp_indice3 = indices_save(k,1)
+				if (temp_indice == temp_indice3) then
+					coord_indice1 = indices_save(k,2)
+				else if (temp_indice2 == temp_indice3) then
+					coord_indice2 = indices_save(k,2)
+				end if
+			end do
+			
 			! Stashing coordinates.
-			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = (coord_indice1 - 1) * 3
 			coord_counter_1 = coord_counter_1 + 1
-			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = (coord_indice2 - 1) * 3
 			coord_counter_2 = coord_counter_2 + 1
 			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
 			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
@@ -291,12 +419,27 @@ contains
 			r = ATOM_DISTANCE(coords_1, coords_2)
 			prims(j) = r
 		else if (zero_count .eq. 1) then
+			! Getting the correct numerical indice...
+			temp_indice = prim_list(j,1)
+			temp_indice2 = prim_list(j,2)
+			temp_indice3 = prim_list(j,3)
+			do k=1, atom_num
+				temp_indice4 = indices_save(k,1)
+				if (temp_indice == temp_indice4) then
+					coord_indice1 = indices_save(k,2)
+				else if (temp_indice2 == temp_indice4) then
+					coord_indice2 = indices_save(k,2)
+				else if (temp_indice3 == temp_indice4) then
+					coord_indice3 = indices_save(k,2)
+				end if	
+			end do 	
+			
 			! Stashing coordinates.
-			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = (coord_indice1 - 1) * 3
 			coord_counter_1 = coord_counter_1 + 1
-			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = (coord_indice2 - 1) * 3
 			coord_counter_2 = coord_counter_2 + 1
-			coord_counter_3 = (prim_list(j,3) - 1) * 3
+			coord_counter_3 = (coord_indice3 - 1) * 3
 			coord_counter_3 = coord_counter_3 + 1
 			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
 			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
@@ -307,14 +450,32 @@ contains
 			theta = ATOM_ANGLE(coords_1, coords_2, coords_3)
 			prims(j) = theta
 		else if (zero_count .eq. 0) then
+			! Getting the correct numerical indice...
+			temp_indice = prim_list(j,1)
+			temp_indice2 = prim_list(j,2)
+			temp_indice3 = prim_list(j,3)
+			temp_indice4 = prim_list(j,4)
+			do k=1, atom_num
+				temp_indice5 = indices_save(k,1)
+				if (temp_indice == temp_indice5) then
+					coord_indice1 = indices_save(k,2)
+				else if (temp_indice2 == temp_indice5) then
+					coord_indice2 = indices_save(k,2)
+				else if (temp_indice3 == temp_indice5) then
+					coord_indice3 = indices_save(k,2)
+				else if (temp_indice4 == temp_indice5) then
+					coord_indice4 = indices_save(k,2)
+				end if	
+			end do 
+					
 			! Stashing coordinates.
-			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = (coord_indice1 - 1) * 3
 			coord_counter_1 = coord_counter_1 + 1
-			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = (coord_indice2 - 1) * 3
 			coord_counter_2 = coord_counter_2 + 1
-			coord_counter_3 = (prim_list(j,3) - 1) * 3
+			coord_counter_3 = (coord_indice3 - 1) * 3
 			coord_counter_3 = coord_counter_3 + 1
-			coord_counter_4 = (prim_list(j,4) - 1) * 3
+			coord_counter_4 = (coord_indice4 - 1) * 3
 			coord_counter_4 = coord_counter_4 + 1
 			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
 			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
@@ -331,30 +492,40 @@ contains
 	end subroutine calc_prims
 	
 	
-	subroutine gen_Bmat_prims(atom_num, n_prims, coords, prim_list, Bmat_p)
+	subroutine gen_Bmat_prims(atom_num, n_prims, to_generate, coords, prim_list, Bmat_p)
 	! Here, the Wilson B matrix for the conversion between cartesian and primitive internal coordinates is created.
 	!
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to generate primitive internal coordinates for.
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
+	!               to_generate : 1D array containing the list of atom indices which primitive internal coordinates are to be generated for.
 	!               coords      : 1D array containing all the cartesian coordinates of the system.
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
     !               Bmat_p      : 2D array which contains the primitive Wilson B matrix.	
 
 	implicit none
-	integer(i4b) :: i, j, k, number_reset, atom_num, n_prims, zero_count, temp_int
+	integer(i4b) :: i, j, k, number_reset, atom_num, n_prims, zero_count, temp_int, indices_save(atom_num,2)
+	integer(i4b) :: temp_indice, temp_indice2, temp_indice3, temp_indice4, temp_indice5, coord_indices(4)
+	integer(i4b) :: coord_indice1, coord_indice2, coord_indice3, coord_indice4, to_generate(atom_num)
 	integer(i4b) :: coord_counter_1, coord_counter_2, coord_counter_3, coord_counter_4
 	integer(i4b) :: prim_list(n_prims, 4), work_prim(4)
 	real(sp) :: grad_r(3,2), grad_theta(3,3), grad_phi(3,4)
 	real(sp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
 	real(sp), allocatable :: Bmat_p(:,:)
-
+	
+	! In order to get the appropriate coordinates, save an array which gives the list of indices for which primitives are to be generated accompanied with numerical order indices.
+	indices_save(:,1) = to_generate(:)
+	indices_save(:,2) = (/(i,i=1,atom_num,1)/)
+	
 	! The Wilson B matrix is allocated. By definition, its dimensions are (number of prims) x (3N), where N is the number of atoms.
 	if (.not. ALLOCATED(Bmat_p)) allocate(Bmat_p((3 * atom_num), n_prims))
 	Bmat_p(:,:) = 0.0
-	
+
 	! The Wilson B matrix is populated with the relevant second derivative terms.
 	number_reset = 1
 	do j=1, n_prims
+		! Reset the indice array...
+		coord_indices(:) = 0
+		
 		! First, decide which kind of primitive internal coordinate we are dealing with.
 		zero_count = 0
 		work_prim = prim_list(j,:)
@@ -365,33 +536,65 @@ contains
 			end if
 		end do
 		if (zero_count .eq. 2) then
+			! Getting the correct numerical indice...
+			temp_indice = prim_list(j,1)
+			temp_indice2 = prim_list(j,2)
+			do k=1, atom_num
+				temp_indice3 = indices_save(k,1)
+				if (temp_indice == temp_indice3) then
+					coord_indice1 = indices_save(k,2)
+					coord_indices(1) = coord_indice1
+				else if (temp_indice2 == temp_indice3) then
+					coord_indice2 = indices_save(k,2)
+					coord_indices(2) = coord_indice2
+				end if	
+			end do 
+					
 			! Stashing coordinates.
-			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = (coord_indice1 - 1) * 3
 			coord_counter_1 = coord_counter_1 + 1
-			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = (coord_indice2 - 1) * 3
 			coord_counter_2 = coord_counter_2 + 1
 			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
-			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))  
+			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
 
 			! Calculating the analytical first derivatives and adding them to the Wilson B matrix.
 			grad_r = ATOM_DISTANCE_GRAD(coords_1, coords_2)
 			do i=1, 2
-				if ((prim_list(j,i) - number_reset) == 0) then
+				if ((coord_indices(i) - number_reset) == 0) then
 					k = 1
 				else
-					k = (3 * (prim_list(j,i) - number_reset)) + 1
+					k = (3 * (coord_indices(i) - number_reset)) + 1
 				end if
 				Bmat_p(k,j) = grad_r(1,i)
 				Bmat_p(k+1,j) = grad_r(2,i)
 				Bmat_p(k+2,j) = grad_r(3,i)
 			end do
 		else if (zero_count .eq. 1) then
+			! Getting the correct numerical indice...
+			temp_indice = prim_list(j,1)
+			temp_indice2 = prim_list(j,2)
+			temp_indice3 = prim_list(j,3)
+			do k=1, atom_num
+				temp_indice4 = indices_save(k,1)
+				if (temp_indice == temp_indice4) then
+					coord_indice1 = indices_save(k,2)
+					coord_indices(1) = coord_indice1
+				else if (temp_indice2 == temp_indice4) then
+					coord_indice2 = indices_save(k,2)
+					coord_indices(2) = coord_indice2
+				else if (temp_indice3 == temp_indice4) then
+					coord_indice3 = indices_save(k,2)
+					coord_indices(3) = coord_indice3
+				end if	
+			end do 
+					
 			! Stashing coordinates.
-			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = (coord_indice1 - 1) * 3
 			coord_counter_1 = coord_counter_1 + 1
-			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = (coord_indice2 - 1) * 3
 			coord_counter_2 = coord_counter_2 + 1
-			coord_counter_3 = (prim_list(j,3) - 1) * 3
+			coord_counter_3 = (coord_indice3 - 1) * 3
 			coord_counter_3 = coord_counter_3 + 1
 			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
 			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
@@ -400,24 +603,46 @@ contains
 			! Calculating the analytical first derivatives and adding them to the Wilson B matrix.
 			grad_theta = ATOM_ANGLE_GRAD(coords_1, coords_2, coords_3)
 			do i=1, 3
-				if ((prim_list(j,i) - number_reset) == 0) then
+				if ((coord_indices(i) - number_reset) == 0) then
 					k = 1
 				else
-					k = (3 * (prim_list(j,i) - number_reset)) + 1
+					k = (3 * (coord_indices(i) - number_reset)) + 1
 				end if
 				Bmat_p(k,j) = grad_theta(1,i)
 				Bmat_p(k+1,j) = grad_theta(2,i)
 				Bmat_p(k+2,j) = grad_theta(3,i)
 			end do
 		else if (zero_count .eq. 0) then
+			! Getting the correct numerical indice...
+			temp_indice = prim_list(j,1)
+			temp_indice2 = prim_list(j,2)
+			temp_indice3 = prim_list(j,3)
+			temp_indice4 = prim_list(j,4)
+			do k=1, atom_num
+				temp_indice5 = indices_save(k,1)
+				if (temp_indice == temp_indice5) then
+					coord_indice1 = indices_save(k,2)
+					coord_indices(1) = coord_indice1
+				else if (temp_indice2 == temp_indice5) then
+					coord_indice2 = indices_save(k,2)
+					coord_indices(2) = coord_indice2
+				else if (temp_indice3 == temp_indice5) then
+					coord_indice3 = indices_save(k,2)
+					coord_indices(3) = coord_indice3
+				else if (temp_indice4 == temp_indice5) then
+					coord_indice4 = indices_save(k,2)
+					coord_indices(4) = coord_indice4
+				end if	
+			end do 
+					
 			! Stashing coordinates.
-			coord_counter_1 = (prim_list(j,1) - 1) * 3
+			coord_counter_1 = (coord_indice1 - 1) * 3
 			coord_counter_1 = coord_counter_1 + 1
-			coord_counter_2 = (prim_list(j,2) - 1) * 3
+			coord_counter_2 = (coord_indice2 - 1) * 3
 			coord_counter_2 = coord_counter_2 + 1
-			coord_counter_3 = (prim_list(j,3) - 1) * 3
+			coord_counter_3 = (coord_indice3 - 1) * 3
 			coord_counter_3 = coord_counter_3 + 1
-			coord_counter_4 = (prim_list(j,4) - 1) * 3
+			coord_counter_4 = (coord_indice4 - 1) * 3
 			coord_counter_4 = coord_counter_4 + 1
 			coords_1(:) = coords(coord_counter_1:(coord_counter_1 + 2))
 			coords_2(:) = coords(coord_counter_2:(coord_counter_2 + 2))
@@ -427,10 +652,10 @@ contains
 			! Calculating the analytical first derivatives and adding them to the Wilson B matrix.
 			grad_phi = ATOM_DIHEDRAL_GRAD(coords_1, coords_2, coords_3, coords_4)
 			do i=1, 4
-				if ((prim_list(j,i) - number_reset) == 0) then
+				if ((coord_indices(i) - number_reset) == 0) then
 					k = 1
 				else
-					k = (3 * (prim_list(j,i) - number_reset)) + 1
+					k = (3 * (coord_indices(i) - number_reset)) + 1
 				end if
 				Bmat_p(k,j) = grad_phi(1,i)
 				Bmat_p(k+1,j) = grad_phi(2,i)
@@ -546,7 +771,7 @@ contains
     ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
     ! Instead, an iterative transformation procedure must be used.
     ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
-	call gen_Bmat_prims(atom_num, n_prims, x_1, prim_list, Bmat_p)
+	call gen_Bmat_prims(atom_num, n_prims, opt, x_1, prim_list, Bmat_p)
 	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
 	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
 
@@ -572,8 +797,8 @@ contains
 		if (ALLOCATED(temp_q)) then 
 			deallocate(temp_q)
 		end if
-		call calc_prims(atom_num, n_prims, temp_q, x_2, prim_list) 
-		call gen_Bmat_prims(atom_num, n_prims, x_2, prim_list, Bmat_p)
+		call calc_prims(atom_num, n_prims, temp_q, opt, x_2, prim_list) 
+		call gen_Bmat_prims(atom_num, n_prims, opt, x_2, prim_list, Bmat_p)
 		q(:) = temp_q(:)
 		
 		! The Moore-Penrose inverse is constructed for the next iteration.
@@ -615,7 +840,7 @@ contains
 			exit
 		end if
 	end do
-	
+
 	! The new cartesian coordinates are saved.
 	x_2(:) = x_1(:)
 

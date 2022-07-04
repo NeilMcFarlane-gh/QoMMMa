@@ -244,13 +244,15 @@ else if (coordtype .eq. 1) then
 			is_cons = .True.
 		end if
 
-		if (Nstep .le. 0) then
+		if (Nstep .le. 2) then
 			!###################
 			! Steepest descent.#
 			!###################
 			
 			ChgeS = optg_dlc * 0.7 * (-1)
-
+			do i=1, SIZE(chges)
+				print *, chges(i)
+			end do
 			! Now, if there are any constraints, given elements of the DLC should not change.
 			if (is_cons .eqv. .True.) then
 				ChgeS(ndlc - (ncon_prim - 1):ndlc) = 0.0
@@ -267,11 +269,14 @@ else if (coordtype .eq. 1) then
 				ChgeS = ChgeS / lstep * STPMX
 				write (*,*)"Changing (2) Step Length"
 			END IF
+
+			!TO-DO: implement adaptive step algorithm...
+			!ChgeS = ChgeS * 5
 			
 			!The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart2(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
-			call calc_prims(nopt, nprim, prims, newx, prim_list)
+			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call calc_prims(nopt, nprim, prims, opt, newx, prim_list)
 			ChgeX = newx(:) - temp_x(:)
 		else
 			!###############
@@ -282,8 +287,7 @@ else if (coordtype .eq. 1) then
 			call gen_hess_prim_to_DLC(nopt, ndlc, nprim, Umat, h_p, h_dlc)
 
 			! The change in DLC can now be evaluated using a quasi-Newton methodology.
-			ChgeS = MATMUL(TRANSPOSE(h_dlc), optg_dlc) * (-8)
-			!TO-DO: implement adaptive step algorithm...
+			ChgeS = MATMUL(TRANSPOSE(h_dlc), optg_dlc) * (-1)
 			
 		    ! Now, if there are any constraints, given elements of the DLC should not change.
 			if (is_cons .eqv. .True.) then
@@ -301,15 +305,18 @@ else if (coordtype .eq. 1) then
 				ChgeS = ChgeS / lstep * STPMX
 				write (*,*)"Changing (2) Step Length"
 			END IF
-		
+			
+			!TO-DO: implement adaptive step algorithm...
+			!ChgeS = ChgeS * 5
+			
 			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart2(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
 			ChgeX = newx(:) - temp_x(:)
 			
 			! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.
 			! To ensure continuity, a new set of primitive internal coordinates is calculated for newx.
-			call calc_prims(nopt, nprim, prims, newx, prim_list)
+			call calc_prims(nopt, nprim, prims, opt, newx, prim_list)
 			call update_bfgs_p(nopt, nprim, h_p, optg_p, og_p, prims, old_prims)
 		end if
 		
@@ -320,8 +327,8 @@ else if (coordtype .eq. 1) then
 		conv(1)=e-oe
 		conv(2)=maxval(abs(ChgeX))
 		conv(3)=sqrt(sum(chgex**2)/real(noptx,sp))
-		conv(4)=maxval(abs(optg_dlc))
-		conv(5)=sqrt(sum(optg_dlc**2)/real(((ndlc * 3) - 6),sp))
+		conv(4)=maxval(abs(optg_dlc(1:(ndlc - ncon_prim))))
+		conv(5)=sqrt(sum(optg_dlc(1:(ndlc - ncon_prim))**2)/real((ndlc - ncon_prim),sp))
 
 		! Tighter convergence test for climbing image
 		if (climbing(img_num)) then

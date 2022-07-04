@@ -280,7 +280,7 @@ def qomreport(nimg, usrdir, cwd, cln, qomout):
            os.remove('%s%d'%('mulliken', im))
     
     # If the report contains the message from the Fortran code which indicates that the optimisation has converged, then this is written to QoMMMa8.log. 
-    # This is fort the case of the nudged elastic band.
+    # This is for the case of the nudged elastic band.
     if nimg != 1:
         fm = open(usrdir + '/master_report', 'a')
         fi = open('add_to_master_report', 'r')

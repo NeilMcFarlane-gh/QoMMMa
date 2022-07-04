@@ -18,7 +18,7 @@ do i=1, nl
 end do
 
 ! Now calculate the primitive internal coordinates.
-call calc_prims((nq + nl), nprim, prims, xopt, prim_list)
+call calc_prims((nq + nl), nprim, prims, opt, xopt, prim_list)
 
 ! Now, generate the constrained coordinate array.
 call gen_cons(ncon_prim, nprim, cdat, prim_list, prims)

@@ -40,7 +40,7 @@ def fortinp(usrdir):
     fd.write(str(('%s%d'%('   ', nlink))))
     fd.write(str(('%s%d'%('   ', nopt))))
     fd.write('\n')
-    
+
     # Whether dispersion is to be calculated (1) or not (0) is written to fortinput.
     fd.write('disp')   # dispersion keyword
     fd.write('\n')
@@ -87,7 +87,7 @@ def fortinp(usrdir):
     fd.write(str(('%s%d'%('   ', inebtyp))))
     fd.write(str(('%s%d'%('   ', kspring))))
     fd.write('\n')
-      
+
     # If used, the growing string method mode (double- or single-ended) is written to fortinput.
     if gsmtype.lower() == 'none':
         igsmtyp = 0
@@ -119,7 +119,7 @@ def fortinp(usrdir):
     fd.write('\n')
     fd.write(str(igsmphase))
     fd.write('\n')
-
+ 
     # The type of coordinates used is written to fortinput.
     if coordtype.lower() == 'cart':
         icoordtyp = 0
@@ -145,7 +145,18 @@ def fortinp(usrdir):
     fd.write('\n')
     fd.write(str(iprimtyp))
     fd.write('\n') 
-    
+
+    # If they have been read in already, write the primitive internal coordinate definitions to fortinput.
+    fd.write('Total prims followed by definitions')
+    fd.write('\n')
+    fd.write(str(prim_num))
+    fd.write('\n')
+    if prim_num > 0:
+        for i in prim_defs:
+            for j in i:
+                fd.write(str(j).rjust(8))
+            fd.write('\n')
+
     # The atom indices and types relating to the QM atoms is written to fortinput using the function qmread defined in qomutil.py.
     # If the old format of defining qm atoms is used, then it will still work, but this will be removed in future versions.
     if nqm > 0:
@@ -668,7 +679,11 @@ def qmmm(usrdir, cwd, cln):
         converg_achieved = True
         if gsmtype.lower() == 'none':
             qomutil.qomend('Congratulations,', cwd, usrdir)
-            
+        if (gsmtype.lower() == 'de_gsm' or 'se_gsm'):
+            qomutil.qomsave(cwd, usrdir)
+            return converg_achieved    
+    
+    # For the case where the string is growing...
     if (gsmtype.lower() == 'de_gsm' or 'se_gsm') and (cln == maxcycle):
         converg_achieved = True
         qomutil.qomsave(cwd, usrdir)
@@ -715,7 +730,7 @@ def qmmm(usrdir, cwd, cln):
         except:
              qomutil.qomend('Error while doing micro-iteration at QM/MM cycle :' + str(cln), cwd, usrdir)
              
-    # Using the Fortran code, the post microiteration manipulation of files is performed.          
+    # Using the Fortran code, the post microiteration manipulation of files is performed.     
     try:
         os.system(qommmadir + '/bin/postmicro8.x') 
     except:
@@ -726,7 +741,7 @@ def qmmm(usrdir, cwd, cln):
         qomutil.postrearrange(nimg, cwd)
     except:
         qomutil.qomend('Error, while rearranging the files after QoMMMa post-processing  job at cycle :' + str(cln), cwd, usrdir)  
-            
+        
 
 
 def QoMMMa_opt(usrdir, node):
@@ -808,7 +823,7 @@ def QoMMMa_opt(usrdir, node):
             elif gsmtype.lower() == 'se_gsm' or 'de_gsm':
                 # For the case in GSM, converg_achieved is used to decide when to exit the given calculation.
                 converg_achieved = qmmm(usrdir, cwd, cln)
-                if converg_achieved == True:
+                if converg_achieved == True:             
                     return
         if maxcycle == 1 and job.lower() == 'freq':
             qomutil.qomlog('Frequency job is started after first QoMMMa run, Frequency job will be performed with the geometry given in ' + inpgeom_prefix + '*.xyz file, here qmcode used is Gaussian', usrdir) 
@@ -876,6 +891,7 @@ if __name__ == "__main__":
     # Normal QoMMMa run. 
     if gsmtype.lower() == 'none':  
         # The directory for the input files is simply the base user directory.
+        prim_num = 0
         QoMMMa_opt(basedir,1)
         
     # GSM job. 
@@ -922,7 +938,22 @@ if __name__ == "__main__":
                 nodeP_dir = basedir + '/nodeP'
                 if (os.path.exists(nodeP_dir)) is not True:
                     gsmutil.gsmend('Error: for a double-ended GSM calculation, a (preferentially well-optimised) product directory called ''nodeP'' within the working directory must exist.', basedir)
+                    
+                # Initialising primitive internal coordinates for the reaction pathway so that they can be written to fortinput.
+                # It is essential that the primitive internal coordinates remain the same across the pathway.
+                prims_r = nodeR_dir + '/jobfiles/prim_list'
+                if (os.path.exists(prims_r)) is not True:
+                    gsmutil.gsmend('Error: could not find the primitive definitions in /nodeR/jobfiles. Perhaps this is an old directory?.', basedir)
+                prims_p = nodeP_dir + '/jobfiles/prim_list'
+                if (os.path.exists(prims_p)) is not True:
+                    gsmutil.gsmend('Error: could not find the primitive definitions in /nodeP/jobfiles. Perhaps this is an old directory?.', basedir)
+                prim_num = 0
+                prim_num, prim_defs = gsmutil.DE_initialise_prims(prims_r, prims_p, basedir)    
                 
+                # If any additional primitive internal coordinates were specified, then these are added to prim_defs now.
+                additional_prims = [] # set to zero, for now ...
+                prim_num, prim_defs = gsmutil.additional_prims(additional_prims, prim_num, prim_defs, basedir)
+                    
                 # For the first cycle, the frontier nodes are the reactant and product nodes.
                 frontierR_dir = nodeR_dir
                 frontierP_dir = nodeP_dir
@@ -953,7 +984,7 @@ if __name__ == "__main__":
                     
                     # To define the coordinates of the new nodes, obtain the difference in primitive internal coordinates between the reactant and product side frontier nodes.
                     # New nodes are then added along this tangent.
-                    tangent = gsmutil.DE_get_tangent(frontier_dirs, current_nodes, total_nodes, basedir)
+                    tangent, tangent_prims = gsmutil.DE_get_tangent(frontier_dirs, current_nodes, total_nodes, basedir)
                     
                     # Now create two new qommma.in files for these new nodes and copy the geometries of the previous nodes over.
                     # The generation of new geometries (mathematically intensive) is handled by the Fortran code.
@@ -1005,13 +1036,14 @@ if __name__ == "__main__":
                     
                     # To define the coordinates of the central node, obtain the difference in primitive internal coordinates between the reactant and product side frontier nodes.
                     # The node is then added along this tangent.
-                    gsmutil.DE_get_tangent(frontier_dirs, current_nodes, total_nodes, basedir)
+                    tangent, tangent_prims = gsmutil.DE_get_tangent(frontier_dirs, current_nodes, total_nodes, basedir)
                     
                     # Now create two new qommma.in files for these new nodes and copy the geometries of the previous nodes over.
                     # The generation of new geometries (mathematically intensive) is handled by the Fortran code.
                     gsmutil.DE_add_nodes(frontier_dirs, new_dirs, tangent, basedir, to_add=1)
                     
                     # Update the frontier directory to represent the new node.
+                    old_frontier_dir = frontier_dir
                     frontier_dir = new_frontier_dir
                
                     # Now, the central node can be optimised subject to the conditions of a growth phase calculation.
@@ -1027,7 +1059,6 @@ if __name__ == "__main__":
                         gsmutil.gsmend('Could not open input file for central node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
                     gsmutil.gsmlog('Optimising node (growth-phase): ' + inpf + '........', basedir)
                     QoMMMa_opt(frontier_dir, math.ceil(total_nodes / 2)) # performing QoMMMa growth-phase optimisation.
-
                     
                     # Finally, the string is reparameterised one more time.
                     gsmutil.DE_reparam_g(all_nodes, current_nodes, total_nodes, basedir)
@@ -1045,7 +1076,19 @@ if __name__ == "__main__":
                 nodeR_dir = basedir + '/nodeR'
                 if (os.path.exists(nodeR_dir)) is not True:
                     gsmutil.gsmend('Error: for a single-ended GSM calculation, a (preferentially well-optimised) reactant directory called ''nodeR'' within the working directory must exist.', basedir)
-                
+                    
+                # Initialising primitive internal coordinates for the reaction pathway so that they can be written to fortinput.
+                # It is essential that the primitive internal coordinates remain the same across the pathway.
+                prims_r = nodeR_dir + '/jobfiles/prim_list'
+                if (os.path.exists(prims_r)) is not True:
+                    gsmutil.gsmend('Error: could not find the primitive definitions in /nodeR/jobfiles. Perhaps this is an old directory?.', basedir)
+                prim_num = 0
+                prim_num, prim_defs = gsmutil.SE_initialise_prims(prims_r, basedir)    
+
+                # If any additional primitive internal coordinates were specified, then these are added to prim_defs now.
+                additional_prims = [] # set to zero, for now ...
+                prim_num, prim_defs = gsmutil.additional_prims(additional_prims, prim_num, prim_defs, basedir)
+
                 # For the first cycle, the frontier node is the reactant node.
                 frontier_dir = nodeR_dir
                 all_nodes.append(nodeR_dir)
@@ -1092,8 +1135,9 @@ if __name__ == "__main__":
                     SP_found = gsmutil.SE_check_delE(old_frontier_dir, frontier_dir)
 
                     # If the number of nodes becomes greater than the maximum allowed number of nodes, then the calculation is ended.
-                    if current_nodes == max_nodes:
-                        gsmutil.gsmend('The maximum number of allowed nodes is: ' + str(max_nodes) + ' , and this has been reached - ending calculation...', basedir)
+                    if ((current_nodes == max_nodes) and (SP_found == False)):
+                        gsmutil.gsmlog('Please note: the maximum number of allowed nodes is: ' + str(max_nodes) + ' , and this has been reached - adding final nodes...', basedir)
+                        break
                 
                 # When the stationary point (SP) has been surpassed, 2 - 4 new nodes with large steps are created - hopefully finding the minimum on the other side.
                 # The large steps are defined based on the total primitive internal coordinate change from the pre-SP nodes.
@@ -1103,7 +1147,7 @@ if __name__ == "__main__":
                 # Based on the magnitude of the tangent, new directories can be created. 
                 # The criteria for these magnitudes are essentially based on trial and error, but can be easily modified.
                 new_dirs = []
-                for i in range(1,total_new):
+                for i in range(0,total_new-1):
                     new_frontier_dir = basedir + '/node' + str(current_nodes + i)
                     new_dirs.append(new_frontier_dir)
                     all_nodes.append(new_frontier_dir)
@@ -1113,7 +1157,7 @@ if __name__ == "__main__":
                 # Now create new qommma.in files for the new nodes and copy the geometries of the previous nodes over.
                 # In this case, the starting geometry for all 2-4 nodes is the same and is the current frontier node.
                 # The generation of the new geometries (mathematically intensive) is handled by the Fortran code.
-                gsmutil.SE_add_final_nodes(frontier_dir, new_dirs, tangent, basedir)
+                gsmutil.SE_add_final_nodes(frontier_dir, new_dirs, tangent, driving_coords, basedir)
                 
                 # Update the frontier directories to represent the new nodes.
                 frontier_dirs = []
@@ -1133,7 +1177,16 @@ if __name__ == "__main__":
                         gsmutil.gsmend('Could not open input file for node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
                     gsmutil.gsmlog('Optimising node (growth-phase): ' + inpf + '........', basedir)
                     QoMMMa_opt(dir, (current_nodes + counter)) # performing QoMMMa growth-phase optimisation.
-                current_nodes += total_new
+                    
+                    # Now copy the geometry to the next new frontier node...
+                    # Unless it is the last node, of course, as this is the final frontier node and thus the newly obtained product node.
+                    if (counter != (total_new-2)):
+                        source = dir
+                        geom_s = source + '/geom1.xyz'
+                        destination = frontier_dirs[counter+1]
+                        geom_d = destination + '/init_geom1.xyz'  
+                        shutil.copy(geom_s, geom_d)  
+                current_nodes += total_new-1
                 
                 # Growth phase complete!
                 gsmutil.gsmlog('The growth phase is complete! There is now a total (including reactant) of: ' + str(current_nodes) + '   nodes...', basedir)
@@ -1142,16 +1195,17 @@ if __name__ == "__main__":
         # The optimisation phase commences.
         # In the optimisation phase, the single- and double-ended variant reduce to the same procedure.
         gsmutil.gsmlog('        /// Optimising the string... ///       ', basedir)
-        import sys; sys.exit()
+        is_optimised = False
+
         while is_optimised == False:
             # First, generate a list of all the tangents for ease of working.
             # Tangents are defined between neighbouring nodes. and the string optimised with stricter convergence criteria than in the growth phase.
-            tangent_list = gsmutil.get_tangents_opt(all_nodes, basedir)
-            
+            tangent_list, tangent_prims_list = gsmutil.get_tangents_opt(all_nodes, basedir, driving_coords)
+
             # Now, optimise each node with stricter convergence criteria than in the growth phase.
             # This starts with creating the qommma.in files for every node and then optimising each.
-            gsmutil.gen_input_opt(all_nodes, tangent_list, basedir)
-            for dir in all_nodes:
+            gsmutil.gen_input_opt(all_nodes, tangent_list, tangent_prims_list, basedir)
+            for counter,dir in enumerate(all_nodes):
                 try:
                     exec(open(qommmadir + '/lib/default.in').read())
                 except:
@@ -1162,9 +1216,8 @@ if __name__ == "__main__":
                 except:
                     gsmutil.gsmend('Could not open input file for node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
                 gsmutil.gsmlog('Optimising node (optimisation-phase): ' + inpf + '........', basedir)
-                QoMMMa_opt(dir) # performing QoMMMa optimisation-phase optimisation.
-                
-            
+                QoMMMa_opt(dir, (counter + 1)) # performing QoMMMa optimisation-phase optimisation.
+                            
             # Now, check for convergence of all nodes.
             # If all are converged, then perform a final reparameterisation of the string and the optimisation-phase is complete.
             # Otherwise, reparameterise the string and optimise all nodes again.

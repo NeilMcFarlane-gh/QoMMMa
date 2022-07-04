@@ -655,7 +655,7 @@ contains
 		combo_alloc = combo_alloc + j
 		j = j - 1
 	end do
-	allocate(combos_2(combo_alloc, 4))
+	allocate(combos_2(combo_alloc, 2))
 	
 	! The 2-integer combinations are generated.
 	combos_counter = 1
@@ -673,13 +673,11 @@ contains
 			! Populating the output array...
 			combos_2(combos_counter,1) = k
 			combos_2(combos_counter,2) = l
-			combos_2(combos_counter,3) = 0
-			combos_2(combos_counter,4) = 0
 			combos_counter = combos_counter + 1
 		end do
 		integers_work(i) = 0
 	end do
-
+	
 	end function COMBINATIONS_2
 	
 	

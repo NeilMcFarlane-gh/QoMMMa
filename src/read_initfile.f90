@@ -8,7 +8,7 @@ implicit none
 character(3) :: tmplab
 character(80) :: dummy
 integer(i4b) :: rstat, prima, gsma, gsmb, coorda
-integer(i4b) :: i, j, k, ii, jj, kk, iii, nmodif, neba, nebb, nebc
+integer(i4b) :: q, i, j, k, ii, jj, kk, iii, nmodif, neba, nebb, nebc
 real(sp) :: rql, rqm, tmpchg
 
 ! First check whether the arrays are in fact already allocated...
@@ -55,6 +55,16 @@ read(unit=8,fmt=*) coorda
 ! If DLC are used, the primitive internal coordinate type
 read(unit=8,fmt=*) dummy
 read(unit=8,fmt=*) prima
+
+! Now, if they have been pre-defined, read in the primitive internal coordinate definitions.
+read(unit=8,fmt=*) dummy
+read(unit=8,fmt=*) nprim
+if (nprim .gt. 0) then
+	allocate(prim_list(nprim,4))
+	do q = 1, nprim
+		read (unit=8,fmt=*) (prim_list(q,j),j=1,4)
+	end do	
+end if	
 
 ! now reads the QM atoms
 read(unit=8,fmt=*) dummy

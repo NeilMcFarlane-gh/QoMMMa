@@ -4,13 +4,14 @@ URGENT:
 // F90 //
 
 Fix DLC_to_cart2() - probably to do with B matrix, or evaluation of new dq at each cycle.
-(LINKED WITH ***) When in optimisation phase, primitive internal coordinates don't need to be renumbered in initialise_prims.f90. ***
+(LINKED WITH ***) When in optimisation phase OR DE-GSM, primitive internal coordinates don't need to be renumbered in initialise_prims.f90. ***
 Check where unproj_cons() should be used...
 Integrate a step-halving type algorithm in update_opt_geometry() so that large/small steps can be taken where necessary.
+If the number of traditional primitives is < 3N-6, then tell the user OR add additional bonds until 3N-6 is reached
 
 // PYTHON //
 
-(LINKED WITH ***) When in optimisation phase, read in primitives from the files prim_list & prims. ***
+(LINKED WITH ***) When in optimisation phase OR DE-GSM, read in primitives from the files prim_list & prims. ***
 
 Allow additional prims in input 
 

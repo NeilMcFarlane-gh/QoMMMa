@@ -119,7 +119,7 @@ c     set default parameters for the optimization
 c
       msav = min(nvar,maxsav)
       if (fctmin .eq. 0.0d0)  fctmin = -10000000.0d0
-      if (maxiter .eq. 0)  maxiter = 1000000
+      if (maxiter .eq. 0)  maxiter = 10000000
       if (nextiter .eq. 0)  nextiter = 1
       if (iprint .lt. 0)  iprint = 1
       if (iwrite .lt. 0)  iwrite = 1
