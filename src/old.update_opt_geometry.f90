@@ -6,9 +6,9 @@ implicit none
 ! Specially Adapted BFGS routine from Numerical Recipes
 
 integer(i4b) :: I,j, img_num
-real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), DelX(noptx), w(noptx)
-real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax
-real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
+real(dp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), DelX(noptx), w(noptx)
+real(dp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax
+real(dp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
 stpmax = STPMX * REAL(noptx,sp)
 
 update_geom=.true.

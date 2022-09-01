@@ -7,7 +7,7 @@ implicit none
 !   corresponding QM atoms.
 
 integer(i4b) :: i, j, k, img_num
-real(sp) :: chgt
+real(dp) :: chgt
 
 !Loop over all images
 do img_num=1,nimg

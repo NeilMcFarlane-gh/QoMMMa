@@ -6,7 +6,7 @@ implicit none
 ! This subroutine is QM-program SPECIFIC as yet.
 
 integer(i4b) :: i, j, k, ii, img_num
-real(sp) :: eps=1d-4
+real(dp) :: eps=1d-4
 
 !Loop over all images
 do img_num=1,nimg

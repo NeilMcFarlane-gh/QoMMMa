@@ -7,7 +7,7 @@ implicit none
 
 integer(i4b) :: i, j, k, ii, img_num
 character(20) :: dummy
-real(sp) :: vec(3)
+real(dp) :: vec(3)
 
 do img_num=1,nimg
 

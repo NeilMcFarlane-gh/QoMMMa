@@ -16,8 +16,8 @@ implicit none
 integer(i4b) :: i, j, k, l, m, ii, in_pos, old_nprim
 integer(i4b) :: cons_temp, qm_temp, cons_work(ncon_prim,4), prim_list_work(nprim,4), to_add
 integer(i4b) :: prim_temp1(4), prim_temp2(4)
-real(sp) :: temp_coord(3), qm_coord(3), dq
-real(sp), allocatable :: complete_dq(:)
+real(dp) :: temp_coord(3), qm_coord(3), dq
+real(dp), allocatable :: complete_dq(:)
 
 if (ncon_prim .gt. 0) then
 	! If there are any primitive internal coordinates which were not automatically generated, then these are added to prim_list.

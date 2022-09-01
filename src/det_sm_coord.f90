@@ -5,7 +5,7 @@ implicit none
 ! Using the data in coordinates, determines the full geometry of the small system.
 
 integer(i4b) :: i, j, k, ii, jj, img_num
-real(sp) :: vec(3)
+real(dp) :: vec(3)
 
 ! Loop over all images
 do img_num=1,nimg

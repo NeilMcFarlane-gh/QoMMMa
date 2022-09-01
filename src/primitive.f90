@@ -15,10 +15,13 @@ contains
 
 	implicit none
 	integer(i4b) :: atom_num, to_generate(atom_num)
-	integer(i4b), allocatable :: prim_list(:,:)
+	integer(i4b), allocatable :: prim_list_temp(:,:), prim_list(:,:)
 
 	! The list of primitive internal coordinates is rather simple to define when every atom is connected to every atom.
-	prim_list = COMBINATIONS_2(to_generate, atom_num)
+	prim_list_temp = COMBINATIONS_2(to_generate, atom_num)
+	allocate(prim_list(SIZE(prim_list_temp,1),4))
+	prim_list(:,:) = 0
+	prim_list(:,1:2) = prim_list_temp(:,:)
 
 	! The global integer, nprim, is also initialised here.
 	nprim = SIZE(prim_list,1)
@@ -42,8 +45,8 @@ contains
 	integer(i4b) :: atom_1, atom_2, prim_counter, ang_counter, di_atom, temp_prim(4), temp_prim_1(4), temp_prim_2(4)
 	integer(i4b), allocatable :: TC_list(:,:), prim_list(:,:), prim_list_ordered(:,:), angle_atoms(:)
 	integer(i4b), allocatable :: prim_list_temp(:,:), combo_list(:,:)
-	real(sp) :: coords_1(3), coords_2(3), coords(atom_num * 3), r, dist
-	real(sp), allocatable :: distances(:)
+	real(dp) :: coords_1(3), coords_2(3), coords(atom_num * 3), r, dist
+	real(dp), allocatable :: distances(:)
 	logical :: is_dupe = .FALSE.
 	logical :: is_allocated = .FALSE.
 	
@@ -370,9 +373,9 @@ contains
 	integer(i4b) :: coord_indice1, coord_indice2, coord_indice3, coord_indice4, to_generate(atom_num)
 	integer(i4b) :: coord_counter_1, coord_counter_2, coord_counter_3, coord_counter_4
 	integer(i4b) :: prim_list(n_prims, 4), work_prim(4)
-	real(sp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
-	real(sp) :: r, theta, phi
-	real(sp), allocatable :: prims(:)
+	real(dp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
+	real(dp) :: r, theta, phi
+	real(dp), allocatable :: prims(:)
 
 	! In order to get the appropriate coordinates, save an array which gives the list of indices for which primitives are to be generated accompanied with numerical order indices.
 	indices_save(:,1) = to_generate(:)
@@ -508,16 +511,16 @@ contains
 	integer(i4b) :: coord_indice1, coord_indice2, coord_indice3, coord_indice4, to_generate(atom_num)
 	integer(i4b) :: coord_counter_1, coord_counter_2, coord_counter_3, coord_counter_4
 	integer(i4b) :: prim_list(n_prims, 4), work_prim(4)
-	real(sp) :: grad_r(3,2), grad_theta(3,3), grad_phi(3,4)
-	real(sp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
-	real(sp), allocatable :: Bmat_p(:,:)
+	real(dp) :: grad_r(3,2), grad_theta(3,3), grad_phi(3,4)
+	real(dp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
+	real(dp), allocatable :: Bmat_p(:,:)
 	
 	! In order to get the appropriate coordinates, save an array which gives the list of indices for which primitives are to be generated accompanied with numerical order indices.
 	indices_save(:,1) = to_generate(:)
 	indices_save(:,2) = (/(i,i=1,atom_num,1)/)
 	
 	! The Wilson B matrix is allocated. By definition, its dimensions are (number of prims) x (3N), where N is the number of atoms.
-	if (.not. ALLOCATED(Bmat_p)) allocate(Bmat_p((3 * atom_num), n_prims))
+	if (.not. ALLOCATED(Bmat_p)) allocate(Bmat_p(n_prims, (3 * atom_num)))
 	Bmat_p(:,:) = 0.0
 
 	! The Wilson B matrix is populated with the relevant second derivative terms.
@@ -566,9 +569,9 @@ contains
 				else
 					k = (3 * (coord_indices(i) - number_reset)) + 1
 				end if
-				Bmat_p(k,j) = grad_r(1,i)
-				Bmat_p(k+1,j) = grad_r(2,i)
-				Bmat_p(k+2,j) = grad_r(3,i)
+				Bmat_p(j,k) = grad_r(1,i)
+				Bmat_p(j,k+1) = grad_r(2,i)
+				Bmat_p(j,k+2) = grad_r(3,i)
 			end do
 		else if (zero_count .eq. 1) then
 			! Getting the correct numerical indice...
@@ -608,9 +611,9 @@ contains
 				else
 					k = (3 * (coord_indices(i) - number_reset)) + 1
 				end if
-				Bmat_p(k,j) = grad_theta(1,i)
-				Bmat_p(k+1,j) = grad_theta(2,i)
-				Bmat_p(k+2,j) = grad_theta(3,i)
+				Bmat_p(j,k) = grad_theta(1,i)
+				Bmat_p(j,k+1) = grad_theta(2,i)
+				Bmat_p(j,k+2) = grad_theta(3,i)
 			end do
 		else if (zero_count .eq. 0) then
 			! Getting the correct numerical indice...
@@ -657,9 +660,9 @@ contains
 				else
 					k = (3 * (coord_indices(i) - number_reset)) + 1
 				end if
-				Bmat_p(k,j) = grad_phi(1,i)
-				Bmat_p(k+1,j) = grad_phi(2,i)
-				Bmat_p(k+2,j) = grad_phi(3,i)
+				Bmat_p(j,k) = grad_phi(1,i)
+				Bmat_p(j,k+1) = grad_phi(2,i)
+				Bmat_p(j,k+2) = grad_phi(3,i)
 			end do
 		end if
 	end do
@@ -681,8 +684,8 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, i, j
-	real(sp) :: hess(n_prims, n_prims), g2_p(n_prims), g1_p(n_prims)
-	real(sp) :: dg(n_prims), dq(n_prims), dhess(n_prims, n_prims), prims_2(n_prims), prims_1(n_prims), dgdq, dqHdq
+	real(dp) :: hess(n_prims, n_prims), g2_p(n_prims), g1_p(n_prims)
+	real(dp) :: dg(n_prims), dq(n_prims), dhess(n_prims, n_prims), prims_2(n_prims), prims_1(n_prims), dgdq, dqHdq
 
 	! The changes associated with the gradient and coordinates from the current and previous iteration are calculated.
 	dg = g2_p - g1_p
@@ -730,18 +733,18 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims
-	real(sp) :: Bmat_p((3 * atom_num), n_prims), g(atom_num * 3)
-	real(sp), allocatable :: g_p(:)
-	real(sp) :: BT_Ginv(n_prims, (3 * atom_num)), Gmat(n_prims, n_prims)
+	real(dp) :: Bmat_p(n_prims, (3 * atom_num)), g(atom_num * 3)
+	real(dp), allocatable :: g_p(:)
+	real(dp) :: BT_inv(n_prims, (3 * atom_num)), Gmat(n_prims, n_prims)
 
 	! The primitive gradient array is allocated. By definition, its dimensions are the number of prims.
 	if (.not. ALLOCATED(g_p)) allocate(g_p(n_prims))
 	g_p(:) = 0.0
 	
 	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
-	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
-	g_p = MATMUL(g, TRANSPOSE(BT_Ginv))
+	Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
+	BT_inv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), Bmat_p)
+	g_p = MATMUL(BT_inv, g)
 
 	end subroutine gen_grad_cart_to_prim
 	
@@ -761,19 +764,19 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, i, iter_counter, prim_list(n_prims, 4)
-	real(sp) :: dq(n_prims), q(n_prims), q_2(n_prims), x_1(3 * atom_num), x_2(3 * atom_num)
-	real(sp) :: BT_Ginv(n_prims, (3 * atom_num))
-	real(sp) :: dq_actual(n_prims), check(n_prims), temp_check, xyz_rms_1, xyz_rms_2
-	real(sp) :: init_dq(n_prims), target_q(n_prims), dx(3 * atom_num), Gmat(n_prims, n_prims)
-	real(sp), allocatable :: temp_q(:), Bmat_p(:,:)
+	real(dp) :: dq(n_prims), q(n_prims), q_2(n_prims), x_1(3 * atom_num), x_2(3 * atom_num)
+	real(dp) :: BT_inv((3 * atom_num), n_prims)
+	real(dp) :: dq_actual(n_prims), check(n_prims), temp_check, xyz_rms_1, xyz_rms_2
+	real(dp) :: init_dq(n_prims), target_q(n_prims), dx(3 * atom_num), Gmat(n_prims, n_prims)
+	real(dp), allocatable :: temp_q(:), Bmat_p(:,:)
 	logical :: convergence
 	
     ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
     ! Instead, an iterative transformation procedure must be used.
     ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
 	call gen_Bmat_prims(atom_num, n_prims, opt, x_1, prim_list, Bmat_p)
-	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
+	Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
+	BT_inv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), Bmat_p)
 
 	! Stashing some values for convergence criteria.
 	convergence = .FALSE.
@@ -785,7 +788,7 @@ contains
 	do while (convergence .eqv. .FALSE.) 
 		! The change in cartesian coordinates associated with the change in primitive internal coordinates is calculated.
 		dx(:) = 0.0
-		dx = MATMUL(TRANSPOSE(BT_Ginv), dq)
+		dx = MATMUL(TRANSPOSE(BT_inv), dq)
 
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
 		xyz_rms_2 = RMSD_CALC(dx, x_1, (atom_num * 3))
@@ -802,10 +805,10 @@ contains
 		q(:) = temp_q(:)
 		
 		! The Moore-Penrose inverse is constructed for the next iteration.
-		BT_Ginv(:,:) = 0.0
+		BT_inv(:,:) = 0.0
 		Gmat(:,:) = 0.0
-		Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-		BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), TRANSPOSE(Bmat_p))
+		Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
+		BT_inv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), Bmat_p)
 
         ! The change in primitive internals for the next iteration is evaluated, and any which do not change in the original change in primitive internals is set to zero.
 		! This mitigates any risk of primitive internal coordinates changing which should remain constant, thus making the interpolation linear.

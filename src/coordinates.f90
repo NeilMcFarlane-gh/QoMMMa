@@ -5,34 +5,34 @@ implicit none
 integer(i4b), parameter :: maxbond = 8
 integer(i4b) :: n, nx, nq, nqx, nl, nlx, nopt, noptx, ndlc, nprim, ninact, kcnstyp, nimg, nebtype 
 integer(i4b) :: gsmtype, gsmphase, coordtype, primtype, ncon_prim, ncon_cart
-real(sp) :: tolde_org, tolgmax_org, tolgrms_org, toldxmax_org, toldxrms_org, tolper
+real(dp) :: tolde_org, tolgmax_org, tolgrms_org, toldxmax_org, toldxrms_org, tolper
 
-real(sp) :: kspring
+real(dp) :: kspring
 
 logical, allocatable :: modchg(:), inact(:)
 
-real(sp), parameter :: bohr=.529177d0
-real(sp), parameter :: cut_off = 1.5 ! Angstroms
+real(dp), parameter :: bohr=.529177d0
+real(dp), parameter :: cut_off = 1.5 ! Angstroms
 integer(i4b), allocatable :: nbonds(:),bonds(:,:), bonds_xopt(:,:),attyp(:),links(:,:), &
     &  qm(:),opt(:)
 
 ! tables of coordinate of various groups of atoms, of all images 
-real(sp), allocatable :: fullx(:,:), fullxq(:,:), fullxl(:,:), fullxopt(:,:)
+real(dp), allocatable :: fullx(:,:), fullxq(:,:), fullxl(:,:), fullxopt(:,:)
 
 ! tables of coordinates of various groups of atoms, of a particular image
-real(sp), allocatable :: x(:), xq(:), xl(:), xopt(:), dlc(:), lratio(:), chg(:), x_copy(:)
+real(dp), allocatable :: x(:), xq(:), xl(:), xopt(:), dlc(:), lratio(:), chg(:), x_copy(:)
 
 ! matrices used in the generation and constraining of DLC.
 ! these matrices are frequently deallocated and reallocated.
 integer(i4b), allocatable :: prim_list(:,:) ! Primitive coordinate indice array.
 integer(i4b), allocatable :: to_generate(:) ! Used dynamically to assign temporary atom indices.
-real(sp), allocatable :: prims(:), old_prims(:) ! Primitive internal coordinate array.
-real(sp), allocatable :: Bmat_p(:,:), old_Bmat_p(:,:) ! Primitive Wilson B matrix array.
-real(sp), allocatable :: Bmat_dlc(:,:), old_Bmat_dlc(:,:) ! DLC Wilson B matrix array.
-real(sp), allocatable :: Gmat(:,:) ! G matrix array.
-real(sp), allocatable :: Umat(:,:) ! U matrix array.
-real(sp), allocatable :: Vmat(:,:) ! V matrix array.
-real(sp), allocatable :: Rmat(:,:) ! R matrix array.
+real(dp), allocatable :: prims(:), old_prims(:) ! Primitive internal coordinate array.
+real(dp), allocatable :: Bmat_p(:,:), old_Bmat_p(:,:) ! Primitive Wilson B matrix array.
+real(dp), allocatable :: Bmat_dlc(:,:), old_Bmat_dlc(:,:) ! DLC Wilson B matrix array.
+real(dp), allocatable :: Gmat(:,:) ! G matrix array.
+real(dp), allocatable :: Umat(:,:) ! U matrix array.
+real(dp), allocatable :: Vmat(:,:) ! V matrix array.
+real(dp), allocatable :: Rmat(:,:) ! R matrix array.
 
 ! for NEB
 character(4), allocatable :: img_string(:)

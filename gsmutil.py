@@ -685,6 +685,12 @@ def get_tangents_opt(node_dirs, usrdir, driving_coords = None):
             temp_prim = prim_list_i[i].split()
             is_driving = False
             
+            # Store the type of primitive internal coordinate.
+            zero_count = 0
+            for prim in temp_prim:
+                if int(prim) == 0:
+                    zero_count += 1
+            
             # Check if it is a driving coordinate.
             for driv in driving_coords:
                 driving = driv[0:4]
@@ -692,13 +698,17 @@ def get_tangents_opt(node_dirs, usrdir, driving_coords = None):
                 for i1, i2 in zip(driv, temp_prim):
                     diff = int(i1) - int(i2)
                     difference.append(diff)
-                if (sum(difference) == 0): # driving coordinate found, exiting loop
+                if (sum(difference) == 0): # driving coordinate found, exiting loop.
                     is_driving = True
                     break
             
             # Setting appropriate element to zero.
             if (abs(temp_tan) < 1E-2) and (is_driving == False):
                 tangent_temp[i] = 0.0  
+            
+            #TEMPORARY TEST FIX
+            if (zero_count == 0) or (zero_count == 1):
+                tangent_temp[i] = 0.0
     
         # We should remove components of the tangent which are zero and save the relevant primitive definitions corresponding to the tangents.
         tangent = []
@@ -792,4 +802,102 @@ def gen_input_opt(node_dirs, tangent_list, tangent_prims_list, usrdir):
             if first_node_phase == True:
                 file.write('\n')
                 file.write("gsmphase='opt'\n") 
+
+def check_convergence(node_dirs, usrdir):
+    """
+    
+    // Function which checks the convergence of all nodes. //
+    // If all nodes have converged, then the function returns True. //
+    
+    Arguments
+    ----------
+    node_dirs : list
+        List of all node directories on the string.
+    usrdir : string
+        The user directory.
+
+    """
+    
+    # Initialising the convergence boolean logic.
+    is_converged = True
+    
+    for dir in node_dirs:
+        # The convergence is most easily found in the report files.
+        report = dir + '/report1'
+
+        # Now, open the reports and reverse the order to find the relevant string.
+        with open(report, 'r') as old_f:
+            lines = old_f.readlines()
+            for line in reversed(lines):
+                if 'Congratulationg!!' not in line:
+                    is_converged = False
+                    break
+
+    return is_converged
+    
+def reparam_opt(node_dirs, usrdir):
+    """
+    
+    // Function which reparameterises the string. //
+    // This is to say that the geometries of all nodes are evenly spaced along the tangent defined between reactant and product node. //
+    
+    Arguments
+    ----------
+    node_dirs : list
+        List of all node directories on the string.
+    usrdir : string
+        The user directory.
+
+    """
+    
+    # To equally respace the nodes, the tangent between reactant and product nodes must first be obtained.
+    nodeR_dir = node_dirs[0]
+    nodeP_dir = node_dirs[-1]
+    
+    # Read the primitive definitions and values for the reactant node.
+    dir_r = nodeR_dir + '/jobfiles/'
+    prims_r = []
+    prim_list_r = []
+    os.chdir(dir_r)
+    with open("prims", 'r') as pr, open("prim_list", 'r') as pr_ls:
+        n_prims = int(pr.readline())
+        pr_ls.readline()
+        for i in range(1,n_prims):
+            prims_r.append(float(pr.readline()))
+            prim_list_r.append(pr_ls.readline())  
+    
+    # Now for the product node.
+    dir_p = nodeP_dir + '/jobfiles/'
+    prims_p = []
+    prim_list_p = []
+    os.chdir(dir_p)
+    with open("prims", 'r') as pr, open("prim_list", 'r') as pr_ls:
+        n_prims = int(pr.readline())
+        pr_ls.readline()
+        for i in range(1,n_prims):
+            prims_p.append(float(pr.readline()))
+            prim_list_p.append(pr_ls.readline())  
+    
+    
+    for dir in node_dirs:
+        # First, change to the appropriate directory.
+        os.chdir(dir)
+        
+    
+    # Initialising the convergence boolean logic.
+    is_converged = True
+    
+    for dir in node_dirs:
+        # The convergence is most easily found in the report files.
+        report = dir + '/report1'
+
+        # Now, open the reports and reverse the order to find the relevant string.
+        with open(report, 'r') as old_f:
+            lines = old_f.readlines()
+            for line in reversed(lines):
+                if 'Congratulationg!!' not in line:
+                    is_converged = False
+                    break
+
+    return is_converged
         

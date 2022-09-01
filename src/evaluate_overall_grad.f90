@@ -6,7 +6,7 @@ implicit none
 !    the qm and the mm gradients in Hartree/Å.
 
 integer(i4b) :: i, j, k, img_num
-real(sp) :: vec(3)
+real(dp) :: vec(3)
 
 !Loop over all images
 do img_num=1,nimg

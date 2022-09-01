@@ -6,14 +6,14 @@ implicit none
 ! It also calculates dispersion gradient corrections
 ! Equations and constants taken from Grimme S, J. Comp. Chem., 2006, 27, 1787
 
-real(sp), dimension(nq) :: rzero, csix     ! Each is an array containing the constants for each atom
-real(sp), parameter :: ssix = 1.05d0        ! This parameter is specific to B3LYP and BP86
-real(sp), parameter :: hart_j_fac = 2625499.621d0      ! Required to get the answer in hartrees
+real(dp), dimension(nq) :: rzero, csix     ! Each is an array containing the constants for each atom
+real(dp), parameter :: ssix = 1.05d0        ! This parameter is specific to B3LYP and BP86
+real(dp), parameter :: hart_j_fac = 2625499.621d0      ! Required to get the answer in hartrees
 integer(i4b) :: i, j, ii, jj, k, l
-real(sp), dimension(nq,nq) :: dist, fdmp, edis, gfac
-real(sp), dimension(3) :: vecs
-real(sp) :: qc(3*nq)
-! real(sp) :: edistot
+real(dp), dimension(nq,nq) :: dist, fdmp, edis, gfac
+real(dp), dimension(3) :: vecs
+real(dp) :: qc(3*nq)
+! real(dp) :: edistot
 
 ! -----------------------------------------------------------
 ! assign values of rzero and csix to arrays rzero() and csix() - more elements can be added

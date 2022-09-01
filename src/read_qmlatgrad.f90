@@ -7,8 +7,8 @@ implicit none
 
 integer(i4b) :: i, j, k, ii, jj, img_num, jfst,jend
 character(20) :: dummy
-real(sp) :: a, esp1, esp2, vec1(3), vec2(3), grad(3)
-real(sp), parameter :: eps=1.d-4
+real(dp) :: a, esp1, esp2, vec1(3), vec2(3), grad(3)
+real(dp), parameter :: eps=1.d-4
 
 !Loop over all images
 do img_num=1,nimg

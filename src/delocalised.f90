@@ -11,20 +11,20 @@ contains
 	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to be delocalised.
 	!               n_dlc       : Integer which represents the number of delocalised internal coordinates (by definition, 3N-6).
 	!               n_prims     : Integer which represents the total number of primitive internal coordinates.
-    !               Bmat_p      : 2D array which contains the primitive Wilson B matrix.	
-    !               Gmat        : 2D array which contains the G matrix used to generate the DLC subspace.	
+    !               Bmat_p      : 2D array which contains the primitive Wilson B matrix.
+    !               Gmat        : 2D array which contains the G matrix used to generate the DLC subspace.
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, n_dlc
-	real(sp) :: Bmat_p((3 * atom_num), n_prims), deter
-	real(sp), allocatable :: Gmat(:,:)
+	real(dp) :: Bmat_p(n_prims, (3 * atom_num)), deter
+	real(dp), allocatable :: Gmat(:,:)
 	
 	! The G matrix is simply the Wilson B matrix multiplied by its transpose.
 	! By definition, it has dimensions of n_prims x n_prims, so it is allocated accordingly.
 	if (.not. ALLOCATED(Gmat)) allocate(Gmat(n_prims, n_prims))
 	Gmat(:,:) = 0.0
-	Gmat = MATMUL(TRANSPOSE(Bmat_p), Bmat_p)
-
+	Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
+	
 	! By definition, the G matrix must have a determinant of zero. 
 	! This criteria is checked to mitigate errors down the line.
 	deter = DETERMINANT(Gmat, n_prims)
@@ -50,29 +50,62 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, n_dlc, j, U_vector_counter, R_vector_counter
-	real(sp) :: Gmat(n_prims, n_prims), eigenvals(n_prims), eigenvecs(n_prims, n_prims), temp_eval, temp
-	real(sp), allocatable :: Umat(:,:), Rmat(:,:)
+	real(dp) :: Gmat(n_prims, n_prims), eigenvals(n_prims), eigenvecs(n_prims, n_prims), temp_eval, temp
+	real(dp), allocatable :: Umat(:,:), Rmat(:,:)
+	integer(i4b) :: IPIV(n_prims), INFO
+	real(dp) :: WORK(n_prims*64), evecs_save(n_prims, n_prims), Gmat_test(n_prims, n_prims), evals_diag(n_prims, n_prims)
+	real(dp) :: eigenvals_temp(n_prims), eigenvecs_temp(n_prims, n_prims)
 	
 	! By definition, the U matrix should contain 3N-6 (where N is the total number of atoms) eigenvectors.
 	! The R matrix, should contain the remaining eigenvectors, which must be at least 6.
 	! These matrices are allocated appropriately.
-	if (.not. ALLOCATED(Umat)) allocate(Umat(n_dlc, n_prims))
-	if (.not. ALLOCATED(Rmat)) allocate(Rmat((n_prims - n_dlc), n_prims))
+	if (.not. ALLOCATED(Umat)) allocate(Umat(n_prims, n_dlc))
+	if (.not. ALLOCATED(Rmat)) allocate(Rmat(n_prims, (n_prims - n_dlc)))
 	Umat(:,:) = 0.0
 	Rmat(:,:) = 0.0
 
 	! Extracting eigenvalues and eigenvectors...
+	eigenvals = 0.0
+	eigenvecs = 0.0
 	eigenvals = EVALS(Gmat, n_prims)
 	eigenvecs = EVECS(Gmat, n_prims)
+
+	! Perform quick check to verify the consistency of the eigendecomposition.
+	! We should be able to regain the G matrix by: Q * A * Q^(-1), where Q is the eigenvectors, and A is a diagonal matrix of eigenvalues.
+	! The eigenvalues and eigenvectors are stored in increasing order.
+	! This is not what we want, so these are flipped.
+	eigenvecs_temp = eigenvecs(:,n_prims:1:-1)
+	eigenvals_temp = eigenvals(n_prims:1:-1)
+
+	! Save the eigenvectors and then make a diagonal matrix of the eigenvalues.
+	evecs_save = 0.0
+	evecs_save = eigenvecs_temp
+	evals_diag = 0.0
+	do j=1, SIZE(eigenvals_temp,1)
+		evals_diag(j,j) = eigenvals_temp(j)
+	end do
+	
+	! Diagonalise the eigenvectors.
+	call DGETRF(n_prims, n_prims, eigenvecs_temp, n_prims, IPIV, INFO)
+	call DGETRI(n_prims, eigenvecs_temp, n_prims, IPIV, WORK, 64*n_prims, INFO)
+	
+	! Now perform the check.
+	Gmat_test = Gmat - MATMUL(MATMUL(evecs_save, evals_diag), eigenvecs_temp)
+	if (MAXVAL(Gmat_test) .gt. 1E-08) then
+		print *, 'Error; the eigendecomposition of the G matrix has gone wrong...'
+		stop
+	end if	
+	
+	! Lastly, create arrays for U and R.
 	U_vector_counter = 1
 	R_vector_counter = 1
 	do j=1, n_prims
 	    temp_eval = eigenvals(j)
 		if (ABS(temp_eval) .lt. 1E-10) then
-		    Rmat(R_vector_counter,:) = eigenvecs(:,j)
+		    Rmat(:,R_vector_counter) = eigenvecs(:,j)
 			R_vector_counter = R_vector_counter + 1
 		else
-		    Umat(U_vector_counter,:) = eigenvecs(:,j)
+		    Umat(:,U_vector_counter) = eigenvecs(:,j)
 			U_vector_counter = U_vector_counter + 1
 		end if
 	end do
@@ -93,16 +126,16 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, n_dlc
-	real(sp) :: Bmat_p((3 * atom_num), n_prims), U_V_mat(n_dlc, n_prims)
-	real(sp), allocatable :: Bmat_dlc(:,:)
+	real(dp) :: Bmat_p(n_prims, (3 * atom_num)), U_V_mat(n_prims, n_dlc)
+	real(dp), allocatable :: Bmat_dlc(:,:)
 
 	! The Wilson B matrix in DLC subspace is allocated. By definition, its dimensions are (3N-6) x (3N), where N is the number of atoms.
-	if (.not. ALLOCATED(Bmat_dlc)) allocate(Bmat_dlc((3 * atom_num), n_dlc))
+	if (.not. ALLOCATED(Bmat_dlc)) allocate(Bmat_dlc(n_dlc, (3 * atom_num)))
 	Bmat_dlc(:,:) = 0.0
 
 	! The calculation of the B matrix in DLC subspace is a straightforward multiplication.	
-	Bmat_dlc = MATMUL(Bmat_p, TRANSPOSE(U_V_mat))
-
+	Bmat_dlc = MATMUL(TRANSPOSE(U_V_mat), Bmat_p)
+	
 	end subroutine gen_Bmat_DLC
 	
 	
@@ -119,8 +152,8 @@ contains
 	
 	implicit none
 	integer(i4b) :: n_prims, atom_num, n_dlc, i, j
-	real(sp) :: U_V_mat(n_dlc, n_prims), prims(n_prims)
-	real(sp), allocatable :: dlc(:)
+	real(dp) :: U_V_mat(n_prims, n_dlc), prims(n_prims)
+	real(dp), allocatable :: dlc(:)
 	
 	! The DLC matrix is allocated.
 	if (.not. ALLOCATED(dlc)) allocate(dlc(n_dlc))
@@ -129,12 +162,48 @@ contains
 	! The DLC are solved simply by linear combinations of the U matrix with the primitive interal coordinates.
 	do i=1, n_dlc
 		do j=1, n_prims
-			dlc(i) = dlc(i) + (U_V_mat(i,j) * prims(j))
+			dlc(i) = dlc(i) + (U_V_mat(j,i) * prims(j))
 		end do
 	end do
 
 	end subroutine gen_DLC
 	
+	
+	subroutine maintain_DLC(atom_num, n_dlc, coords, cdat)
+	! Here, the DLC are maintained but not refreshed (i.e., the G matrix is not diagonalised!).
+	! All arrays used in the generation are deallocated so that they can be allocated appropriately again.
+	!
+	! ARGUMENTS:    atom_num    : Integer which represents the total number of atoms to be delocalised.
+	!               n_dlc       : Integer which represents the number of delocalised internal coordinates (by definition, 3N-6).
+	!               coords      : 1D array containing all the cartesian coordinates of the system.
+	
+	implicit none
+	integer(i4b) :: atom_num, n_dlc, i
+	real(dp) :: coords(atom_num * 3), cdat(ncon_prim, nprim)
+	logical :: is_cons
+	
+	! First, (if necessary) deallocate all arrays used for DLC.
+	if (ALLOCATED(prims)) deallocate(prims)
+	if (ALLOCATED(Bmat_p)) deallocate(Bmat_p)
+	if (ALLOCATED(Bmat_dlc)) deallocate(Bmat_dlc)
+	if (ALLOCATED(dlc)) deallocate(dlc)
+
+	! Now, call DLC subroutines to re-populate the primitive arrays based on the Cartesian coordinates.
+	call calc_prims(atom_num, nprim, prims, opt, coords, prim_list)
+	call gen_Bmat_prims(atom_num, nprim, opt, coords, prim_list, Bmat_p)
+
+	! The DLC are simply generated from linear combinations, and the Wilson B matrix converted to DLC subspace.
+	if (is_cons .eqv. .False.) then
+		! Generating delocalised internal coordinates...
+		call gen_DLC(atom_num, n_dlc, nprim, Umat, prims, dlc)
+		call gen_Bmat_DLC(atom_num, n_dlc, nprim, Bmat_p, Umat, Bmat_dlc)
+	else if (is_cons .eqv. .True.) then
+		! Generating delocalised internal coordinates...
+		call gen_DLC(atom_num, n_dlc, nprim, Vmat, prims, dlc)
+		call gen_Bmat_DLC(atom_num, n_dlc, nprim, Bmat_p, Vmat, Bmat_dlc)	
+	end if
+
+	end subroutine maintain_DLC
 	
 	subroutine refresh_DLC(atom_num, n_dlc, coords, cdat)
 	! Here, the DLC are refreshed or generated for the first time.
@@ -146,16 +215,20 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, i
-	real(sp) :: coords(atom_num * 3), cdat(ncon_prim, nprim)
+	real(dp) :: coords(atom_num * 3), cdat(ncon_prim, nprim)
 	logical :: is_cons
 	
-	! First, (if necessary) deallocate all arrays used in DLC generation.
-	if (ALLOCATED(prims) .or. ALLOCATED(Bmat_p) &
-	& .or. ALLOCATED(Bmat_dlc) .or. ALLOCATED(Gmat) .or. ALLOCATED(Umat) &
-	& .or. ALLOCATED(Rmat)) then
-			deallocate(prims, Bmat_p, Bmat_dlc, Gmat, Umat, Rmat)
-	end if
-
+	! First, (if necessary) deallocate all arrays used for DLC.
+	if (ALLOCATED(prims)) deallocate(prims)
+	if (ALLOCATED(Bmat_p)) deallocate(Bmat_p)
+	if (ALLOCATED(Bmat_dlc)) deallocate(Bmat_dlc)
+	if (ALLOCATED(dlc)) deallocate(dlc)
+	
+	! Now, (if required) deallocate the G and U + R matrices as they will be repopulated when refreshing the DLC.
+	if (ALLOCATED(Gmat)) deallocate(Gmat)
+	if (ALLOCATED(Umat)) deallocate(Umat)
+	if (ALLOCATED(Rmat)) deallocate(Rmat)
+	
 	! Now, check if there is any constraints and deallocate the V matrix accordingly...
 	is_cons = .False.
 	if (ANY(cdat > 0.0)) then
@@ -195,6 +268,7 @@ contains
 		! Generating delocalised internal coordinates...
 		call gen_DLC(atom_num, n_dlc, nprim, Vmat, prims, dlc)
 		call gen_Bmat_DLC(atom_num, n_dlc, nprim, Bmat_p, Vmat, Bmat_dlc)
+		
 	end if
 
 	end subroutine refresh_DLC
@@ -212,18 +286,18 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, n_dlc
-	real(sp) :: Bmat_dlc((3 * atom_num), n_dlc), g(atom_num * 3)
-	real(sp), allocatable :: g_dlc(:)
-	real(sp) :: BT_Ginv(n_dlc, (3 * atom_num)), Gmat(n_dlc, n_dlc)
+	real(dp) :: Bmat_dlc(n_dlc, (3 * atom_num)), g(atom_num * 3)
+	real(dp), allocatable :: g_dlc(:)
+	real(dp) :: BT_inv(n_dlc, (3 * atom_num)), Gmat_dlc(n_dlc, n_dlc)
 	
 	! The primitive gradient array is allocated. By definition, its dimensions are the number of delocalised interal coordinates.
 	if (.not. ALLOCATED(g_dlc)) allocate(g_dlc(n_dlc))
 	g_dlc(:) = 0.0
 	
 	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
-	Gmat = MATMUL(TRANSPOSE(Bmat_dlc), Bmat_dlc)
-	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_dlc, n_dlc), TRANSPOSE(Bmat_dlc))
-	g_dlc = MATMUL(g, TRANSPOSE(BT_Ginv))
+	Gmat_dlc = MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc))
+	BT_inv = MATMUL(SVD_INVERSE(Gmat_dlc, n_dlc, n_dlc), Bmat_dlc)
+	g_dlc = MATMUL(BT_inv, g)
 
 	end subroutine gen_grad_cart_to_DLC
 	
@@ -241,20 +315,20 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, n_dlc
-	real(sp) :: U_V_mat(n_dlc, n_prims), hess(n_prims, n_prims)
-	real(sp), allocatable :: hess_dlc(:,:)
+	real(dp) :: U_V_mat(n_prims, n_dlc), hess(n_prims, n_prims)
+	real(dp), allocatable :: hess_dlc(:,:)
 
 	! First, the hessian matrix is DLC subspace should be allocated.
 	if (.not. ALLOCATED(hess_dlc)) allocate(hess_dlc(n_dlc, n_dlc))
 	hess_dlc(:,:) = 0.0
 
 	! Now, the hessian can be calculated in DLC subspace by a simple multiplication procedure.
-	hess_dlc = MATMUL(U_V_mat, MATMUL(hess, TRANSPOSE(U_V_mat)))
+	hess_dlc = MATMUL(TRANSPOSE(U_V_mat), MATMUL(hess, U_V_mat))
 
 	end subroutine gen_hess_prim_to_DLC
 	
 	
-	subroutine DLC_to_cart(atom_num, n_dlc, n_prims, dS, dlc, x_1, x_2, Bmat_dlc)
+	subroutine DLC_to_cart_old(atom_num, n_dlc, n_prims, dS, dlc, x_1, x_2, Bmat_dlc)
 	! Here, the DLC are converted to cartesian coordinates via an iterative procedure.
 	! This is used at the end of an optimisation cycle to restore the cartesian coordinates for the next gradient evaluation.
 	! A note on notation: changes in dlc are often called 'dS' here as 'S' is another notation widely used for DLC.
@@ -271,28 +345,21 @@ contains
 	implicit none
 	integer(i4b) :: k, atom_num, n_prims, n_dlc
 	integer(i4b), parameter :: resolution = 500
-	real(sp) :: dS_norm_save, dS_norm, dS_norm_init
-	real(sp) :: x_1(3 * atom_num), x_2(3 * atom_num), dx(3 * atom_num)
-	real(sp) :: dx_step(3 * atom_num), dx_temp(3 * atom_num), temp_x(3 * atom_num), dx_save(3 * atom_num)
-	real(sp) :: BT_Ginv(n_dlc, (3 * atom_num)), Bmat_dlc((3 * atom_num), n_dlc), Gmat(n_dlc, n_dlc)
-	real(sp) :: init_dlc(n_dlc), init_dS(n_dlc), target_dlc(n_dlc), dS(n_dlc)
-	real(sp) :: dS_temp(n_dlc), dlc(n_dlc), dS_save(n_dlc)
-
+	real(dp) :: dS_norm_save, dS_norm, dS_norm_init
+	real(dp) :: x_1(3 * atom_num), x_2(3 * atom_num), dx(3 * atom_num)
+	real(dp) :: dx_step(3 * atom_num), dx_temp(3 * atom_num), temp_x(3 * atom_num), dx_save(3 * atom_num)
+	real(dp) :: BT_inv(n_dlc, (3 * atom_num)), Bmat_dlc(n_dlc, (3 * atom_num)), Gmat_dlc(n_dlc, n_dlc)
+	real(dp) :: init_dlc(n_dlc), init_dS(n_dlc), target_dlc(n_dlc), dS(n_dlc)
+	real(dp) :: dS_temp(n_dlc), dlc(n_dlc), dS_save(n_dlc)
+	
     ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
-	Gmat = MATMUL(TRANSPOSE(Bmat_dlc), Bmat_dlc)
-	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_dlc, n_dlc), TRANSPOSE(Bmat_dlc))
-	dx = MATMUL(TRANSPOSE(BT_Ginv), dS)
-
+	Gmat_dlc = MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc))
+	BT_inv = MATMUL(SVD_INVERSE(Gmat_dlc, n_dlc, n_dlc), Bmat_dlc)
+	
 	! Stashing the initial and target values.
 	init_dS(:) = dS(:)
 	init_dlc(:) = dlc(:)
 	target_dlc(:) = dlc(:) + init_dS(:)
-	
-	print *,'_____________________'
-	print *, 'Expected dS...'
-	do k=1, n_dlc
-		print *, init_dS(k)
-	end do
 
 	! In the original implementation by Baker, the transformation procedure is iterative using the equation above.
 	! However, this procedure is rather unstable when it comes to large changes in DLC, or near 180 dihedral angles.
@@ -306,7 +373,7 @@ contains
 		if (k == 1) then
 			dx_temp = dx_step
 			temp_x = dx_temp + x_1
-			call refresh_DLC(atom_num, n_dlc, temp_x, cdat)
+			call maintain_DLC(atom_num, n_dlc, temp_x, cdat)
 			dS_temp = target_dlc - dlc
 			dS_norm_save = NORM2(dS_temp)
 			dx_save = dx_temp
@@ -314,7 +381,7 @@ contains
 		else
 			dx_temp = dx_temp + dx_step
 			temp_x = dx_temp + x_1
-			call refresh_DLC(atom_num, n_dlc, temp_x, cdat)
+			call maintain_DLC(atom_num, n_dlc, temp_x, cdat)
 			dS_temp = target_dlc - dlc
 			dS_norm = NORM2(dS_temp)
 			if (dS_norm .lt. dS_norm_save) then
@@ -327,18 +394,10 @@ contains
 
 	! The new DLC set (which should be close to init_dlc) and the new cartesian coordinates are saved.
 	x_2 = x_1 + dx_save
-	print *, '_____________________'
-	print *, 'Actual dS...'
-	do k=1, n_dlc
-		print *,dS_save(k)
-	end do	
 	
-	end subroutine DLC_to_cart
+	end subroutine DLC_to_cart_old
 	
-	subroutine DLC_to_cart2(atom_num, n_dlc, n_prims, dq, q, x_1, x_2, Bmat_dlc)
-	!##################
-	!###### WIP #######
-	!##################
+	subroutine DLC_to_cart(atom_num, n_dlc, n_prims, dq, q, x_1, x_2)
 	! Here, the primitive internal coordinates are converted to cartesian coordinates using an iterative procedure.
 	! This is used to generate the cartesian coordinates following a linear interpolation in primitive internal coordinates.
 	!
@@ -353,79 +412,62 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_prims, i, k, iter_counter, counter
-	real(sp) :: dq(n_dlc), q(n_dlc), q_2(n_dlc), x_1(3 * atom_num), x_2(3 * atom_num)
-	real(sp) :: BT_Ginv(n_dlc, (3 * atom_num)), temp_vec1(n_dlc), temp_vec2(n_dlc), temp_real
-	real(sp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2
-	real(sp) :: init_dq(n_dlc), target_q(n_dlc), dx(3 * atom_num), Gmat(n_dlc,n_dlc)
-	real(sp), allocatable :: temp_q(:), Bmat_dlc(:,:)
+	real(dp) :: dq(n_dlc), q(n_dlc), q_2(n_dlc), x_1(3 * atom_num), x_2(3 * atom_num), init_x_2(3 * atom_num)
+	real(dp) :: BT_inv(n_dlc, (3 * atom_num)), temp_vec1(n_dlc), temp_vec2(n_dlc), temp_real
+	real(dp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2, old_dlc(n_dlc)
+	real(dp) :: init_dq(n_dlc), target_q(n_dlc), dx(3 * atom_num), Gmat_dlc(n_dlc,n_dlc)
+	real(dp), allocatable :: temp_q(:)
 	logical :: convergence, is_cons
+	integer(i4b) :: IPIV(n_dlc), INFO
+	real(dp) :: WORK(n_dlc*64)
 	
     ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
     ! Instead, an iterative transformation procedure must be used.
-    ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
-	call refresh_DLC(atom_num, n_dlc, x_1, cdat)
-	Gmat = MATMUL(TRANSPOSE(Bmat_dlc), Bmat_dlc)
-	BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_dlc, n_dlc), TRANSPOSE(Bmat_dlc))
+    ! The expression G^(-1)* B is initialised as it is used to convert between coordinate systems.
+	Gmat_dlc = MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc))
+	BT_inv = MATMUL(SVD_INVERSE(Gmat_dlc, n_dlc, n_dlc), Bmat_dlc)
 
 	! Stashing some values for convergence criteria.
 	convergence = .FALSE.
 	xyz_rms_1 = 0
 	xyz_rms_2 = 0
 	init_dq(:) = dq(:)
-	target_q(:) = q(:) + init_dq(:)
+	old_dlc(:) = dlc(:)
+	target_q(:) = dlc(:) + init_dq(:)
 	iter_counter = 0
-	
+
 	! Checking if there are any constraints...
 	is_cons = .False.
 	if (allocated(cdat) .eqv. .True.) then
 		is_cons = .True.
 	end if
-
+	
 	do while (convergence .eqv. .FALSE.) 
 		! The change in cartesian coordinates associated with the change in primitive internal coordinates is calculated.
 		dx(:) = 0.0
-		!dx = MATMUL(TRANSPOSE(BT_Ginv), dq)
-		temp_vec1 = dq
-		do i=1, atom_num*3
-			temp_vec2 = BT_Ginv(:,i)
-			temp_real = INNER_PRODUCT(temp_vec1, temp_vec2, n_prims)
-			dx(i) = temp_real
-		end do
-		print *, '____________________________'		
-		print *, SIZE(BT_Ginv,1), SIZE(BT_Ginv,2), SIZE(dq)
-		counter = 1
-		do i=1, atom_num
-			print *, dx(counter:counter+2)
-			counter = counter + 3
-		end do
-		print *, '____________________________'
-		do i=1, n_dlc
-			print *, SUM(BT_Ginv(:,i)), init_dq(i), dq(i)
-		end do
-		print *, '__________________________'
-		print *, 'Magnitudes of BT_Ginv and dq'
-		print *, NORM2(BT_Ginv), NORM2(dq)
-		print *, '__________________________'
-		print *, dq
-		print *, '__________________________'
+		dx = MATMUL(TRANSPOSE(BT_inv), dq)
+		
+		! Save the first iteration just as if the algorithm fails, then this is probably the best guess.
+		if (iter_counter == 0) then
+			init_x_2 = x_1 + dx
+		end if
 		
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
 		xyz_rms_2 = RMSD_CALC(dx, x_1, (atom_num * 3))
-		
+
 		! The new cartesian geometry is evaluated, the new primitive internal coordinate set, Wilson B matrix, and DLC are obtained.
 		x_2 = x_1 + dx
-		call refresh_DLC(atom_num, n_dlc, x_2, cdat)
+		call maintain_DLC(atom_num, n_dlc, x_2, cdat)
 		
 		! The Moore-Penrose inverse is constructed for the next iteration.
-		BT_Ginv(:,:) = 0.0
-		Gmat(:,:) = 0.0
-		Gmat = MATMUL(TRANSPOSE(Bmat_dlc), Bmat_dlc)
-		BT_Ginv = MATMUL(SVD_INVERSE(Gmat, n_dlc, n_dlc), TRANSPOSE(Bmat_dlc))
-
+		BT_inv(:,:) = 0.0
+		Gmat_dlc(:,:) = 0.0
+		Gmat_dlc = MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc))
+		BT_inv = MATMUL(SVD_INVERSE(Gmat_dlc, n_dlc, n_dlc), Bmat_dlc)
+		
         ! The change in primitive internals for the next iteration is evaluated.
 		dq(:) = 0.0
-		dq = (target_q - dlc)
-		print *, 
+		dq = target_q - dlc
 		
 		! Now, if there are any constraints, the appropriate elements of the DLC should not change.
 		if (is_cons .eqv. .True.) then
@@ -451,20 +493,23 @@ contains
 		
 		! Values which are calculated from the iterative procedure are updated to be ith property for the next iteration.
 		x_1(:) = x_2(:)
+		old_dlc(:) = dlc(:)
 		xyz_rms_1 = xyz_rms_2
 
 		! In some cases, cartesians cannot be solved, so an exit condition must exist for this case.
 		iter_counter = iter_counter + 1
-		if (iter_counter == 2) then
-			print *, "Error; could not solve cartesians from the change in primitive internal coordinates."
+		if (iter_counter == 100) then
+			print *, "Error; could not solve cartesians from the change in primitive internal coordinates. &
+			& Saving the first evaluation as it's the best guess."
+			x_1(:) = init_x_2(:)
 			exit
 		end if
 	end do
-
+	
 	! The new cartesian coordinates are saved.
 	x_2(:) = x_1(:)
-	stop
-	end subroutine DLC_to_cart2
+
+	end subroutine DLC_to_cart
 	
 	
 END MODULE delocalised

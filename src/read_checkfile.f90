@@ -9,13 +9,12 @@ character(3) :: tmplab
 character(80) :: dummy
 integer(i4b) :: rstat
 integer(i4b) :: i, j, k, q, ii, jj, img_num
-real(sp) :: bb
+real(dp) :: bb
 
 ! Start loop over all images
 do img_num=1,nimg
 
 	! First check whether the arrays are in fact already allocated...
-
 	open(unit=8,file=("CheckFile"//trim(img_string(img_num))))
 
 	read(unit=8,fmt=*) dummy
@@ -31,7 +30,6 @@ do img_num=1,nimg
 	end if
 
 	! Dispersion correction
-
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) disp
 
@@ -46,24 +44,21 @@ do img_num=1,nimg
 		read(unit=8,fmt=*) dummy
 	end if
 
-	! GSM type and phase
-	
+	! GSM type and phase	
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) gsmtype
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) gsmphase
 	
 	! Coordinate selection for optimisation
-
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) coordtype
 	
 	! If DLC are used, the primitive internal coordinate type
-	
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) primtype
 	
-	! Primitive internal coordinate definitions.
+	! Primitive and delocalised internal coordinate definitions.
 	if (coordtype .eq. 1) then
 		read(unit=8,fmt=*) dummy
 		read(unit=8,fmt=*) nprim
@@ -71,6 +66,12 @@ do img_num=1,nimg
 		do q = 1, nprim
 			read (unit=8,fmt=*) (prim_list(q,j),j=1,4)
 		end do		
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) ndlc
+		allocate(Umat(nprim,ndlc))
+		do q = 1, nprim
+			read (unit=8,fmt=*) (Umat(q,j),j=1,ndlc)
+		end do	
 	end if
 
 	! Number and overall type of constraints

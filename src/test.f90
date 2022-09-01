@@ -10,11 +10,11 @@ implicit none
 ! for calculating search direction etc.?
 
 integer(i4b) :: I,j, img_num
-real(sp), allocatable :: DelG(:,:), ChgeX(:,:), DelX(:,:) 
-real(sp), allocatable :: dire(:,:), norm_dire(:,:)
-real(sp) ::  maxchgx, mod_dire, mod_delx, weight
-real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
-real(sp) :: gg, dgg, ll, dll, gam, check_restart, hh, ratio, init_step_size, reversing_step_size, resetting_step_size, new_step_size
+real(dp), allocatable :: DelG(:,:), ChgeX(:,:), DelX(:,:) 
+real(dp), allocatable :: dire(:,:), norm_dire(:,:)
+real(dp) ::  maxchgx, mod_dire, mod_delx, weight
+real(dp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
+real(dp) :: gg, dgg, ll, dll, gam, check_restart, hh, ratio, init_step_size, reversing_step_size, resetting_step_size, new_step_size
 logical :: line_search, reversing, resetting, if_climbing
 allocate(delx(nimg,noptx),ChgeX(nimg,noptx),DelX(nimg,noptx),DelG(nimg,noptx))
 allocate(dire(nimg,noptx),norm_dire(nimg,noptx))
@@ -289,9 +289,9 @@ SUBROUTINE check_step_length(change, new_weight)
 use nrtype ; use coordinates ; use optimdata
 implicit none
 
-real(sp) :: Change(nimg,noptx)
-real(sp) :: new_weight
-real(sp) :: stpl, lstep, stpmax
+real(dp) :: Change(nimg,noptx)
+real(dp) :: new_weight
+real(dp) :: stpl, lstep, stpmax
 
 ! I can't allocate it
 !allocate(Change(nimg,noptx))

@@ -1,12 +1,12 @@
 program math_test
 use math ; use nrtype
 
-real(sp) :: distance, theta, phi
-real(sp), allocatable :: unit_vec(:), proj_vec(:), inv_arr(:,:), output_mat(:,:)
+real(dp) :: distance, theta, phi
+real(dp), allocatable :: unit_vec(:), proj_vec(:), inv_arr(:,:), output_mat(:,:)
 integer(i4b) :: i
 integer(i4b), allocatable :: combinations(:,:)
-real(sp) :: vectors(3,3), eigens(3,3), coords_1(3), coords_2(3), arr(2,2), det, eigenvals(3), eigenvecs(3,3)
-real(sp) :: coords_3(3), grad_r(3,2), grad_theta(3,3), grad_phi(3,4), array(3,3), coords_4(3)
+real(dp) :: vectors(3,3), eigens(3,3), coords_1(3), coords_2(3), arr(2,2), det, eigenvals(3), eigenvecs(3,3)
+real(dp) :: coords_3(3), grad_r(3,2), grad_theta(3,3), grad_phi(3,4), array(3,3), coords_4(3)
 logical :: orthogonality
 
 ! Random coordinate set...

@@ -1191,7 +1191,7 @@ if __name__ == "__main__":
                 # Growth phase complete!
                 gsmutil.gsmlog('The growth phase is complete! There is now a total (including reactant) of: ' + str(current_nodes) + '   nodes...', basedir)
                 is_grown = True
-                
+                #import sys; sys.exit()
         # The optimisation phase commences.
         # In the optimisation phase, the single- and double-ended variant reduce to the same procedure.
         gsmutil.gsmlog('        /// Optimising the string... ///       ', basedir)
@@ -1222,11 +1222,11 @@ if __name__ == "__main__":
             # If all are converged, then perform a final reparameterisation of the string and the optimisation-phase is complete.
             # Otherwise, reparameterise the string and optimise all nodes again.
             if gsmutil.check_convergence(all_nodes, basedir) is True:
-                gsmutil.final_reparam(all_nodes, basedir)
+                #gsmutil.final_reparam(all_nodes, basedir)
                 gsmutil.gsmlog('The optimisation phase is complete!', basedir)
                 is_optimised = True
-            else:
-                gsmutil.reparam_opt(all_nodes, basedir)
+            #else:
+                #gsmutil.reparam_opt(all_nodes, basedir)
                 
         # Finally, the transition state can be located by way of an exact TS search.
         #not implemented but planned...

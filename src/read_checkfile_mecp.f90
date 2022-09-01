@@ -9,7 +9,7 @@ character(3) :: tmplab
 character(80) :: dummy
 integer(i4b) :: rstat
 integer(i4b) :: i, j, k, ii, jj, img_num
-real(sp) :: bb
+real(dp) :: bb
 ! Start loop over all images
 do img_num=1,nimg
 

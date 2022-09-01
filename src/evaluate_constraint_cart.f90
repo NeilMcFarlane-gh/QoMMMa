@@ -9,7 +9,7 @@ implicit none
 integer(i4b), parameter :: maxcns=maxcnsat_cart/2
 integer(i4b), intent(in) :: c
 integer(i4b) :: i, j, k, kk, l(maxcnsat_cart)
-real(sp) :: vecs(maxcns,3), cg(maxcns,3), lvec(maxcns), kcnsau
+real(dp) :: vecs(maxcns,3), cg(maxcns,3), lvec(maxcns), kcnsau
 
 ! Reminder of the constraint types:
 ! 1 = r(A-B)
@@ -107,10 +107,10 @@ implicit none
 !  The gradient for small x is k * x
 !  The gradient plateaus at 0.2 au/angstrom. (tanhmax option)
 
-real(sp), intent(out) :: en, grad
+real(dp), intent(out) :: en, grad
 integer(i4b),intent(in) :: typ
-real(sp), intent(in) :: x, k
-real(sp), parameter :: tanhmax=.2_sp
+real(dp), intent(in) :: x, k
+real(dp), parameter :: tanhmax=.2_sp
 
 if (typ.eq.1) then
 ! easy! Harmonic

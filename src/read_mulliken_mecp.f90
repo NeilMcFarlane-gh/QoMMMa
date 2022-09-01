@@ -8,7 +8,7 @@ implicit none
 !   corresponding QM atoms.
 
 integer(i4b) :: i, j, k, img_num
-real(sp) :: chgt
+real(dp) :: chgt
 character(50) :: dummy
 DOUBLE PRECISION :: mulla(nq), mullb(nq)
 

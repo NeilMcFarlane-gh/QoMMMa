@@ -5,11 +5,11 @@ implicit none
 
 ! Specially Adapted BFGS routine from Numerical Recipes
 
-integer(i4b) :: I,j, img_num
-real(sp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS(ndlc), DelX(noptx), w(noptx)
-real(sp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, stpmx, maxchgx, temp_x(noptx), temp_dlc
-real(sp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
-real(sp),parameter :: minstep = 0.1
+integer(i4b) :: I,j, img_num, k
+real(dp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS(ndlc), DelX(noptx), w(noptx)
+real(dp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, stpmx, maxchgx, temp_x(noptx), temp_dlc
+real(dp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
+real(dp),parameter :: minstep = 0.1
 logical :: is_cons
 
 line_search=.false.
@@ -33,7 +33,7 @@ if (coordtype .eq. 0) then
 		xopt(:)=fullxopt(img_num,:)
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
-		print *, 'ENERGY: ', e
+
 		if (nebtype.eq.0) then
 			IF (Nstep.eq.0) THEN
 				ChgeX = -0.7d0*optg
@@ -185,8 +185,8 @@ if (coordtype .eq. 0) then
 else if (coordtype .eq. 1) then
 	do img_num=1,nimg
 		! Initialise the maximum step.
-		stpmax = stpmax_dlc
-		stpmx = stpmax_dlc * REAL(noptx,sp)
+		stpmax = 0.05
+		stpmx = 0.05 * REAL(noptx,sp)
 		
 		! Copy data first
 		oe=fulloe(img_num)
@@ -198,15 +198,15 @@ else if (coordtype .eq. 1) then
 		oh(:,:)=fulloh(img_num,:,:)
 		x_copy = xopt
 
-		! Generating DLC for the given coordinate set.
-	    call refresh_dlc(nopt, ndlc, xopt, cdat)
+		! The primitives, DLC and the B matrices are maintained...
+		call maintain_DLC(nopt, ndlc, xopt, cdat)
 
 		! A selection of values are preserved as they are used in the BFGS update.
 		if (.not. ALLOCATED(old_prims)) allocate(old_prims(nprim))
 		old_prims(:) = prims(:)
-		if (.not. ALLOCATED(old_Bmat_dlc)) allocate(old_Bmat_dlc((3 * nopt), ndlc))
+		if (.not. ALLOCATED(old_Bmat_dlc)) allocate(old_Bmat_dlc(ndlc, (3 * nopt)))
 		old_Bmat_dlc(:,:) = Bmat_dlc(:,:)
-		if (.not. ALLOCATED(old_Bmat_p)) allocate(old_Bmat_p((nopt * 3), nprim))
+		if (.not. ALLOCATED(old_Bmat_p)) allocate(old_Bmat_p(nprim, (nopt * 3)))
 		old_Bmat_p(:,:) = Bmat_p(:,:)
 
 		! Now, the BFGS algorithm can be used to generate the change in DLC from the calculated gradient.
@@ -216,7 +216,7 @@ else if (coordtype .eq. 1) then
 		call gen_grad_cart_to_DLC(nopt, ndlc, nprim, old_Bmat_dlc, og, og_dlc)
 		call gen_grad_cart_to_prim(nopt, nprim, Bmat_p, optg, optg_p)
 		call gen_grad_cart_to_prim(nopt, nprim, old_Bmat_p, og, og_p)
-		
+
 		! To avoid the repeated matrix diagonalisation that would be necessary to continually update the hessian matrix in DLC subspace, we update the primitive hessian.
 		! However, on the first optimisation step, the initial matrix is generated simply as a weighted unit matrix.
 		! Subsequent iterations of the optimisation will use the BFGS scheme to update this primitive hessian matrix.
@@ -244,15 +244,14 @@ else if (coordtype .eq. 1) then
 			is_cons = .True.
 		end if
 
-		if (Nstep .le. 2) then
+		if (Nstep .le. 100) then
 			!###################
 			! Steepest descent.#
 			!###################
 			
+			! Scaled by 0.7 to avoid particularly large steps.
 			ChgeS = optg_dlc * 0.7 * (-1)
-			do i=1, SIZE(chges)
-				print *, chges(i)
-			end do
+
 			! Now, if there are any constraints, given elements of the DLC should not change.
 			if (is_cons .eqv. .True.) then
 				ChgeS(ndlc - (ncon_prim - 1):ndlc) = 0.0
@@ -270,12 +269,9 @@ else if (coordtype .eq. 1) then
 				write (*,*)"Changing (2) Step Length"
 			END IF
 
-			!TO-DO: implement adaptive step algorithm...
-			!ChgeS = ChgeS * 5
-			
 			!The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx)
 			call calc_prims(nopt, nprim, prims, opt, newx, prim_list)
 			ChgeX = newx(:) - temp_x(:)
 		else
@@ -306,12 +302,9 @@ else if (coordtype .eq. 1) then
 				write (*,*)"Changing (2) Step Length"
 			END IF
 			
-			!TO-DO: implement adaptive step algorithm...
-			!ChgeS = ChgeS * 5
-			
 			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, Bmat_dlc)
+			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx)
 			ChgeX = newx(:) - temp_x(:)
 			
 			! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.

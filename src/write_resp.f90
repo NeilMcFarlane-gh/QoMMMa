@@ -8,8 +8,8 @@ implicit none
 ! along each of the x, y and z axes.
 
 integer(i4b) :: i, j, k, ii, img_num
-real(sp) :: vec0(3), vec(3)
-real(sp), parameter :: dx = bohr * .5d-3, eps = 1.d-4
+real(dp) :: vec0(3), vec(3)
+real(dp), parameter :: dx = bohr * .5d-3, eps = 1.d-4
 
 ! Start loop over all images
 do img_num=1,nimg

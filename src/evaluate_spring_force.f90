@@ -3,8 +3,8 @@ use nrtype ; use coordinates ; use optimdata
 implicit none
 
 integer(i4b) img_num, max_img
-real(sp), allocatable :: tangent(:,:), par_spring(:), per_force(:), par_force(:)
-real(sp) :: delta_min, delta_max, max_en
+real(dp), allocatable :: tangent(:,:), par_spring(:), per_force(:), par_force(:)
+real(dp) :: delta_min, delta_max, max_en
 
 allocate(tangent(nimg,noptx))
 allocate(per_force(noptx))
@@ -114,7 +114,7 @@ implicit none
 
 integer(i4b)  c
 
-real(sp) :: dmax, dmin
+real(dp) :: dmax, dmin
 if (abs(fulle(c+1)-fulle(c)).gt.abs(fulle(c-1)-fulle(c))) then
     dmax=abs(fulle(c+1)-fulle(c))
 else

@@ -7,7 +7,7 @@ implicit none
 ! evaluate the total gradient as a sum of the MM (tg) and QM (qg) ones.
 
 integer(i4b) :: i, j, k, img_num
-real(sp) :: vec(3)
+real(dp) :: vec(3)
 
 do img_num=1,nimg
 ! First zero out the gradient

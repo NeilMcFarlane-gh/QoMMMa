@@ -17,8 +17,8 @@ contains
 	
 	implicit none
 	integer(i4b) :: i
-	real(sp), intent(in) :: coords_i(3), coords_j(3)
-	real(sp) :: r, v1(3)
+	real(dp), intent(in) :: coords_i(3), coords_j(3)
+	real(dp) :: r, v1(3)
 	
 	! Calculating vector between both coordinates.
 	do i = 1, 3
@@ -41,9 +41,9 @@ contains
 	
 	implicit none
 	integer(i4b) :: i
-	real(sp) :: unit_vec(3), v1(3)
-	real(sp), intent(in) :: coords_i(3), coords_j(3)
-	real(sp) :: grad_r(3,2)
+	real(dp) :: unit_vec(3), v1(3)
+	real(dp), intent(in) :: coords_i(3), coords_j(3)
+	real(dp) :: grad_r(3,2)
 	
 	! Calculating vector between both coordinates.
 	do i = 1, 3
@@ -69,8 +69,8 @@ contains
 	
 	implicit none
 	integer(i4b) :: i
-	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3)
-	real(sp) :: theta, v1(3), v2(3), cos_val
+	real(dp), intent(in) :: coords_i(3), coords_j(3), coords_k(3)
+	real(dp) :: theta, v1(3), v2(3), cos_val
 	
 	! First, evaluate the vectors between coordinates i and j, and k and j.
 	do i = 1, 3
@@ -104,8 +104,8 @@ contains
 	
 	implicit none
 	integer(i4b) :: i
-	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3)
-	real(sp) :: grad_theta(3,3), theta, v1(3), v2(3), cos_val	
+	real(dp), intent(in) :: coords_i(3), coords_j(3), coords_k(3)
+	real(dp) :: grad_theta(3,3), theta, v1(3), v2(3), cos_val	
 	
 	! First, evaluate the vectors between coordinates i and j, and k and j.
 	v1 = 0.0
@@ -159,9 +159,9 @@ contains
 	
 	implicit none
 	integer(i4b) :: i
-	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3), coords_l(3)
-	real(sp) :: phi, v1(3), v2(3), w(3), ew(3), a1(3), a2(3)
-	real(sp) :: det_array(3,3), sgn, deter, dot_prod
+	real(dp), intent(in) :: coords_i(3), coords_j(3), coords_k(3), coords_l(3)
+	real(dp) :: phi, v1(3), v2(3), w(3), ew(3), a1(3), a2(3)
+	real(dp) :: det_array(3,3), sgn, deter, dot_prod
 
 	! First, evaluate the vectors between coordinates i and j, l and k, and k and j.
 	v1 = 0.0
@@ -221,9 +221,9 @@ contains
 	
 	implicit none
 	integer(i4b) :: i
-	real(sp), intent(in) :: coords_i(3), coords_j(3), coords_k(3), coords_l(3)
-	real(sp) :: phi, v1(3), v2(3), w(3), ew(3), a1(3), a2(3), g(3), A, B, grad_phi(3,4)
-	real(sp) :: det_array(3,3), sgn, deter, dot_prod
+	real(dp), intent(in) :: coords_i(3), coords_j(3), coords_k(3), coords_l(3)
+	real(dp) :: phi, v1(3), v2(3), w(3), ew(3), a1(3), a2(3), g(3), A, B, grad_phi(3,4)
+	real(dp) :: det_array(3,3), sgn, deter, dot_prod
 	
 	! First, evaluate the vectors between coordinates i and j, l and k, and k and j.
 	v1 = 0.0
@@ -308,8 +308,8 @@ contains
 		
 	implicit none
 	integer(i4b), intent(in) :: length
-	real(sp), intent(in) :: vec1(length), vec2(length)
-	real(sp) :: proj_vec(length), unit_vec(length)
+	real(dp), intent(in) :: vec1(length), vec2(length)
+	real(dp) :: proj_vec(length), unit_vec(length)
 	
 	! The projection space is normalised.
     unit_vec = UNIT_VECTOR(vec2,length)
@@ -328,8 +328,8 @@ contains
 	
 	implicit none
 	integer(i4b), intent(in) :: length
-	real(sp), intent(in) :: vec(length)
-	real(sp) :: unit_vec(length)
+	real(dp), intent(in) :: vec(length)
+	real(dp) :: unit_vec(length)
 
 	! The unit vector is calculated by the usual formula.
 	unit_vec = vec / NORM2(vec)
@@ -347,8 +347,8 @@ contains
 	implicit none
 	integer(i4b), intent(in) :: length
 	integer(i4b) :: i
-	real(sp) :: temp, inner
-	real(sp), intent(in) :: vec1(length), vec2(length)
+	real(dp) :: temp, inner
+	real(dp), intent(in) :: vec1(length), vec2(length)
 	
 	! The inner product is calculated simply as:
 	! [a1, a2, a3] * [b1, b2, b3] = SUM[a1*b1, a2*b2, a3*b3]
@@ -373,8 +373,8 @@ contains
 	implicit none
 	integer(i4b), intent(in) :: n1, n2
 	integer(i4b) :: i, j
-	real(sp) :: outer(n1,n2)
-	real(sp), intent(in) :: vec1(n1), vec2(n2)
+	real(dp) :: outer(n1,n2)
+	real(dp), intent(in) :: vec1(n1), vec2(n2)
 	
 	! The outer product is simply calculated by the usual formula.
 	outer = 0.0
@@ -395,8 +395,8 @@ contains
 	!				vec2   : 1D array containing vector 2.
 	
 	implicit none
-	real(sp) :: cross(3)
-	real(sp), intent(in) :: vec1(3), vec2(3)
+	real(dp) :: cross(3)
+	real(dp), intent(in) :: vec1(3), vec2(3)
 	
 	! The cross product is simply calculated by the usual forumla.
 	cross = 0.0
@@ -417,9 +417,9 @@ contains
 	implicit none
 	integer(i4b), intent(in) :: rows, cols
 	integer(i4b) :: LDA, LDU, LWORK, LDVT, INFO, i, j
-	real(sp), intent(in) :: A(rows, cols)
-	real(sp), allocatable :: WORK(:)
-	real(sp) :: U(rows, rows), VT(cols, cols), S(cols), S_inv(rows, cols), A_inv(rows, cols)
+	real(dp), intent(in) :: A(rows, cols)
+	real(dp), allocatable :: WORK(:)
+	real(dp) :: U(rows, rows), VT(cols, cols), S(cols), S_inv(rows, cols), A_inv(rows, cols)
 
 	! Initialising the leading dimensions for the SVD arrays.
 	LDA = rows
@@ -471,8 +471,8 @@ contains
 	implicit none
 	integer(i4b) :: i
 	integer(i4b), intent(in) :: length, n
-	real(sp), intent(in) :: vecs(length, n)
-	real(sp) :: temp_dot
+	real(dp), intent(in) :: vecs(length, n)
+	real(dp) :: temp_dot
 	logical :: orthogonality
 	
 	! Takes the dot product of each vector pair, and if the result is close to zero, then the two vectors are orthogonal.
@@ -503,8 +503,8 @@ contains
 	implicit none
 	integer(i4b), intent(in) :: n
 	integer(i4b) :: i, j, k, l
-    real(sp), intent(in) :: matrix(n,n)
-    real(sp) :: m, temp, det, work_mat(n,n)
+    real(dp), intent(in) :: matrix(n,n)
+    real(dp) :: m, temp, det, work_mat(n,n)
     logical :: DetExists
 	
 	! Copying the input matrix to the working matrix...
@@ -561,10 +561,10 @@ contains
     	
 	implicit none
 	integer(i4b), intent(in) :: n
-	integer(i4b) :: LDA, LWORK, INFO
-	real(sp), intent(in) :: matrix(n, n)
-	real(sp), allocatable :: WORK(:)
-	real(sp) :: eigenvals(n), work_mat(n,n)
+	integer(i4b) :: LDA, LWORK, LIWORK, INFO
+	real(dp), intent(in) :: matrix(n, n)
+	real(dp), allocatable :: WORK(:), IWORK(:)
+	real(dp) :: eigenvals(n), work_mat(n,n)
 	character :: JOBZ, UPLO
 
 	! Assigning working matrix...
@@ -578,14 +578,16 @@ contains
 	INFO = 0
 	
 	! Allocating working array...
-	LWORK = MAX(1, (3 * n) - 1)
+	LWORK = MAX(1, (1 + 6*n + 2*n**2))
+	LIWORK = MAX(1, (3 + 5*n))
 	allocate(WORK(LWORK))
-	WORK(:) = 0.0
+	allocate(IWORK(LIWORK))
+	WORK(:) = 0
+	IWORK(:) = 0
 	
 	! Obtaining eigenvalues...
 	eigenvals(:) = 0.0
-	call DSYEV(JOBZ, UPLO, n, work_mat, LDA, eigenvals, WORK, LWORK, INFO)
-	
+	call DSYEVD(JOBZ, UPLO, n, work_mat, LDA, eigenvals, WORK, LWORK, IWORK, LIWORK, INFO)
 	deallocate(WORK)
 
 	end function EVALS
@@ -600,10 +602,10 @@ contains
 	   	
 	implicit none
 	integer(i4b), intent(in) :: n
-	integer(i4b) :: LDA, LWORK, INFO
-	real(sp), intent(in) :: matrix(n, n)
-	real(sp), allocatable :: WORK(:)
-	real(sp) :: eigenvecs(n, n), eigenvals(n), work_mat(n,n)
+	integer(i4b) :: LDA, LWORK, LIWORK, INFO
+	real(dp), intent(in) :: matrix(n, n)
+	real(dp), allocatable :: WORK(:), IWORK(:)
+	real(dp) :: eigenvecs(n, n), eigenvals(n), work_mat(n,n)
 	character :: JOBZ, UPLO
 
 	! Assigning working matrix...
@@ -617,18 +619,20 @@ contains
 	INFO = 0
 	
 	! Allocating working array....
-	LWORK = MAX(1, (3 * n) - 1)
+	LWORK = MAX(1, (1 + 6*n + 2*n**2))
+	LIWORK = MAX(1, (3 + 5*n))
 	allocate(WORK(LWORK))
-	WORK(:) = 0.0
+	allocate(IWORK(LIWORK))
+	WORK(:) = 0
+	IWORK(:) = 0
 
 	! Obtaining eigenvectors...
 	eigenvals(:) = 0.0
-	call DSYEV(JOBZ, UPLO, n, work_mat, LDA, eigenvals, WORK, LWORK, INFO)
+	call DSYEVD(JOBZ, UPLO, n, work_mat, LDA, eigenvals, WORK, LWORK, IWORK, LIWORK, INFO)
 	eigenvecs(:,:) = 0.0
 	eigenvecs(:,:) = work_mat(:,:)
-
 	deallocate(WORK)
-	
+
 	end function EVECS
 
 	
@@ -753,8 +757,8 @@ contains
 	
 	implicit none
 	integer(i4b), intent(in) :: n
-	real(sp), intent(in) :: dx(n), x(n)
-	real(sp) :: x_n(n), RMSD
+	real(dp), intent(in) :: dx(n), x(n)
+	real(dp) :: x_n(n), RMSD
 	
 	! The new x is calculated.
 	! Indeed, this expression simply cancels out in the subsequent equations, but it is included for clarity.

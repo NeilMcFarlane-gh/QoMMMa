@@ -6,8 +6,8 @@ implicit none
 !   on the mm atoms, in kcal/mol/Å.
 
 integer(i4b) :: i, j, k, kk, img_num
-real(sp) :: vec(3), mulgrad(3), gcorr(3), rmsgcorr, maxgcorr, qxq, lvec
-! real(sp) :: mg(nx),cg(nx)
+real(dp) :: vec(3), mulgrad(3), gcorr(3), rmsgcorr, maxgcorr, qxq, lvec
+! real(dp) :: mg(nx),cg(nx)
 
 !Loop over all images
 do img_num=1,nimg

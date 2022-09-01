@@ -9,7 +9,7 @@ implicit none
 
 character(80) :: dummy
 integer(i4b) :: i, j, k, rstat
-real(sp) :: tc
+real(dp) :: tc
 
 open(unit=8,file="DefaultCharges")
 

@@ -9,7 +9,7 @@ character(3) :: tmplab
 character(80) :: dummy
 integer(i4b) :: rstat, prima, gsma, gsmb, coorda
 integer(i4b) :: q, i, j, k, ii, jj, kk, iii, nmodif, neba, nebb, nebc
-real(sp) :: rql, rqm, tmpchg
+real(dp) :: rql, rqm, tmpchg
 
 ! First check whether the arrays are in fact already allocated...
 IF (.not.(allocated(lratio).and.allocated(links))) THEN

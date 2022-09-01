@@ -17,8 +17,8 @@ contains
 	implicit none
 	integer(i4b) :: i, j, n_cons, n_prims, prim_list(n_prims, 4)
 	integer(i4b) :: temp_cons(4), temp_prim(4)
-	real(sp) :: prims(n_prims)
-	real(sp), allocatable :: cdat(:,:)
+	real(dp) :: prims(n_prims)
+	real(dp), allocatable :: cdat(:,:)
 	
 	! First, allocate cdat based on the number of primitive constraints.
 	if (ALLOCATED(cdat)) deallocate(cdat)
@@ -53,9 +53,9 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, ic, ip, j
-	real(sp) :: cdat(n_cons, n_prims), Umat(n_dlc, n_prims)
-	real(sp) :: temp_cons(n_prims), temp_U(n_prims), work(n_prims)
-	real(sp), allocatable :: cdat_unproj(:,:)
+	real(dp) :: cdat(n_cons, n_prims), Umat(n_dlc, n_prims)
+	real(dp) :: temp_cons(n_prims), temp_U(n_prims), work(n_prims)
+	real(dp), allocatable :: cdat_unproj(:,:)
 
 	! Save the unprojected cdat so that it can later be used, and zero out cdat so that it can be projected.
 	if (ALLOCATED(cdat_unproj)) deallocate(cdat_unproj)
@@ -97,8 +97,8 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, i, alloc_counter, cons_counter, U_counter
-	real(sp) :: work(n_dlc), cdat(n_cons, n_prims), Umat(n_dlc, n_prims)
-	real(sp), allocatable :: Vmat(:,:)
+	real(dp) :: work(n_dlc), cdat(n_cons, n_prims), Umat(n_dlc, n_prims)
+	real(dp), allocatable :: Vmat(:,:)
 	
 	! First, allocate Vmat appropriately.
 	if (.not. ALLOCATED(Vmat)) allocate(Vmat((n_dlc + n_cons), n_prims))
@@ -137,8 +137,8 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, i, j, k, nvec
-	real(sp) :: work(n_prims), dnorm, scapro, tol, Vmat((n_dlc + n_cons), n_prims)
-	real(sp), parameter :: tolerance = 1.0D-10
+	real(dp) :: work(n_prims), dnorm, scapro, tol, Vmat((n_dlc + n_cons), n_prims)
+	real(dp), parameter :: tolerance = 1.0D-10
 
 	! Start by initialising some values.
 	nvec = n_dlc + n_cons
@@ -191,8 +191,8 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, i
-	real(sp) :: work((n_dlc + n_cons), n_prims)
-	real(sp), allocatable :: Vmat(:,:)
+	real(dp) :: work((n_dlc + n_cons), n_prims)
+	real(dp), allocatable :: Vmat(:,:)
 
 	! Firstly, the V matrix is saved in work so that the V matrix can be appropriately deallocated and reallocated.
 	work(:,:) = Vmat(:,:)
@@ -227,7 +227,7 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, i
-	real(sp) :: Vmat(n_dlc, n_prims), cdat_unproj(n_cons, n_prims)
+	real(dp) :: Vmat(n_dlc, n_prims), cdat_unproj(n_cons, n_prims)
 	
 	! The unprojected constraint(s) are simply put back into Vmat.
 	do i=1, n_cons

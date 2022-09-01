@@ -5,7 +5,7 @@ implicit none
 ! This subroutine initialises output.
 
 integer(i4b) :: rstat, i, j, k, ii, img_num, conv_counter
-real(sp) :: dist, angle, arccos, tot_angle, qe_no_disp
+real(dp) :: dist, angle, arccos, tot_angle, qe_no_disp
 logical :: any
 conv_counter=0
 
