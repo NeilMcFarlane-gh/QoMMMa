@@ -6,10 +6,9 @@ implicit none
 ! Specially Adapted BFGS routine from Numerical Recipes
 
 integer(i4b) :: I,j, img_num, k
-real(dp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS(ndlc), DelX(noptx), w(noptx)
+real(dp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS(ndlc), DelX(noptx), w(noptx), dg_p(nprim)
 real(dp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, stpmx, maxchgx, temp_x(noptx), temp_dlc
 real(dp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
-real(dp),parameter :: minstep = 0.1
 logical :: is_cons
 
 line_search=.false.
@@ -185,8 +184,9 @@ if (coordtype .eq. 0) then
 else if (coordtype .eq. 1) then
 	do img_num=1,nimg
 		! Initialise the maximum step.
-		stpmax = 0.05
-		stpmx = 0.05 * REAL(noptx,sp)
+		print *, stpmax_dlc
+		stpmax = stpmax_dlc
+		stpmx = stpmax_dlc * REAL(noptx,sp)
 		
 		! Copy data first
 		oe=fulloe(img_num)
@@ -197,26 +197,25 @@ else if (coordtype .eq. 1) then
 		ox(:)=fullox(img_num,:)
 		oh(:,:)=fulloh(img_num,:,:)
 		x_copy = xopt
-
+	
 		! The primitives, DLC and the B matrices are maintained...
-		call maintain_DLC(nopt, ndlc, xopt, cdat)
-
-		! A selection of values are preserved as they are used in the BFGS update.
-		if (.not. ALLOCATED(old_prims)) allocate(old_prims(nprim))
-		old_prims(:) = prims(:)
-		if (.not. ALLOCATED(old_Bmat_dlc)) allocate(old_Bmat_dlc(ndlc, (3 * nopt)))
-		old_Bmat_dlc(:,:) = Bmat_dlc(:,:)
-		if (.not. ALLOCATED(old_Bmat_p)) allocate(old_Bmat_p(nprim, (nopt * 3)))
-		old_Bmat_p(:,:) = Bmat_p(:,:)
+		call maintain_DLC(nopt, ndlc, xopt)
+		
+		! Preserve the primitives and Wilson B matrix...
+		if (.not. ALLOCATED(Bmat_p_save)) allocate(Bmat_p_save(nprim,ndlc))
+		if (.not. ALLOCATED(prims_save)) allocate(prims_save(nprim))
+		prims_save = prims
+		Bmat_p_save = Bmat_p
 
 		! Now, the BFGS algorithm can be used to generate the change in DLC from the calculated gradient.
-		! Firstly, the gradients from both the current and previous step must be updated to DLC subspace.
-		! In addition, the gradients are updated to primitive subspace as these are used in the updating of the hessian matrix.
+		! Firstly, the gradients from the current step must be updated to DLC subspace.
+		! In addition, the current and previous gradient is updated to primitive subspace as these are used in the updating of the hessian matrix.
 		call gen_grad_cart_to_DLC(nopt, ndlc, nprim, Bmat_dlc, optg, optg_dlc)
-		call gen_grad_cart_to_DLC(nopt, ndlc, nprim, old_Bmat_dlc, og, og_dlc)
-		call gen_grad_cart_to_prim(nopt, nprim, Bmat_p, optg, optg_p)
-		call gen_grad_cart_to_prim(nopt, nprim, old_Bmat_p, og, og_p)
-
+		if (Nstep .ne. 0) then
+			call gen_grad_cart_to_prim(nopt, nprim, Bmat_p, optg, optg_p)
+			call gen_grad_cart_to_prim(nopt, nprim, old_Bmat_p, og, og_p)
+		end if
+		
 		! To avoid the repeated matrix diagonalisation that would be necessary to continually update the hessian matrix in DLC subspace, we update the primitive hessian.
 		! However, on the first optimisation step, the initial matrix is generated simply as a weighted unit matrix.
 		! Subsequent iterations of the optimisation will use the BFGS scheme to update this primitive hessian matrix.
@@ -240,11 +239,11 @@ else if (coordtype .eq. 1) then
 
 		! Checking if there are any constraints...
 		is_cons = .False.
-		if (allocated(cdat) .eqv. .True.) then
+		if (ncon_prim .gt. 0) then
 			is_cons = .True.
 		end if
 
-		if (Nstep .le. 100) then
+		if (Nstep .le. 300) then
 			!###################
 			! Steepest descent.#
 			!###################
@@ -280,11 +279,20 @@ else if (coordtype .eq. 1) then
 			!###############
 			
 			! The hessian matrix is updated to DLC subspace.
-			call gen_hess_prim_to_DLC(nopt, ndlc, nprim, Umat, h_p, h_dlc)
+			if (is_cons .eqv. .True.) then
+				call gen_hess_prim_to_DLC(nopt, ndlc, nprim, Vmat, h_p, h_dlc)
+			else
+				call gen_hess_prim_to_DLC(nopt, ndlc, nprim, Umat, h_p, h_dlc)
+			end if
 
 			! The change in DLC can now be evaluated using a quasi-Newton methodology.
 			ChgeS = MATMUL(TRANSPOSE(h_dlc), optg_dlc) * (-1)
 			
+			! Now, if there are any constraints, given elements of the DLC should not change.
+			if (is_cons .eqv. .True.) then
+				ChgeS(ndlc - (ncon_prim - 1):ndlc) = 0.0
+			end if
+
 		    ! Now, if there are any constraints, given elements of the DLC should not change.
 			if (is_cons .eqv. .True.) then
 				ChgeS(ndlc - (ncon_prim - 1):ndlc) = 0.0
@@ -301,16 +309,15 @@ else if (coordtype .eq. 1) then
 				ChgeS = ChgeS / lstep * STPMX
 				write (*,*)"Changing (2) Step Length"
 			END IF
-			
+
 			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
 			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx)
 			ChgeX = newx(:) - temp_x(:)
 			
-			! Lastly, using the BFGS method, the primitive hessian for the next optimisation cycle is calculated.
-			! To ensure continuity, a new set of primitive internal coordinates is calculated for newx.
-			call calc_prims(nopt, nprim, prims, opt, newx, prim_list)
-			call update_bfgs_p(nopt, nprim, h_p, optg_p, og_p, prims, old_prims)
+			! Lastly, using the BFGS method, the primitive hessian is updated.
+			dg_p = (optg_p * scale_by) - og_p
+			call update_bfgs_p(nopt, nprim, h_p, dg_p, prims, prims_save)
 		end if
 		
 		! evaluate convergence tests
@@ -340,21 +347,21 @@ else if (coordtype .eq. 1) then
 			if (conv(5) .lt. tolgrms) then
 				convs(5)="YES" ; i=i+1
 			end if
-		! When in the growth phase of the string, the convergence criteria are loosened by a factor of 10.
+		! When in the growth phase of the string, the convergence criteria are loosened.
 		else if (gsmphase .eq. 1) then
-			if (abs(conv(1)) .lt. (tolde * 10)) then
+			if (abs(conv(1)) .lt. (tolde * 25)) then
 				 convs(1)="YES" ; i=i+1
 			end if
-			if (conv(2) .lt. (toldxmax * 10)) then
+			if (conv(2) .lt. (toldxmax * 5)) then
 				 convs(2)="YES" ; i=i+1
 			end if
-			if (conv(3) .lt. (toldxrms * 10)) then
+			if (conv(3) .lt. (toldxrms * 5)) then
 				 convs(3)="YES" ; i=i+1
 			end if
-			if (conv(4) .lt. (tolgmax * 10)) then
+			if (conv(4) .lt. (tolgmax * 5)) then
 				 convs(4)="YES" ; i=i+1
 			end if
-			if (conv(5) .lt. (tolgrms * 10)) then
+			if (conv(5) .lt. (tolgrms * 5)) then
 				 convs(5)="YES" ; i=i+1
 			end if
 		else

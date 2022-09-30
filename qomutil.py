@@ -590,7 +590,7 @@ def link_write(link):
         fd.write('\n')  
     fd.close()
     
-def cons_write_prim(cons, usrdir):
+def cons_write_prim(cons, coeffs, ncon, usrdir):
     """
     
     // Function which generates the constraint details for primitive internal coordinates. //
@@ -598,8 +598,12 @@ def cons_write_prim(cons, usrdir):
     
     Arguments
     ----------
-    cons : tuple
-        Represents the details for each constraint.
+    cons : list
+        Represents the primitives internal coordinates for each constraint.
+    coeffs : tuple
+        Represents the scaling coefficients for each of the primitive internal coordinates.
+    ncon : integer
+        The number of primitive internal coordinate constraints.
     usrdir : string
         The user directory.
         
@@ -608,13 +612,21 @@ def cons_write_prim(cons, usrdir):
     # The file fortinput is opened.
     fd = open('fortinput', 'a')
 
-    for i in range(len(cons)):
+    for i in range(ncon):
         # The constraint details are written to fortinput.
-        fd.write(str(cons[i][0]).rjust(8)) # The desired change in primitive coordinates.
+        fd.write('The number of scaling coefficients for constraint number ' + str(i+1) + ' is...')
         fd.write('\n')
-        for j in range(len(cons[i][1])):
-            fd.write(str(cons[i][1][j]).rjust(8))
+        fd.write(str(len(coeffs[i])))
         fd.write('\n')
+        fd.write('Now, what are the details of the primitive internal coordinate linear combination constraint...')
+        fd.write('\n')
+        temp_coeffs = coeffs[i]
+        temp_prims = cons[i]
+        for k in range(len(temp_coeffs)):
+            fd.write(str(temp_coeffs[k]).rjust(8)) # the co-efficient to scale the primitive internal coordinate by...
+            for j in range(len(temp_prims[k])):
+                fd.write(str(temp_prims[k][j]).rjust(8)) # the primitive internal coordinate...
+            fd.write('\n')
     fd.close()
     
 def cons_write_cart(cons, usrdir):
@@ -655,6 +667,33 @@ def cons_write_cart(cons, usrdir):
         fd.write('\n')
         for j in range(len(cons[i][3])):
             fd.write(str(cons[i][3][j]).rjust(8))
+        fd.write('\n')
+    fd.close()
+    
+def disp_write_prim(disp, usrdir):
+    """
+    
+    // Function which requested displacement in primitive internal coordinates. //
+    // This function is called in the function fortinp found in qommmma.py. //
+    
+    Arguments
+    ----------
+    disp : tuple
+        Represents the details for each displacement.
+    usrdir : string
+        The user directory.
+        
+    """
+    
+    # The file fortinput is opened.
+    fd = open('fortinput', 'a')
+
+    for i in range(len(disp)):
+        # The constraint details are written to fortinput.
+        fd.write(str(disp[i][0]).rjust(8)) # The value to change the primitive internal coordinate by.
+        fd.write('\n')
+        for j in range(len(disp[i][1])):
+            fd.write(str(disp[i][1][j]).rjust(8))
         fd.write('\n')
     fd.close()
 

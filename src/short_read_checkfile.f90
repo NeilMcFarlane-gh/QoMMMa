@@ -51,6 +51,15 @@ do img_num=1,nimg
 	! If DLC are used, the primitive internal coordinate type
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) primtype
+
+
+	! Number and overall type of constraints
+
+	read(unit=8,fmt=*) dummy
+	read(unit=8,fmt=*) ncon_cart,kcnstyp
+	read(unit=8,fmt=*) dummy
+	read(unit=8,fmt=*) ncon_prim
+	
 	
 	! Primitive  and delocalised internal coordinate definitions.
 	if (coordtype .eq. 1) then
@@ -62,18 +71,19 @@ do img_num=1,nimg
 		end do		
 		read(unit=8,fmt=*) dummy
 		read(unit=8,fmt=*) ndlc
-		allocate(Umat(nprim,ndlc))
+		if (ncon_prim .eq. 0) then
+			allocate(Umat(nprim,ndlc))
+		else if (ncon_prim .gt. 0) then
+			allocate(Vmat(nprim,ndlc))
+		end if
 		do q = 1, nprim
-			read (unit=8,fmt=*) (Umat(q,j),j=1,ndlc)
+			if (ncon_prim .eq. 0) then
+				read (unit=8,fmt=*) (Umat(q,j),j=1,ndlc)
+			else if (ncon_prim .gt. 0) then
+				read (unit=8,fmt=*) (Vmat(q,j),j=1,ndlc)
+			end if
 		end do	
 	end if
-
-	! Number and overall type of constraints
-
-	read(unit=8,fmt=*) dummy
-	read(unit=8,fmt=*) ncon_cart,kcnstyp
-	read(unit=8,fmt=*) dummy
-	read(unit=8,fmt=*) ncon_prim
 
 	! Now read through list of QM atoms.
 	read(unit=8,fmt=*) dummy
@@ -163,10 +173,13 @@ do img_num=1,nimg
 		! Check that all constrained atoms are QM, Link or HessOpt
 		call check_constrained_atoms()
 	else if (ncon_prim.gt.0) then
-		cnsat_p=0
 		do i=1,ncon_prim
-			read(unit=8,fmt=*) cnsdq_p(i)
-			read(unit=8,fmt=*) (cnsat_p(i,j),j=1,4)
+			read(unit=8,fmt=*) dummy
+			read(unit=8,fmt=*) cns_n_coeff_p(i)
+			read(unit=8,fmt=*) dummy
+			do j=1,cns_n_coeff_p(i)
+				read(unit=8,fmt=*) cnscoeff_p(i,j), (cnsat_p(i,j,k),k=1,4)
+			end do
 		end do
 		! Check that all constrained atoms are QM, Link or HessOpt
 		call check_constrained_atoms()

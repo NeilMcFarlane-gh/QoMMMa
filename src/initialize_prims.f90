@@ -10,8 +10,9 @@ implicit none
 integer(i4b) :: i, j, k
 	
 if (coordtype .eq. 1) then
-	! If the primitive internal coordinates have already been defined, then we can skip this subroutine.
+	! If the primitive internal coordinates have already been defined, then we can add any additional primitives and move on.
 	if (ALLOCATED(prim_list)) then
+		call add_primitives()
 		return
 	end if
 	
@@ -34,6 +35,54 @@ if (coordtype .eq. 1) then
 	else if (primtype .eq. 1) then ! Full definition
 		call define_prims_full(nopt, opt, xopt, prim_list)	
 	end if
+	
+	! Lastly, add any additional primitive internal coordinates which have not been found automatically.
+	call add_primitives()
 end if
 
 end subroutine initialize_prims
+
+
+subroutine add_primitives()
+use nrtype ; use coordinates ; use optimdata ; use primitive ; use math
+implicit none
+
+! Subroutine which adds the additional primitives defined to prim_list.
+! If the additional primitive has been added already by the generation algorithm or was read in via fortinput, then it will not be added.
+
+integer(i4b) :: i, j, to_add, prim_temp1(4), prim_temp2(4), prim_list_save(nprim,4)
+logical :: need_to_add(add_prims)
+
+! Find all the primitives which need to be included.
+to_add = 0
+do i=1, add_prims
+		prim_temp1 = prim_add_list(i,:)
+		do j=1, nprim
+			prim_temp2 = prim_list(j,:)
+			if (MAXVAL(ABS(prim_temp1 - prim_temp2)) .eq. 0) then ! the primtive internal coordinate is already there so no need to add it.
+				need_to_add = .False.
+				exit
+			else if (j .eq. nprim) then
+				to_add = to_add + 1
+				need_to_add(i) = .True. ! we need to add a new one to prim_list.
+			end if
+		end do
+end do
+
+! Deallocate and subsequently re-allocate prim_list with space allowed for the new primitives to be included.
+prim_list_save(:,:) = prim_list(:,:)
+deallocate(prim_list)
+allocate(prim_list(nprim + to_add, 4))
+
+! Now add the original and additional primitived to prim_list
+prim_list(1:nprim,:) = prim_list_save(:,:) ! the original primitives
+to_add = 0
+do i=1, add_prims ! the additional primitives
+	if (need_to_add(i) .eqv. .True.) then
+		to_add = to_add + 1
+		prim_list(nprim + to_add,:) = prim_add_list(i,:)
+	end if
+end do
+nprim = nprim + to_add ! update the number of primitives
+
+end subroutine add_primitives

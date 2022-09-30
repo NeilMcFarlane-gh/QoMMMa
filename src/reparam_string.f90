@@ -11,10 +11,10 @@ implicit none
 
 call alloc_coord()
 call alloc_optim()
-call read_expl_coord()
-call short_read_checkfile()
+call read_expl_coord() ! Just to get nbonds(:)
+call read_geom_coord()
+call read_initfile()
 call initialize_step()
 call update_step_geometry()
-call write_prim_coord()
 
 END PROGRAM reparam_string

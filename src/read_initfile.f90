@@ -37,6 +37,12 @@ read(unit=8,fmt=*) i, j
 read(unit=8,fmt=*) dummy
 read(unit=8,fmt=*) i
 
+read(unit=8,fmt=*) dummy
+read(unit=8,fmt=*) i
+
+read(unit=8,fmt=*) dummy
+read(unit=8,fmt=*) i
+
 ! NEB
 read(unit=8,fmt=*) dummy
 read(unit=8,fmt=*) neba, nebb, nebc
@@ -62,9 +68,18 @@ read(unit=8,fmt=*) nprim
 if (nprim .gt. 0) then
 	allocate(prim_list(nprim,4))
 	do q = 1, nprim
-		read (unit=8,fmt=*) (prim_list(q,j),j=1,4)
+		read (unit=8,fmt=*) ( prim_list(q,j),j=1,4 )
 	end do	
 end if	
+
+! Now, any additional primitive internal coordinates to be added.
+if (add_prims .gt. 0) then
+	read(unit=8,fmt=*) dummy
+	allocate(prim_add_list(add_prims,4))
+	do q = 1, add_prims
+		read (unit=8,fmt=*) ( prim_add_list(q,j),j=1,4 )
+	end do
+end if
 
 ! now reads the QM atoms
 read(unit=8,fmt=*) dummy
@@ -183,12 +198,30 @@ if (ncon_cart.gt.0) then
 	call check_constrained_atoms()
 else if (ncon_prim .gt. 0) then
 	read(unit=8,fmt=*) dummy
-	do i=1,ncon_prim
-		read(unit=8,fmt=*) cnsdq_p(i)
-		read(unit=8,fmt=*) (cnsat_p(i,j),j=1,4)
+	do j=1, ncon_prim
+		read(unit=8,fmt=*) dummy
+		read(unit=8,fmt=*) cns_n_coeff_p(j)
+		if (cns_n_coeff_p(j) .gt. maxcnsat_dlc) then
+			write (*,*) "Too complicated a combination of primitive internal coordinates (> 10...). Check your input."
+			close(8)
+			stop
+		end if
+		read(unit=8,fmt=*) dummy
+		do i=1,cns_n_coeff_p(j)
+			read(unit=8,fmt=*) cnscoeff_p(j,i), (cnsat_p(j,i,k),k=1,4)
+		end do
 	end do
 	! Check that all constrained atoms are QM, Link or HessOpt
 	call check_constrained_atoms()
+end if
+
+! Now read in details of displacements to be applied to primitive internal coordinates.
+if (disp_prim .gt. 0) then
+	read(unit=8,fmt=*) dummy
+	do i=1, disp_prim
+		read(unit=8,fmt=*) dq_p(i)
+		read(unit=8,fmt=*) (dq_at_p(i,j),j=1,4)
+	end do
 end if
 
 ! read in list of atoms on which the charge needs to be changed.

@@ -37,6 +37,10 @@ if (ncon_prim .lt. 0) then
     stop
 end if
 read(8,*) dummy
+read(8,*) disp_prim
+read(8,*) dummy
+read(8,*) add_prims
+read(8,*) dummy
 read(8,*) nimg, nebtype, kspring
 read(8,*) dummy
 read(8,*) gsmtype

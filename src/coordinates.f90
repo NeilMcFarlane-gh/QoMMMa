@@ -4,7 +4,7 @@ implicit none
 
 integer(i4b), parameter :: maxbond = 8
 integer(i4b) :: n, nx, nq, nqx, nl, nlx, nopt, noptx, ndlc, nprim, ninact, kcnstyp, nimg, nebtype 
-integer(i4b) :: gsmtype, gsmphase, coordtype, primtype, ncon_prim, ncon_cart
+integer(i4b) :: gsmtype, gsmphase, coordtype, primtype, ncon_prim, ncon_cart, disp_prim, add_prims
 real(dp) :: tolde_org, tolgmax_org, tolgrms_org, toldxmax_org, toldxrms_org, tolper
 
 real(dp) :: kspring
@@ -24,10 +24,10 @@ real(dp), allocatable :: x(:), xq(:), xl(:), xopt(:), dlc(:), lratio(:), chg(:),
 
 ! matrices used in the generation and constraining of DLC.
 ! these matrices are frequently deallocated and reallocated.
-integer(i4b), allocatable :: prim_list(:,:) ! Primitive coordinate indice array.
+integer(i4b), allocatable :: prim_list(:,:), prim_add_list(:,:) ! Primitive coordinate indice array.
 integer(i4b), allocatable :: to_generate(:) ! Used dynamically to assign temporary atom indices.
-real(dp), allocatable :: prims(:), old_prims(:) ! Primitive internal coordinate array.
-real(dp), allocatable :: Bmat_p(:,:), old_Bmat_p(:,:) ! Primitive Wilson B matrix array.
+real(dp), allocatable :: prims(:), old_prims(:), prims_save(:) ! Primitive internal coordinate array.
+real(dp), allocatable :: Bmat_p(:,:), old_Bmat_p(:,:), Bmat_p_save(:,:) ! Primitive Wilson B matrix array.
 real(dp), allocatable :: Bmat_dlc(:,:), old_Bmat_dlc(:,:) ! DLC Wilson B matrix array.
 real(dp), allocatable :: Gmat(:,:) ! G matrix array.
 real(dp), allocatable :: Umat(:,:) ! U matrix array.

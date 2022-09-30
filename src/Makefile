@@ -38,7 +38,7 @@ alloc_optim.o alloc_coord.o  read_expl_coord.o  write_first_report.o  read_charg
 write_charges.o   write_resp.o   write_inactive.o  write_first_checkfile.o  \
 read_initfile.o  setup_first.o det_sm_coord.o write_sm_coord.o write_atomic.o \
 check_constrained_atoms.o initialize_update_geom.o initialize_prims.o \
-initialize_step.o update_step_geometry.o write_U.o initialize_DLC.o
+initialize_step.o update_step_geometry.o write_U.o initialize_DLC.o evaluate_constraint_dlc.o
 
 QOMMMA_MECP=$(BIN)/qommma_mecp.x
 QOMMMA_MECP_OBJ= \
@@ -59,8 +59,8 @@ GSM_REPARAM_OBJ= \
 nrtype.o  coordinates.o  optimdata.o \
 math.o primitive.o delocalised.o dlc_constraint.o \
 reparam_string.o \
-alloc_coord.o alloc_optim.o read_expl_coord.o \
-short_read_checkfile.o initialize_step.o update_step_geometry.o \
+alloc_coord.o alloc_optim.o read_expl_coord.o read_geom_coord.o read_initfile.o \
+initialize_step.o update_step_geometry.o read_prim_coord.o \
 write_prim_coord.o check_constrained_atoms.o write_U.o
 
 

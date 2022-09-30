@@ -3,20 +3,25 @@ URGENT:
 
 // F90 //
 
-Fix DLC_to_cart2() - probably to do with B matrix, or evaluation of new dq at each cycle.
+optimisation stuff....
+Fix Hessian update scheme so that Quasi-Newton methods can be used
+Fix constraints in angles and dihedrals
+Fix check_constrained_atoms.f90 so that it actually works for primitive
 
-Integrate a step-halving type algorithm in update_opt_geometry() so that large/small steps can be taken where necessary.
+primitive stuff...
 If the number of traditional primitives is < 3N-6, then flag an error, save the primitives, and say to add additional primitives
 Where there are complicated allocation schemes, allocate matrices to be much bigger than they need to
 Don't use zero_count, introduce a new prim_type(nprims) array instead
-Improve gen_prims_full to generate angles better such that duplicates are not added
+Improve gen_prims_full to generate valence and dihedral angles better such that duplicates are not added
+Add link atoms to neighbours array in generating primitives
+
+others...
 Allocate important arrays outwith subroutines (not functions), and don't pass too much (or anything) to subroutines
-Fix check_constrained_atoms.f90 so that it actually works for primitive
+Merge gsm.in and qommma.in into one file
+
 
 // PYTHON //
 
-Allow additional prims in input files
-Merge gsm.in and qommma.in into one file
 Remove all the GSM running code from qommma.py and add to functions SE_gsm() and DE_gsm() in gsmutil.py
 
 

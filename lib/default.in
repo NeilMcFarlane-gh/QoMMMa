@@ -12,7 +12,7 @@ disp=0
 maxcycle=200
 maxcycle_grow=5 #for GSM
 
-max_nodes=10 #for SE-GSM
+max_nodes=20 #for SE-GSM
 
 # output option
 qomout='None'
@@ -33,6 +33,9 @@ qm_lst='None'
 link_lst='None'
 cart_constrain_lst='None'
 prim_constrain_lst='None'
+prim_coeff_lst='None'
+prim_displacement_lst='None'
+prim_add_lst='None'
 newcha_lst='None'
 newcha='''
 0
@@ -41,6 +44,8 @@ newcha='''
   
 nlink=0
 ncon_prim=0	 	
+disp_prim=0
+add_prims=0
 ncon_cart=0  	
 kcnstype='harmonic'
 kspring=100

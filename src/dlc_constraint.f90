@@ -15,7 +15,7 @@ contains
 	!               prims       : 1D array containing all the primitive internal coordinates associated with this input.
 
 	implicit none
-	integer(i4b) :: i, j, n_cons, n_prims, prim_list(n_prims, 4)
+	integer(i4b) :: i, j, k, n_cons, n_prims, prim_list(n_prims, 4)
 	integer(i4b) :: temp_cons(4), temp_prim(4)
 	real(dp) :: prims(n_prims)
 	real(dp), allocatable :: cdat(:,:)
@@ -27,12 +27,14 @@ contains
 
 	! By simple comparison of prim_list and the constrained primtives, we can obtain the integer corresponding to each constraint to add to cdat.
 	do i=1, n_cons
-		temp_cons = cnsat_p(i,:)
-		do j=1, n_prims
-			temp_prim = prim_list(j,:)
-			if (MAXVAL(ABS(temp_cons - temp_prim)) .eq. 0) then
-				cdat(i,j) = prims(j)
-			end if
+		do k=1, cns_n_coeff_p(i)
+			temp_cons = cnsat_p(i,k,:)
+			do j=1, n_prims
+				temp_prim = prim_list(j,:)
+				if (MAXVAL(ABS(temp_cons - temp_prim)) .eq. 0) then
+					cdat(i,j) = cnscoeff_p(i,k) * prims(j)
+				end if
+			end do
 		end do
 	end do
 
@@ -52,31 +54,40 @@ contains
 	!                             This is the DLC transformation vector set.
 	
 	implicit none
-	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, ic, ip, j
-	real(dp) :: cdat(n_cons, n_prims), Umat(n_dlc, n_prims)
-	real(dp) :: temp_cons(n_prims), temp_U(n_prims), work(n_prims)
+	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, ic, ip, j, i
+	real(dp) :: cdat(n_cons, n_prims), Umat(n_prims, n_dlc)
+	real(dp) :: temp_cons(n_prims), temp_U(n_prims), work(n_dlc)
 	real(dp), allocatable :: cdat_unproj(:,:)
 
 	! Save the unprojected cdat so that it can later be used, and zero out cdat so that it can be projected.
 	if (ALLOCATED(cdat_unproj)) deallocate(cdat_unproj)
 	allocate(cdat_unproj(n_cons,n_prims))
 	cdat_unproj(:,:) = cdat(:,:)
+	work(:) = 0.0
 	
 	! First, start by performing the operation: dp_{ic,j} = <C_ic|U_j>
 	do ic=1, n_cons
 		do j=1, n_dlc
 			work(j) = 0.0
 			do ip = 1, n_prims
-				work(j) = work(j) + Umat(j,ip)*cdat(ic,ip)
+				work(j) = work(j) + Umat(ip,j)*cdat(ic,ip)
 			end do
 		end do
-
+		
+		! Now, zero out the given constraint vector.
+		cdat(ic,:) = 0.0
+		
 		! Lastly, perform the operation: C_ic = sum_j dp_{ic,j}*U_j
 		do j=1, n_dlc
 			do ip=1, n_prims
-				cdat(ic,ip) = cdat(ic,ip) + work(j)*Umat(j,ip)
+				cdat(ic,ip) = cdat(ic,ip) + work(j)*Umat(ip,j)
 			end do
 		end do
+	end do
+	
+	! Lastly, make each of the individual constraint vectors unitary.
+	do i=1, n_cons
+		cdat(i,:) = UNIT_VECTOR(cdat(i,:), n_prims)
 	end do
 
 	end subroutine proj_cons
@@ -97,28 +108,28 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, i, alloc_counter, cons_counter, U_counter
-	real(dp) :: work(n_dlc), cdat(n_cons, n_prims), Umat(n_dlc, n_prims)
+	real(dp) :: work(n_dlc), cdat(n_cons, n_prims), Umat(n_prims, n_dlc)
 	real(dp), allocatable :: Vmat(:,:)
 	
 	! First, allocate Vmat appropriately.
-	if (.not. ALLOCATED(Vmat)) allocate(Vmat((n_dlc + n_cons), n_prims))
-	
+	if (.not. ALLOCATED(Vmat)) allocate(Vmat(n_prims, (n_dlc + n_cons)))
+
 	! The V matrix can be easily created. The constraint vector(s) are added first, followed by the original U matrix.
 	alloc_counter = 1
 	cons_counter = 1
 	U_counter = 1
 	do i=1, (n_dlc + n_cons)
 		if (alloc_counter .le. n_cons) then
-			Vmat(i,:) = cdat(cons_counter,:)
+			Vmat(:,i) = cdat(cons_counter,:)
 			alloc_counter = alloc_counter + 1
 			cons_counter = cons_counter + 1
 		else
-			Vmat(i,:) = Umat(U_counter,:)
+			Vmat(:,i) = Umat(:,U_counter)
 			alloc_counter = alloc_counter + 1
 			U_counter = U_counter + 1
 		end if
 	end do
-	
+
 	end subroutine gen_Vmat
 	
 	
@@ -137,35 +148,32 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, i, j, k, nvec
-	real(dp) :: work(n_prims), dnorm, scapro, tol, Vmat((n_dlc + n_cons), n_prims)
+	real(dp) :: work(n_prims), dnorm, dot_p, tol, fac
+	real(dp) :: Vmat(n_prims,(n_dlc + n_cons))
 	real(dp), parameter :: tolerance = 1.0D-10
 
 	! Start by initialising some values.
 	nvec = n_dlc + n_cons
-	
+
 	! Now begin the loop of orthogonalisation of vectors i=2, nvec.
-	do i=1, nvec
+	do i=2, nvec
 		work(:) = 0.0
 		! Make the ith vector orthogonal to vectors k=1, i-1.
 		do k=1, i-1
-			scapro = 0.0D0
+			dot_p = 0.0D0
 			do j=1, n_prims
-				scapro = scapro + Vmat(i,j)*Vmat(k,j)
+				dot_p = dot_p + Vmat(j,i)*Vmat(j,k)
 			end do
+			! Subtract the co-linear vectors to make vector i orthogonal to k=1,i-1.
 			do j=1, n_prims
-				work(j) = work(j) + Vmat(k,j)*scapro
+				Vmat(j,i) = Vmat(j,i) - (dot_p * Vmat(j,k))
 			end do
-		end do
-
-		! Now, subtract the collinear vector to make the ith vector orthogonal to k=1, i-1.
-		do j=1, n_prims
-			Vmat(i,j) = Vmat(i,j) - work(j)
 		end do
 
 		! Lastly, normalise the ith vector.
 		dnorm = 0.0
 		do j=1, n_prims
-			dnorm = dnorm + Vmat(i,j)*Vmat(i,j)
+			dnorm = dnorm + Vmat(j,i)*Vmat(j,i)
 		end do
 		if (ABS(dnorm) < tolerance) then
 			dnorm = 0.0D0
@@ -173,7 +181,7 @@ contains
 			dnorm = 1.0D0 / SQRT(dnorm)
 		end if
 		do j = 1, n_prims
-			Vmat(i,j) = Vmat(i,j)*dnorm
+			Vmat(j,i) = Vmat(j,i)*dnorm
 		end do
 	end do
 
@@ -191,7 +199,7 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, i
-	real(dp) :: work((n_dlc + n_cons), n_prims)
+	real(dp) :: work(n_prims,(n_dlc + n_cons))
 	real(dp), allocatable :: Vmat(:,:)
 
 	! Firstly, the V matrix is saved in work so that the V matrix can be appropriately deallocated and reallocated.
@@ -199,16 +207,16 @@ contains
 	
 	! Now, the V matrix is deallocated and reallocated with appropriate dimensions.
 	deallocate(Vmat)
-	allocate(Vmat(n_dlc, n_prims))
+	allocate(Vmat(n_prims, n_dlc))
 	
 	! The constraint(s) are now extracted from the working array and added to the back of the newly allocated Vmat.
 	do i=1, n_cons
-		Vmat((n_dlc - (i - 1)),:) = work(i,:)
+		Vmat(:,(n_dlc - (i - 1))) = work(:,i)
 	end do
 	
 	! Lastly, adding the active space to Vmat...
 	do i=1, (n_dlc - n_cons)
-		Vmat(i,:) = work(n_cons + i,:)
+		Vmat(:,i) = work(:,(n_cons + i))
 	end do
 
 	end subroutine move_cons
@@ -227,11 +235,11 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_cons, n_prims, i
-	real(dp) :: Vmat(n_dlc, n_prims), cdat_unproj(n_cons, n_prims)
+	real(dp) :: Vmat(n_prims, n_dlc), cdat_unproj(n_cons, n_prims)
 	
 	! The unprojected constraint(s) are simply put back into Vmat.
 	do i=1, n_cons
-		Vmat((n_dlc - (i - 1)),:) = cdat_unproj(i,:)
+		Vmat(:,(n_dlc - (i - 1))) = cdat_unproj(i,:)
 	end do
 	
 	end subroutine unproj_cons

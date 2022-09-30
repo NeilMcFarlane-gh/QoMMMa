@@ -169,7 +169,7 @@ contains
 	end subroutine gen_DLC
 	
 	
-	subroutine maintain_DLC(atom_num, n_dlc, coords, cdat)
+	subroutine maintain_DLC(atom_num, n_dlc, coords)
 	! Here, the DLC are maintained but not refreshed (i.e., the G matrix is not diagonalised!).
 	! All arrays used in the generation are deallocated so that they can be allocated appropriately again.
 	!
@@ -179,7 +179,7 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, i
-	real(dp) :: coords(atom_num * 3), cdat(ncon_prim, nprim)
+	real(dp) :: coords(atom_num * 3)
 	logical :: is_cons
 	
 	! First, (if necessary) deallocate all arrays used for DLC.
@@ -187,10 +187,22 @@ contains
 	if (ALLOCATED(Bmat_p)) deallocate(Bmat_p)
 	if (ALLOCATED(Bmat_dlc)) deallocate(Bmat_dlc)
 	if (ALLOCATED(dlc)) deallocate(dlc)
+	
+	! Now, check if there is any constraints...
+	is_cons = .False.
+	if (ncon_prim .gt. 0) then
+		is_cons = .True.
+	end if
 
 	! Now, call DLC subroutines to re-populate the primitive arrays based on the Cartesian coordinates.
 	call calc_prims(atom_num, nprim, prims, opt, coords, prim_list)
 	call gen_Bmat_prims(atom_num, nprim, opt, coords, prim_list, Bmat_p)
+	
+	! TESTING COMBINATORIAL CONSTRAINTS
+	!print *, prims(116)
+	!print *, prims(4), prims(116)
+	!print *, prims(4) - prims(116)
+	!print *, '________________________'
 
 	! The DLC are simply generated from linear combinations, and the Wilson B matrix converted to DLC subspace.
 	if (is_cons .eqv. .False.) then
@@ -228,16 +240,16 @@ contains
 	if (ALLOCATED(Gmat)) deallocate(Gmat)
 	if (ALLOCATED(Umat)) deallocate(Umat)
 	if (ALLOCATED(Rmat)) deallocate(Rmat)
-	
+
 	! Now, check if there is any constraints and deallocate the V matrix accordingly...
 	is_cons = .False.
-	if (ANY(cdat > 0.0)) then
+	if (ncon_prim .gt. 0) then
 		is_cons = .True.
 		if (ALLOCATED(Vmat)) then 
 			deallocate(Vmat)
 		end if
 	end if
-	
+
 	! Now, all the DLC subroutines can be called to reallocate the arrays.
 	call calc_prims(atom_num, nprim, prims, opt, coords, prim_list)
 	call gen_Bmat_prims(atom_num, nprim, opt, coords, prim_list, Bmat_p)
@@ -246,11 +258,11 @@ contains
 
 	! If there is not any constraints, then it is relatively simple as the DLC are simply generated from linear combinations, and the Wilson B matrix converted to DLC subspace.
 	if (is_cons .eqv. .False.) then
-
+	
 		! Generating delocalised internal coordinates...
 		call gen_DLC(atom_num, n_dlc, nprim, Umat, prims, dlc)
 		call gen_Bmat_DLC(atom_num, n_dlc, nprim, Bmat_p, Umat, Bmat_dlc)
-		
+
 	! If there are constraints, then the constraint must first be projected and then added to the active coordinate set.
 	! Then, the set is Gram-Schmidt orthogonalised to regain the 3N-6 set of coordinates which contains ncon_prim constraint vectors.
 	! These vectors can then be fixed in the optimisation and thus the constraint achieved.
@@ -268,7 +280,7 @@ contains
 		! Generating delocalised internal coordinates...
 		call gen_DLC(atom_num, n_dlc, nprim, Vmat, prims, dlc)
 		call gen_Bmat_DLC(atom_num, n_dlc, nprim, Bmat_p, Vmat, Bmat_dlc)
-		
+
 	end if
 
 	end subroutine refresh_DLC
@@ -373,7 +385,7 @@ contains
 		if (k == 1) then
 			dx_temp = dx_step
 			temp_x = dx_temp + x_1
-			call maintain_DLC(atom_num, n_dlc, temp_x, cdat)
+			call maintain_DLC(atom_num, n_dlc, temp_x)
 			dS_temp = target_dlc - dlc
 			dS_norm_save = NORM2(dS_temp)
 			dx_save = dx_temp
@@ -381,7 +393,7 @@ contains
 		else
 			dx_temp = dx_temp + dx_step
 			temp_x = dx_temp + x_1
-			call maintain_DLC(atom_num, n_dlc, temp_x, cdat)
+			call maintain_DLC(atom_num, n_dlc, temp_x)
 			dS_temp = target_dlc - dlc
 			dS_norm = NORM2(dS_temp)
 			if (dS_norm .lt. dS_norm_save) then
@@ -413,9 +425,9 @@ contains
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_prims, i, k, iter_counter, counter
 	real(dp) :: dq(n_dlc), q(n_dlc), q_2(n_dlc), x_1(3 * atom_num), x_2(3 * atom_num), init_x_2(3 * atom_num)
-	real(dp) :: BT_inv(n_dlc, (3 * atom_num)), temp_vec1(n_dlc), temp_vec2(n_dlc), temp_real
-	real(dp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2, old_dlc(n_dlc)
-	real(dp) :: init_dq(n_dlc), target_q(n_dlc), dx(3 * atom_num), Gmat_dlc(n_dlc,n_dlc)
+	real(dp) :: BT_inv(n_dlc, (3 * atom_num)), temp_vec1(n_dlc), temp_vec2(n_dlc), temp_real, saved_best_x(3 * atom_num)
+	real(dp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2, old_dlc(n_dlc), temp_norm
+	real(dp) :: init_dq(n_dlc), target_q(n_dlc), dx(3 * atom_num), Gmat_dlc(n_dlc,n_dlc), saved_best_dlc(n_dlc)
 	real(dp), allocatable :: temp_q(:)
 	logical :: convergence, is_cons
 	integer(i4b) :: IPIV(n_dlc), INFO
@@ -435,30 +447,26 @@ contains
 	old_dlc(:) = dlc(:)
 	target_q(:) = dlc(:) + init_dq(:)
 	iter_counter = 0
+	scale_by = 1.0
 
 	! Checking if there are any constraints...
 	is_cons = .False.
-	if (allocated(cdat) .eqv. .True.) then
+	if (ncon_prim .gt. 0) then
 		is_cons = .True.
 	end if
 	
-	do while (convergence .eqv. .FALSE.) 
+100	do while (convergence .eqv. .FALSE.) 
 		! The change in cartesian coordinates associated with the change in primitive internal coordinates is calculated.
 		dx(:) = 0.0
 		dx = MATMUL(TRANSPOSE(BT_inv), dq)
-		
-		! Save the first iteration just as if the algorithm fails, then this is probably the best guess.
-		if (iter_counter == 0) then
-			init_x_2 = x_1 + dx
-		end if
-		
+
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
 		xyz_rms_2 = RMSD_CALC(dx, x_1, (atom_num * 3))
 
 		! The new cartesian geometry is evaluated, the new primitive internal coordinate set, Wilson B matrix, and DLC are obtained.
 		x_2 = x_1 + dx
-		call maintain_DLC(atom_num, n_dlc, x_2, cdat)
-		
+		call maintain_DLC(atom_num, n_dlc, x_2)
+
 		! The Moore-Penrose inverse is constructed for the next iteration.
 		BT_inv(:,:) = 0.0
 		Gmat_dlc(:,:) = 0.0
@@ -469,16 +477,31 @@ contains
 		dq(:) = 0.0
 		dq = target_q - dlc
 		
-		! Now, if there are any constraints, the appropriate elements of the DLC should not change.
-		if (is_cons .eqv. .True.) then
-			dq(n_dlc - (ncon_prim - 1):n_dlc) = 0.0
+		! Now, check if the new change in DLC is larger than the original change. 
+		! If this is the case, divide the change by two and start the iterative procedure again.
+		! This is in place as large changes in DLC can result in an unstable transformation procedure.
+		if (MAXVAL(dq) .gt. MAXVAL(init_dq)) then
+			scale_by = scale_by * 0.5
+			dq = init_dq * scale_by
+			go to 100
 		end if
-
+	
 		! Now, the three exit conditions should be checked...
 		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
         ! The second ending condition for this transformation is when the difference in root-mean-square change in cartesians between iteration i and i+1 is less than 10^-12.
-        ! The third ending condition for this transformation is when the difference between the target DIC and the calculated DLC is less than 10^-6.
-		check = target_q - q
+        ! The third ending condition for this transformation is when the difference between the target DLC and the calculated DLC is less than 10^-6.
+		check = target_q - dlc
+		if (iter_counter .eq. 0) then
+			saved_best_dlc(:) = dlc(:)
+			temp_norm = NORM2(target_q - saved_best_dlc)
+			saved_best_x(:) = x_2(:)
+		else
+			if (ABS(temp_norm) .gt. ABS(NORM2(target_q - dlc))) then
+				saved_best_dlc(:) = dlc(:)
+				temp_norm = NORM2(target_q - saved_best_dlc)
+				saved_best_x(:) = x_2(:)
+			end if
+		end if
 		if (ABS(xyz_rms_2) < 1E-06) then
 			convergence = .TRUE.
 		else if (ABS(xyz_rms_2 - xyz_rms_1) < 1E-12) then
@@ -498,14 +521,16 @@ contains
 
 		! In some cases, cartesians cannot be solved, so an exit condition must exist for this case.
 		iter_counter = iter_counter + 1
-		if (iter_counter == 100) then
-			print *, "Error; could not solve cartesians from the change in primitive internal coordinates. &
-			& Saving the first evaluation as it's the best guess."
-			x_1(:) = init_x_2(:)
+		if (iter_counter == 10000) then
+			print *, "Error; could not solve cartesians from the change in delocalised internal coordinates. &
+			& The change in delocalised internal coordinates was probably too large. &
+			& Saving the most successful evaluation as it's probably the best guess."
+			dlc = saved_best_dlc
+			x_1(:) = saved_best_x(:)
 			exit
 		end if
 	end do
-	
+
 	! The new cartesian coordinates are saved.
 	x_2(:) = x_1(:)
 

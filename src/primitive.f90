@@ -16,7 +16,7 @@ contains
 	implicit none
 	integer(i4b) :: atom_num, to_generate(atom_num)
 	integer(i4b), allocatable :: prim_list_temp(:,:), prim_list(:,:)
-
+	
 	! The list of primitive internal coordinates is rather simple to define when every atom is connected to every atom.
 	prim_list_temp = COMBINATIONS_2(to_generate, atom_num)
 	allocate(prim_list(SIZE(prim_list_temp,1),4))
@@ -83,32 +83,12 @@ contains
 		r = ATOM_DISTANCE(coords_1, coords_2)
 		distances(i) = r
 	end do
-
-	! Now, an array containing the neighbours for each atom can be initialised.
-	! Here, a predefined cut-off determines whether two atoms are bonded or not.
-	! TO-DO : This should be based on the VdW radius so that larger atoms (e.g., Fe) can have neighbouring atoms.
+	
+	! Establish the array of neighbours to each atom. This is defined in (init)_geom1.xyz.
 	neighbours = 0
-	do i=1, SIZE(TC_list,1)
-		dist = distances(i)
-		if (dist .lt. cut_off) then
-			! Getting the correct numerical indice...
-			temp_indice = TC_list(i,1)
-			do m=1, atom_num
-				temp_indice2 = indices_save(m,1)
-				if (temp_indice == temp_indice2) then
-					coord_indice1 = indices_save(m,2)
-				end if
-			end do
-				
-			! If less than cut-off, then adding the neighbour...
-			do j=1, maxbond
-				neigh_pos = neighbours(coord_indice1,j)
-				if (neigh_pos .eq. 0) then
-					neighbours(coord_indice1,j) = TC_list(i,2)
-					exit
-				end if
-			end do
-		end if
+	do i=1, SIZE(to_generate)
+		temp_indice = to_generate(i)
+		neighbours(i,:) = bonds(temp_indice,:)
 	end do
 
 	! Due to the fact that the number of primitive internal coordinates is unknown at initial execution, the algorithm must be performed twice.
@@ -514,7 +494,7 @@ contains
 	real(dp) :: grad_r(3,2), grad_theta(3,3), grad_phi(3,4)
 	real(dp) :: coords_1(3), coords_2(3), coords_3(3), coords_4(3), coords(atom_num * 3)
 	real(dp), allocatable :: Bmat_p(:,:)
-	
+
 	! In order to get the appropriate coordinates, save an array which gives the list of indices for which primitives are to be generated accompanied with numerical order indices.
 	indices_save(:,1) = to_generate(:)
 	indices_save(:,2) = (/(i,i=1,atom_num,1)/)
@@ -670,7 +650,7 @@ contains
 	end subroutine gen_Bmat_prims
 
 
-	subroutine update_bfgs_p(atom_num, n_prims, hess, g2_p, g1_p, prims_2, prims_1) 
+	subroutine update_bfgs_p(atom_num, n_prims, hess, dg_p, prims_2, prims_1) 
 	! Here, the primtive hessian matrix is updated using the BFGS method.
 	! In the terminology in this subroutine, state 2 refers to the newly calculated values, and state 1 to the ones from the previous iteration.
 	!
@@ -684,11 +664,11 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims, i, j
-	real(dp) :: hess(n_prims, n_prims), g2_p(n_prims), g1_p(n_prims)
+	real(dp) :: hess(n_prims, n_prims), g2_p(n_prims), g1_p(n_prims), dg_p(n_prims)
 	real(dp) :: dg(n_prims), dq(n_prims), dhess(n_prims, n_prims), prims_2(n_prims), prims_1(n_prims), dgdq, dqHdq
 
 	! The changes associated with the gradient and coordinates from the current and previous iteration are calculated.
-	dg = g2_p - g1_p
+	dg = dg_p
 	dq = prims_2 - prims_1
 
 	! To ensure that values in the BFGS update do not become unreasonably large, some scaling can be required.
@@ -722,7 +702,7 @@ contains
 	end subroutine update_bfgs_p
 		
 		
-	subroutine gen_grad_cart_to_prim(atom_num, n_prims, Bmat_p, g, g_p)
+	subroutine gen_grad_cart_to_prim(atom_num, n_prims, Bmat_p_temp, g, g_p)
 	! Here, the gradient array in cartesian subspace is updated to primitive subspace.
 	!
 	! ARGUMENTS:    atom_num : Integer which represents the total number of atoms to be delocalised.
@@ -733,7 +713,7 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_prims
-	real(dp) :: Bmat_p(n_prims, (3 * atom_num)), g(atom_num * 3)
+	real(dp) :: Bmat_p_temp(n_prims, (3 * atom_num)), g(atom_num * 3)
 	real(dp), allocatable :: g_p(:)
 	real(dp) :: BT_inv(n_prims, (3 * atom_num)), Gmat(n_prims, n_prims)
 
@@ -742,9 +722,9 @@ contains
 	g_p(:) = 0.0
 	
 	! Using single value decomposition, the Moore-Penrose inverse is constructed and used to convert the gradient array.
-	Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
-	BT_inv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), Bmat_p)
-	g_p = MATMUL(BT_inv, g)
+	!Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
+	!BT_inv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), Bmat_p)
+	g_p = MATMUL(Bmat_p_temp, g)
 
 	end subroutine gen_grad_cart_to_prim
 	
@@ -765,8 +745,9 @@ contains
 	implicit none
 	integer(i4b) :: atom_num, n_prims, i, iter_counter, prim_list(n_prims, 4)
 	real(dp) :: dq(n_prims), q(n_prims), q_2(n_prims), x_1(3 * atom_num), x_2(3 * atom_num)
-	real(dp) :: BT_inv((3 * atom_num), n_prims)
-	real(dp) :: dq_actual(n_prims), check(n_prims), temp_check, xyz_rms_1, xyz_rms_2
+	real(dp) :: BT_inv(n_prims, (3 * atom_num)), init_x_2(3 * atom_num)
+	real(sp) :: saved_best_x(3 * atom_num), saved_best_q(n_prims)
+	real(dp) :: dq_actual(n_prims), check(n_prims), temp_check, xyz_rms_1, xyz_rms_2, temp_norm
 	real(dp) :: init_dq(n_prims), target_q(n_prims), dx(3 * atom_num), Gmat(n_prims, n_prims)
 	real(dp), allocatable :: temp_q(:), Bmat_p(:,:)
 	logical :: convergence
@@ -777,18 +758,24 @@ contains
 	call gen_Bmat_prims(atom_num, n_prims, opt, x_1, prim_list, Bmat_p)
 	Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
 	BT_inv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), Bmat_p)
-
+	
 	! Stashing some values for convergence criteria.
 	convergence = .FALSE.
 	xyz_rms_1 = 0
 	xyz_rms_2 = 0
+	iter_counter = 0
 	init_dq(:) = dq(:)
 	target_q(:) = q(:) + init_dq(:)
-
+	
+	! For some reason, multiplying by 0.5 makes it work???
+	! However, then for after the stationary point, the 0.5 actually multiplies by 0.5???
+	! TEMPORARY
+	dq = dq * 0.5
+	
 	do while (convergence .eqv. .FALSE.) 
 		! The change in cartesian coordinates associated with the change in primitive internal coordinates is calculated.
 		dx(:) = 0.0
-		dx = MATMUL(TRANSPOSE(BT_inv), dq)
+		dx = MATMUL(TRANSPOSE(Bmat_p), dq)
 
 		! The root-mean-square change is used as a convergence criteria, so it is evaluated.
 		xyz_rms_2 = RMSD_CALC(dx, x_1, (atom_num * 3))
@@ -796,38 +783,49 @@ contains
 		! The new cartesian geometry is evaluated, and the new primitive internal coordinate set and Wilson B matrix are obtained.
 		x_2 = x_1 + dx
 		q(:) = 0.0
-		Bmat_p(:,:) = 0.0
+		!Bmat_p(:,:) = 0.0
 		if (ALLOCATED(temp_q)) then 
 			deallocate(temp_q)
 		end if
 		call calc_prims(atom_num, n_prims, temp_q, opt, x_2, prim_list) 
-		call gen_Bmat_prims(atom_num, n_prims, opt, x_2, prim_list, Bmat_p)
+		!call gen_Bmat_prims(atom_num, n_prims, opt, x_2, prim_list, Bmat_p)
 		q(:) = temp_q(:)
-		
+	
 		! The Moore-Penrose inverse is constructed for the next iteration.
-		BT_inv(:,:) = 0.0
-		Gmat(:,:) = 0.0
-		Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
-		BT_inv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), Bmat_p)
+		!BT_inv(:,:) = 0.0
+		!Gmat(:,:) = 0.0
+		!Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
+		!BT_inv = MATMUL(SVD_INVERSE(Gmat, n_prims, n_prims), Bmat_p)
 
         ! The change in primitive internals for the next iteration is evaluated, and any which do not change in the original change in primitive internals is set to zero.
 		! This mitigates any risk of primitive internal coordinates changing which should remain constant, thus making the interpolation linear.
 		dq(:) = 0.0
-		dq = (target_q - q)
+		dq = target_q - q
 
 		! Now, the three exit conditions should be checked...
 		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
         ! The second ending condition for this transformation is when the difference in root-mean-square change in cartesians between iteration i and i+1 is less than 10^-12.
         ! The third ending condition for this transformation is when the difference between the target DIC and the calculated DLC is less than 10^-6.
 		check = target_q - q
-		if (ABS(xyz_rms_2) < 1E-06) then
+		if (iter_counter .eq. 0) then
+			saved_best_q(:) = q(:)
+			temp_norm = NORM2(target_q - saved_best_q)
+			saved_best_x(:) = x_2(:)
+		else
+			if (ABS(temp_norm) .gt. ABS(NORM2(target_q - q))) then
+				saved_best_q(:) = q(:)
+				temp_norm = NORM2(target_q - q)
+				saved_best_x(:) = x_2(:)
+			end if
+		end if
+		if (ABS(xyz_rms_2) < 1E-6) then
 			convergence = .TRUE.
 		else if (ABS(xyz_rms_2 - xyz_rms_1) < 1E-12) then
 			convergence = .TRUE.
 		end if
 		do i=1, SIZE(check)
 			temp_check = check(i)
-			if (ABS(temp_check) < 1E-12) then
+			if (ABS(temp_check) < 1E-6) then
 				convergence = .TRUE.
 			end if
 		end do
@@ -839,7 +837,11 @@ contains
 		! In some cases, cartesians cannot be solved, so an exit condition must exist for this case.
 		iter_counter = iter_counter + 1
 		if (iter_counter == 1000) then
-			print *, "Error; could not solve cartesians from the change in primitive internal coordinates."
+			print *, "Error; could not solve cartesians from the change in primitive internal coordinates. &
+			& The change in primitive internal coordinates was probably too large. &
+			& Saving the most successful evaluation as it's probably the best guess."
+			q = saved_best_q
+			x_1(:) = saved_best_x(:)
 			exit
 		end if
 	end do

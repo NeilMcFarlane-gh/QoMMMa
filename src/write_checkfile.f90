@@ -79,22 +79,26 @@ do img_num=1,nimg
 	write(unit=8,fmt='(2I6, F10.2)') coordtype
 	write(unit=8,fmt='(A)') "If DLC are used, the type of primitive internal coordinates used to generate the DLC"
 	write(unit=8,fmt='(2I6, F10.2)') primtype
+	write(unit=8,fmt='(A)') "Then the number of cartesian constraints and the type (1=Harmonic or 2=tanh)"
+	write(unit=8,fmt='(2I6)') ncon_cart, kcnstyp
+	write(unit=8,fmt='(A)') "Then the number of primitive internal coordinate constraints"
+	write(unit=8,fmt='(2I6)') ncon_prim
 	if (coordtype .eq. 1) then
 		write(unit=8,fmt='(A)') "Then the number of primitive internal coordinates and their definition."
 		write(unit=8,fmt='(I6)') nprim
 		do i = 1, nprim
 			write (unit=8,fmt='(4I6,3X)') (prim_list(i,j),j=1,4)
 		end do
-		write(unit=8,fmt='(A)') "Then the number of delocalised internal coordinates and their transformation matrix (U-Matrix)."
+		write(unit=8,fmt='(A)') "Then the number of delocalised internal coordinates and their transformation matrix."
 		write(unit=8,fmt='(I6)') ndlc
 		do i = 1, nprim
-			write (unit=8,fmt=*) (Umat(i,j),j=1,ndlc)
+			if (ncon_prim .eq. 0) then
+				write (unit=8,fmt=*) (Umat(i,j),j=1,ndlc)
+			else if (ncon_prim .gt. 0) then
+				write (unit=8,fmt=*) (Vmat(i,j),j=1,ndlc)
+			end if
 		end do
 	end if
-	write(unit=8,fmt='(A)') "Then the number of cartesian constraints and the type (1=Harmonic or 2=tanh)"
-	write(unit=8,fmt='(2I6)') ncon_cart, kcnstyp
-	write(unit=8,fmt='(A)') "Then the number of primitive internal coordinate constraints"
-	write(unit=8,fmt='(2I6)') ncon_prim
 	write(unit=8,fmt='(A)') "Then the list of which atoms are QM:"
 	do i = 1, nq
 		 write (unit=8,fmt='(I6,3X,A2)') qm(i),qlabel(i)
@@ -132,8 +136,12 @@ do img_num=1,nimg
 		write(unit=8,fmt='(A)') "Then (in a new line) the atoms to which the constraint should apply."
 		if (ncon_prim.gt.0) then
 		   do i=1,ncon_prim
-				write(unit=8,fmt='(F10.4)') cnsdq_p(i)
-				write(unit=8,fmt='(4I6)') (cnsat_p(i,j),j=1,4)
+				write(unit=8,fmt='(A,I6,A)') "The number of shaling coefficients for constraint number ", i, ' is...'
+				write(unit=8,fmt='(I6)') cns_n_coeff_p(i)
+				write(unit=8,fmt='(A)') "Now what are the details of the primitive internal coordinate linear combination constraint..."
+				do j=1,cns_n_coeff_p(i)
+					write(unit=8,fmt='(F10.2,4I6)') cnscoeff_p(i,j), (cnsat_p(i,j,k),k=1,4)
+				end do
 		   end do
 		end if
 	end if
@@ -159,6 +167,14 @@ do img_num=1,nimg
 	write(unit=8,fmt='(3F12.6)') (xopt(i),i=1,noptx)
 	write(unit=8,fmt='(A)') "Gradient at the previous step:"
 	write(unit=8,fmt='(3F12.6)') (optg(i),i=1,noptx)
+	if (coordtype .eq. 1) then
+		write(unit=8,fmt='(A)') "Primitive internal coordinates at the previous step:"
+		write(unit=8,fmt=*) (prims_save(i),i=1,nprim)
+		write(unit=8,fmt='(A)') "Primitive Wilson B matrix at the previous step:"
+		do i=1, nprim
+			write(unit=8,fmt=*) (Bmat_p_save(i,j),j=1,ndlc)
+		end do
+	end if
 	write(unit=8,fmt='(A)') "Approximate Inverse Hessian at the previous step (lower half!):"
 	if (coordtype .eq. 0) then
 		do i = 1, noptx
