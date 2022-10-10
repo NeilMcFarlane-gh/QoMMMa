@@ -242,7 +242,7 @@ def SE_get_tangent(frontier_dir, driving_coords, usrdir):
                 zero_count += 1
         
         if (zero_count == 2): # Bond
-            tangent.append(0.05 * direction) # Angstroms...
+            tangent.append(0.1 * direction) # Angstroms...
         elif (zero_count == 1): # Angle
             tangent.append(0.0872665 * direction) # Radians (5 deg)...
         elif (zero_count == 0): # Dihedral torsion
@@ -282,7 +282,7 @@ def SE_get_final_tangent(current_nodes, driving_coords, usrdir):
                 zero_count += 1
         
         if (zero_count == 2): # Bond
-            tangent.append(0.05 * direction)# * current_nodes) # Angstroms...
+            tangent.append(0.1 * direction)# * current_nodes) # Angstroms...
         elif (zero_count == 1): # Angle
             tangent.append(0.0872665 * direction)# * current_nodes) # Radians (5 deg)...
         elif (zero_count == 0): # Dihedral torsion
@@ -736,7 +736,7 @@ def get_tangents_opt(node_dirs, usrdir, driving_coords = None):
             for i in range(0,n_prims):
                 p1 = prims_i[i]
                 p2 = prims_j[i]
-                p = p1 - p2
+                p = p2 - p1
                 tangent_temp.append(p)
             
             # If a given primitive is below a certain threshold, then it is set to zero and hence not constrained in the Fortran optimisation.
@@ -930,7 +930,7 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
     
     # To equally respace the nodes, the tangent between reactant and product nodes must first be obtained.
     nodeR_dir = node_dirs[1]
-    nodeP_dir = node_dirs[-2]
+    nodeP_dir = node_dirs[-1]
 
     # Read the primitive definitions and values for the reactant node.
     dir_r = nodeR_dir + '/jobfiles/'
@@ -955,31 +955,25 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
         for i in range(0,n_prims):
             prims_p.append(float(pr.readline()))
             prim_list_p.append(pr_ls.readline())  
-    print(prims_r[-1])
-    print(prims_p[-1])
+
     # Find the overall tangent which the nodes will be spaced along.
+    # If the change in primitive internal coordinates is not particularly great, then do not space the node along this coordinate.
     total_tangent = []
+    total_tangent_prims = []
     for i in range(0,n_prims):
         p1 = prims_r[i]
         p2 = prims_p[i]
         p = p1 - p2
-        print(p1)
-        print(p2)
-        print(p)
-        total_tangent.append(p)
-        print('______')
-    import sys; sys.exit()
-    #FROM HERE BELOW....
-    # Need to include the comparison of what the current prims are for node i against the tangent they should be spaced along.
-    
-    prim_list = prim_list_r
-    tangent_prims_list = []
-    tangent_list = []
-    for counter,tang in enumerate(total_tangent):
-        if (abs(tang) > 1E-2):
-            tangent_prims_list.append(prim_list[counter])
-            tangent_list.append(tang)
-            
+        if (abs(p) > 0.01):
+            total_tangent.append(p)  
+        else:
+            total_tangent.append(0.0)
+        total_tangent_prims.append(prim_list_r[i])
+        
+    # Initialise the starting point for the primitive internal coordinates which the reparameterisation will occur across.
+    # This array is maintained as the generation of qommma.in files proceeds.
+    starting_prims = prims_r
+        
     # Now, new qommma.in files are created for each of the node directories so that the string can be reparameterised.
     for counter,dir in enumerate(node_dirs):
         if not ("nodeR" or "nodeP") in dir:
@@ -995,70 +989,45 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
                     n_prims = int(pr.readline())
                     for i in range(1,n_prims):
                         prims_i.append(float(pr.readline()))
-        
-            # Get the primitive internal coordinates of the i-1 node.
-            dir_i_1 = node_dirs[counter-1] + '/jobfiles/'
-            prims_i_1 = []
-            os.chdir(dir_i_1)
-            with open("prims", 'r') as pr:
-                    n_prims = int(pr.readline())
-                    for i in range(1,n_prims):
-                        prims_i_1.append(float(pr.readline()))
-
-            # The primitive internal coordinates for the ith node should be equal to the i-1 node's internal coordinates + total_tangent.
-            # This criteria is checked, and then the ith node reparameterised within some tolerence.
-            check = []
-            for i1,i2 in zip(prims_i_1, total_tangent):
-                i3 = i1 + i2
-                check.append(i3)
-            check_2 = []
-            for j1,j2 in zip(check, prims_i):
-                j3 = j2 - j1
-                check_2.append(j3)
+                        
+            # Generate the primitive internal coordinates from reparameterisation.
+            reparam_prims = starting_prims + (total_tangent / total_nodes)
+            
+            # Now, compare the actual primitives (prims_i) and the primitives generated by reparameterisation (reparam_prims).
+            # If the difference between them is large enough, then include in the reparameterisation.
             tangent_prims_list = []
             tangent_list = []
-            for counter_i,tang in enumerate(check_2):
-                if (abs(tang) > 1E-2):
-                    tangent_prims_list.append(prim_list[counter_i])
-                    tangent_list.append(tang)
+            for i in range(0,n_prims):
+                p1 = prims_i[i]
+                p2 = reparam_prims[i]
+                p = p1 - p2
+                if (abs(p) > 0.01):
+                    tangent_prims_list.append(prim_list_r[i])
+                    tangent_list.append(p) 
                         
             # Prepare the new input prim_constrain_lst for the given qommma.in using the tangent and the primitive internal coordinates.
             # In this case, there is no step to be taken because we are in the optimisation phase.
-            prim_constrain_lst = []
+            prim_displacement_lst = []
             for prim,tang in zip(tangent_prims_list,tangent_list):
                 prim.replace("\n","")
                 prim = prim.split()
                 dq = tang
                 to_append = (dq,) + (prim,)
-                prim_constrain_lst.append(to_append)
+                prim_displacement_lst.append(to_append)
             
             # Now, the new qommma.in file in the new directory is modified to include the new tangent and the gsmphase.
-            first_node_cons = True
-            first_node_type = True
-            first_node_ncon = True
-            first_node_phase = True
             inpf_d = destination + '/qommma.in'
             with open(inpf_d, 'r') as file:
                 inp_data = file.readlines()
             for line_num,line in enumerate(inp_data):
                 if "prim_constrain_lst" in line:
-                    inp_data[line_num] = "prim_constrain_lst=" + str(prim_constrain_lst) + '\n'
-                    first_node_cons = False
-                if "gsmphase" in line: 
-                    inp_data[line_num] = "gsmphase='reparam'\n"
-                    first_node_phase = False
-                if "ncon_prim" in line:
-                    inp_data[line_num] = "ncon_prim=" + str(len(tangent_list)) + '\n'
-                    first_node_ncon = False
+                    inp_data[line_num] = "prim_constrain_lst='None'" + '\n'
+                if "prim_coeff_lst" in line:
+                    inp_data[line_num] = "prim_coeff_lst='None'" + '\n'
+                if "prim_displacement_lst" in line:
+                    inp_data[line_num] = "prim_displacement_lst=" + str(prim_displacement_lst) + '\n'
+                if "disp_prim" in line:
+                    inp_data[line_num] = "disp_prim=" + str(len(tangent_list)) + '\n'
             with open(inpf_d, 'w') as file:
-                file.writelines(inp_data)
-                if first_node_cons == True:
-                    file.write('\n')
-                    file.write("prim_constrain_lst=" + str(prim_constrain_lst) + '\n')
-                if first_node_ncon == True:
-                    file.write('\n')
-                    file.write("ncon_prim=" + str(len(tangent_list)) + '\n')            
-                if first_node_phase == True:
-                    file.write('\n')
-                    file.write("gsmphase='reparam'\n")    
+                file.writelines(inp_data) 
         

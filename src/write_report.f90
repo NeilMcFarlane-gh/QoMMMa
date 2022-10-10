@@ -70,11 +70,11 @@ do img_num=1,nimg
 		write (unit=8,fmt=100) "Maximum gradient element:",conv(4),tolgmax_org,convs(4)
 		write (unit=8,fmt=100) "RMS gradient element:",conv(5),tolgrms_org,convs(5)
 	else if (gsmphase .eq. 1) then
-		write (unit=8,fmt=100) "Change in energy:",conv(1),(tolde*25),convs(1)
-		write (unit=8,fmt=100) "Maximum change of X:",conv(2),(toldxmax*5),convs(2)
-		write (unit=8,fmt=100) "RMS change of X:",conv(3),(toldxrms*5),convs(3)
-		write (unit=8,fmt=100) "Maximum gradient element:",conv(4),(tolgmax*5),convs(4)
-		write (unit=8,fmt=100) "RMS gradient element:",conv(5),(tolgrms*5),convs(5)
+		write (unit=8,fmt=100) "Change in energy:",conv(1),(tolde*4),convs(1)
+		write (unit=8,fmt=100) "Maximum change of X:",conv(2),(toldxmax*2),convs(2)
+		write (unit=8,fmt=100) "RMS change of X:",conv(3),(toldxrms*2),convs(3)
+		write (unit=8,fmt=100) "Maximum gradient element:",conv(4),(tolgmax*2),convs(4)
+		write (unit=8,fmt=100) "RMS gradient element:",conv(5),(tolgrms*2),convs(5)
 	else
 		write (unit=8,fmt=100) "Change in energy:",conv(1),tolde,convs(1)
 		write (unit=8,fmt=100) "Maximum change of X:",conv(2),toldxmax,convs(2)

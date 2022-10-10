@@ -34,10 +34,8 @@ real(dp),allocatable :: fulloea(:),fulloeb(:),ga(:),gb(:),optga(:),optgb(:)
 real(dp),allocatable :: fulloptga(:,:),fulloptgb(:,:)
 real(dp) :: qea,qeb,ea,eb,oea,oeb
 
-real(dp) :: scale_by
-
 real(dp), parameter :: hart_kcal = 627.5095d0
-real(dp), parameter :: stpmax_dlc = 0.001
+real(dp), parameter :: stpmax_dlc = 0.1
 real(dp), parameter :: stpmax_cart = 0.1
 integer(i4b), parameter :: maxcnsat_cart = 10 ! maximum constraint of 10 atoms
 integer(i4b), parameter :: maxcnsat_dlc = 10  ! maximum constraint of 10 primitive internal coordindates

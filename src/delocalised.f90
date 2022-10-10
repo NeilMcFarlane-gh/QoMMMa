@@ -197,12 +197,6 @@ contains
 	! Now, call DLC subroutines to re-populate the primitive arrays based on the Cartesian coordinates.
 	call calc_prims(atom_num, nprim, prims, opt, coords, prim_list)
 	call gen_Bmat_prims(atom_num, nprim, opt, coords, prim_list, Bmat_p)
-	
-	! TESTING COMBINATORIAL CONSTRAINTS
-	!print *, prims(116)
-	!print *, prims(4), prims(116)
-	!print *, prims(4) - prims(116)
-	!print *, '________________________'
 
 	! The DLC are simply generated from linear combinations, and the Wilson B matrix converted to DLC subspace.
 	if (is_cons .eqv. .False.) then
@@ -424,9 +418,9 @@ contains
 	
 	implicit none
 	integer(i4b) :: atom_num, n_dlc, n_prims, i, k, iter_counter, counter
-	real(dp) :: dq(n_dlc), q(n_dlc), q_2(n_dlc), x_1(3 * atom_num), x_2(3 * atom_num), init_x_2(3 * atom_num)
+	real(dp) :: dq(n_dlc), q(n_dlc), q_2(n_dlc), x_1(3 * atom_num), x_2(3 * atom_num), init_x_1(3 * atom_num), init_init_dq(n_dlc)
 	real(dp) :: BT_inv(n_dlc, (3 * atom_num)), temp_vec1(n_dlc), temp_vec2(n_dlc), temp_real, saved_best_x(3 * atom_num)
-	real(dp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2, old_dlc(n_dlc), temp_norm
+	real(dp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2, old_dlc(n_dlc), temp_norm, scale_by
 	real(dp) :: init_dq(n_dlc), target_q(n_dlc), dx(3 * atom_num), Gmat_dlc(n_dlc,n_dlc), saved_best_dlc(n_dlc)
 	real(dp), allocatable :: temp_q(:)
 	logical :: convergence, is_cons
@@ -436,6 +430,7 @@ contains
     ! Since cartesians are rectilinear and internal coordinates are curvilinear, a simple transformation cannot be used.
     ! Instead, an iterative transformation procedure must be used.
     ! The expression G^(-1)* B is initialised as it is used to convert between coordinate systems.
+	call maintain_DLC(atom_num, n_dlc, x_1)
 	Gmat_dlc = MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc))
 	BT_inv = MATMUL(SVD_INVERSE(Gmat_dlc, n_dlc, n_dlc), Bmat_dlc)
 
@@ -443,7 +438,9 @@ contains
 	convergence = .FALSE.
 	xyz_rms_1 = 0
 	xyz_rms_2 = 0
+	init_x_1(:) = x_1(:)
 	init_dq(:) = dq(:)
+	init_init_dq(:) = init_dq(:)
 	old_dlc(:) = dlc(:)
 	target_q(:) = dlc(:) + init_dq(:)
 	iter_counter = 0
@@ -466,6 +463,13 @@ contains
 		! The new cartesian geometry is evaluated, the new primitive internal coordinate set, Wilson B matrix, and DLC are obtained.
 		x_2 = x_1 + dx
 		call maintain_DLC(atom_num, n_dlc, x_2)
+		
+		! The transformation can become unstable with large changes in DLC.
+		! In these cases, the first evaluation is probably the best guess as it will be in the right direction (at least).
+		if (iter_counter .eq. 0) then
+			saved_best_dlc(:) = dlc(:)
+			saved_best_x(:) = x_2(:)
+		end if
 
 		! The Moore-Penrose inverse is constructed for the next iteration.
 		BT_inv(:,:) = 0.0
@@ -476,32 +480,12 @@ contains
         ! The change in primitive internals for the next iteration is evaluated.
 		dq(:) = 0.0
 		dq = target_q - dlc
-		
-		! Now, check if the new change in DLC is larger than the original change. 
-		! If this is the case, divide the change by two and start the iterative procedure again.
-		! This is in place as large changes in DLC can result in an unstable transformation procedure.
-		if (MAXVAL(dq) .gt. MAXVAL(init_dq)) then
-			scale_by = scale_by * 0.5
-			dq = init_dq * scale_by
-			go to 100
-		end if
-	
+
 		! Now, the three exit conditions should be checked...
 		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
         ! The second ending condition for this transformation is when the difference in root-mean-square change in cartesians between iteration i and i+1 is less than 10^-12.
         ! The third ending condition for this transformation is when the difference between the target DLC and the calculated DLC is less than 10^-6.
 		check = target_q - dlc
-		if (iter_counter .eq. 0) then
-			saved_best_dlc(:) = dlc(:)
-			temp_norm = NORM2(target_q - saved_best_dlc)
-			saved_best_x(:) = x_2(:)
-		else
-			if (ABS(temp_norm) .gt. ABS(NORM2(target_q - dlc))) then
-				saved_best_dlc(:) = dlc(:)
-				temp_norm = NORM2(target_q - saved_best_dlc)
-				saved_best_x(:) = x_2(:)
-			end if
-		end if
 		if (ABS(xyz_rms_2) < 1E-06) then
 			convergence = .TRUE.
 		else if (ABS(xyz_rms_2 - xyz_rms_1) < 1E-12) then
@@ -524,7 +508,7 @@ contains
 		if (iter_counter == 10000) then
 			print *, "Error; could not solve cartesians from the change in delocalised internal coordinates. &
 			& The change in delocalised internal coordinates was probably too large. &
-			& Saving the most successful evaluation as it's probably the best guess."
+			& Saving the most first evaluation as it's probably the best guess."
 			dlc = saved_best_dlc
 			x_1(:) = saved_best_x(:)
 			exit

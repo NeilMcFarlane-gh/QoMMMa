@@ -184,7 +184,6 @@ if (coordtype .eq. 0) then
 else if (coordtype .eq. 1) then
 	do img_num=1,nimg
 		! Initialise the maximum step.
-		print *, stpmax_dlc
 		stpmax = stpmax_dlc
 		stpmx = stpmax_dlc * REAL(noptx,sp)
 		
@@ -248,7 +247,7 @@ else if (coordtype .eq. 1) then
 			! Steepest descent.#
 			!###################
 			
-			! Scaled by 0.7 to avoid particularly large steps.
+			! Evaluate the step in DLC.
 			ChgeS = optg_dlc * 0.7 * (-1)
 
 			! Now, if there are any constraints, given elements of the DLC should not change.
@@ -316,7 +315,7 @@ else if (coordtype .eq. 1) then
 			ChgeX = newx(:) - temp_x(:)
 			
 			! Lastly, using the BFGS method, the primitive hessian is updated.
-			dg_p = (optg_p * scale_by) - og_p
+			dg_p = optg_p - og_p
 			call update_bfgs_p(nopt, nprim, h_p, dg_p, prims, prims_save)
 		end if
 		
@@ -349,19 +348,19 @@ else if (coordtype .eq. 1) then
 			end if
 		! When in the growth phase of the string, the convergence criteria are loosened.
 		else if (gsmphase .eq. 1) then
-			if (abs(conv(1)) .lt. (tolde * 25)) then
+			if (abs(conv(1)) .lt. (tolde * 4)) then
 				 convs(1)="YES" ; i=i+1
 			end if
-			if (conv(2) .lt. (toldxmax * 5)) then
+			if (conv(2) .lt. (toldxmax * 2)) then
 				 convs(2)="YES" ; i=i+1
 			end if
-			if (conv(3) .lt. (toldxrms * 5)) then
+			if (conv(3) .lt. (toldxrms * 2)) then
 				 convs(3)="YES" ; i=i+1
 			end if
-			if (conv(4) .lt. (tolgmax * 5)) then
+			if (conv(4) .lt. (tolgmax * 2)) then
 				 convs(4)="YES" ; i=i+1
 			end if
-			if (conv(5) .lt. (tolgrms * 5)) then
+			if (conv(5) .lt. (tolgrms * 2)) then
 				 convs(5)="YES" ; i=i+1
 			end if
 		else
