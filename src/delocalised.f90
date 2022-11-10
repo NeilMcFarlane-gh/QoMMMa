@@ -403,7 +403,7 @@ contains
 	
 	end subroutine DLC_to_cart_old
 	
-	subroutine DLC_to_cart(atom_num, n_dlc, n_prims, dq, q, x_1, x_2)
+	subroutine DLC_to_cart(atom_num, n_dlc, n_prims, dq, q, x_1, x_2, INFO)
 	! Here, the primitive internal coordinates are converted to cartesian coordinates using an iterative procedure.
 	! This is used to generate the cartesian coordinates following a linear interpolation in primitive internal coordinates.
 	!
@@ -438,6 +438,7 @@ contains
 	convergence = .FALSE.
 	xyz_rms_1 = 0
 	xyz_rms_2 = 0
+	INFO = 0
 	init_x_1(:) = x_1(:)
 	init_dq(:) = dq(:)
 	init_init_dq(:) = init_dq(:)
@@ -452,7 +453,7 @@ contains
 		is_cons = .True.
 	end if
 	
-100	do while (convergence .eqv. .FALSE.) 
+	do while (convergence .eqv. .FALSE.) 
 		! The change in cartesian coordinates associated with the change in primitive internal coordinates is calculated.
 		dx(:) = 0.0
 		dx = MATMUL(TRANSPOSE(BT_inv), dq)
@@ -509,6 +510,7 @@ contains
 			print *, "Error; could not solve cartesians from the change in delocalised internal coordinates. &
 			& The change in delocalised internal coordinates was probably too large. &
 			& Saving the most first evaluation as it's probably the best guess."
+			INFO = 1
 			dlc = saved_best_dlc
 			x_1(:) = saved_best_x(:)
 			exit

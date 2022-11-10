@@ -242,7 +242,7 @@ def SE_get_tangent(frontier_dir, driving_coords, usrdir):
                 zero_count += 1
         
         if (zero_count == 2): # Bond
-            tangent.append(0.1 * direction) # Angstroms...
+            tangent.append(0.05 * direction) # Angstroms...
         elif (zero_count == 1): # Angle
             tangent.append(0.0872665 * direction) # Radians (5 deg)...
         elif (zero_count == 0): # Dihedral torsion
@@ -282,13 +282,15 @@ def SE_get_final_tangent(current_nodes, driving_coords, usrdir):
                 zero_count += 1
         
         if (zero_count == 2): # Bond
-            tangent.append(0.1 * direction)# * current_nodes) # Angstroms...
+            tangent.append(0.05 * direction)# * current_nodes) # Angstroms...
         elif (zero_count == 1): # Angle
             tangent.append(0.0872665 * direction)# * current_nodes) # Radians (5 deg)...
         elif (zero_count == 0): # Dihedral torsion
             tangent.append(0.0872665 * direction)# * current_nodes) # Radians (5 deg)...
     
-    #TEMPORARY!!
+    ######################################################################
+    # TEMPORARY TEST FIX - simply makes the reaction pathway symmetrical.#
+    ######################################################################
     total_new = current_nodes
     return tangent, total_new
     
@@ -381,7 +383,7 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
             first_node_disp_n = False
         if "maxcycle" in line:
-            inp_data[line_num] = 'maxcycle=15\n'
+            inp_data[line_num] = 'maxcycle=5\n'
             first_node_maxcyc = False
         if "gsmphase" in line: 
             inp_data[line_num] = "gsmphase='growth'\n"
@@ -487,7 +489,7 @@ def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, driving_coords,
             if "disp_prim" in line:
                 inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
             if "maxcycle" in line:
-                inp_data[line_num] = 'maxcycle=15\n'
+                inp_data[line_num] = 'maxcycle=5\n'
             if "gsmphase" in line: 
                 inp_data[line_num] = "gsmphase='growth'\n"
             if "gsmtype" in line:

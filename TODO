@@ -25,7 +25,6 @@ Merge gsm.in and qommma.in into one file
 Remove all the GSM running code from qommma.py and add to functions SE_gsm() and DE_gsm() in gsmutil.py
 
 
-
 LATER:
 
 Integrate all the DLC work into MECP code
@@ -36,5 +35,9 @@ Remove NEB from F90 and create nebutil.py like gsmutil.py
 Integrate all the DLC work into NEB code
 
 Create adiabatic mapping procedures in adiabutil.py like gsmutil.py and nebutil.py
+
+Create single-point energy evaluation protocols
+
+Create automatic generation of driving coordinates: machine learning? chemical networks? collective variables?
 
 Update manual, readme, qomdoc

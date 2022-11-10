@@ -1266,6 +1266,9 @@ if __name__ == "__main__":
             # If all are converged, then the optimisation-phase is complete.
             # Otherwise, reparameterise the string and optimise all nodes again.
             is_converged = gsmutil.check_convergence(all_nodes, current_nodes, basedir)
+            ###################################################
+            import sys; sys.exit ######## TEMPORARY ###########
+            ###################################################
             if (all(is_converged) and (reparam_counter > 0)) is True: # we should at least reparameterise once due to nodes later in the string being not evenly spaced...
                 gsmutil.gsmlog('The optimisation phase is complete!', basedir)
                 is_optimised = True

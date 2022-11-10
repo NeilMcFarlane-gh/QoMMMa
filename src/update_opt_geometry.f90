@@ -5,9 +5,10 @@ implicit none
 
 ! Specially Adapted BFGS routine from Numerical Recipes
 
-integer(i4b) :: I,j, img_num, k
+integer(i4b) :: I,j, img_num, k, INFO
 real(dp) :: DelG(noptx), HDelG(noptx), ChgeX(noptx), ChgeS(ndlc), DelX(noptx), w(noptx), dg_p(nprim)
 real(dp) :: fac, fad, fae, sumdg, sumdx, stpl, lstep, stpmax, stpmx, maxchgx, temp_x(noptx), temp_dlc
+real(dp) :: init_x(noptx), init_dS(ndlc), scale_by
 real(dp),parameter ::  eps = 1.d-6  ! eps = 1.d-5 ! eps = 3.d-8 !
 logical :: is_cons
 
@@ -267,9 +268,12 @@ else if (coordtype .eq. 1) then
 				write (*,*)"Changing (2) Step Length"
 			END IF
 
-			!The new DLC and, more importantly, cartesian coordinates can now be evaluated.
+			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx)
+			scale_by = 1.0
+			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, INFO)
+			
+			! Lastly, calculate the new primitive internal coordinates.
 			call calc_prims(nopt, nprim, prims, opt, newx, prim_list)
 			ChgeX = newx(:) - temp_x(:)
 		else
@@ -311,7 +315,7 @@ else if (coordtype .eq. 1) then
 
 			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
-			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx)
+			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, INFO)
 			ChgeX = newx(:) - temp_x(:)
 			
 			! Lastly, using the BFGS method, the primitive hessian is updated.
