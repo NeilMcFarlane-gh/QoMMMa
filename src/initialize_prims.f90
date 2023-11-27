@@ -24,9 +24,11 @@ if (coordtype .eq. 1) then
 		k = (3 * (opt(i)-1)) + 1
 		xopt(j:j+2) = x(k:k+2)
 	end do
+	j = (3 * (nq-1)) + 1
 	do i=1, nl
-		j = (3 * nq) + i
-		xopt(j:j+2) = xl(i:i+2)
+		k = (3 * (i-1)) + 1
+		j = j + 3
+		xopt(j:j+2) = xl(k:k+2)
 	end do
 
 	! Now, the primitive internal coordinates can be defined.
@@ -35,6 +37,11 @@ if (coordtype .eq. 1) then
 	else if (primtype .eq. 1) then ! Full definition
 		call define_prims_full(nopt, opt, xopt, prim_list)	
 	end if
+	
+	!do i=1, SIZE(prim_list,1)
+	!	print *, prim_list(i,:)
+	!end do
+	!stop
 	
 	! Lastly, add any additional primitive internal coordinates which have not been found automatically.
 	call add_primitives()

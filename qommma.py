@@ -665,6 +665,12 @@ def qmmm(usrdir, cwd, cln):
                 elif job.lower() == 'mecp':
                     from orcautil import mecp_orcamain
                     mecp_orcamain(imn, cwd, usrdir, qmjob_prefix, nqm, nlink, cln, qmkey, cha_mul1, cha_mul2, extra_basis, orca_head)
+                    
+            # xTB QM job.
+            elif qmcode.lower() == 'xtb':
+                # Note that MECP and frequency calculations are not possible in the current implementation of xTB within QoMMMa.
+                from xtbutil import qmxtbmain
+                qmxtbmain(imn, cwd, usrdir, qmjob_prefix, nqm, nlink, cln, cha_mul)
           
             # From geom*.xyz, the file geom_expl*.xyz is created.
             os.chdir(cwd)
@@ -789,7 +795,7 @@ def QoMMMa_opt(usrdir, node):
     usrdir : string
         The user directory - in this case it is the directory containing the files qommma.in and init_geom1.xyz.
     node : integer 
-        Represents the node number for the current GSM calculation. If not using GSM, then it's simply.
+        Represents the node number for the current GSM calculation. If not using GSM, then it's simply 1.
         This is only used for setting the scratch directories.
         
     """
@@ -803,6 +809,8 @@ def QoMMMa_opt(usrdir, node):
     try:
         dirs = os.environ['TMPDIR'] + '/qmmm_'
         dirs = dirs + str(os.getpid()) + '_' + str(node)
+        if os.path.exists(dirs):
+            shutil.rmtree(dirs)
         os.mkdir(dirs)
     except:
         qomutil.qomlog('Either Variable TMPDIR is not set or Could not be able to create temporary directory ' + dirs, usrdir)
@@ -881,15 +889,13 @@ if __name__ == "__main__":
     
     # If any directories from previous GSM runs are found, these are copied and retained.
     # The reactant and product (only nodeR for SE-GSM) side nodes are NOT copied and retained as these should be obtained and minimised prior to GSM.
-    all_nodes = []
     for file in os.listdir(basedir):
         dir = os.path.join(basedir, file)
         if ((os.path.isdir(dir)) and ('node' in file) and ('nodeP' not in file) and ('nodeR' not in file) and ('_' not in file)):
-            all_nodes.append(basedir+'/'+file)
             shutil.copytree(basedir + '/' + file, basedir + '/' + file + '_')
             shutil.rmtree(basedir + '/' + file)
             gsmutil.gsmlog('Note, node directories from previous GSM QoMMMa runs have been moved to /nodei_; before submitting next QoMMMa job if you need this directory rename it since it will be deleted', basedir)
-
+     
     # Files from previous runs of QoMMMa are renamed and retained.
     if os.path.exists(basedir + '/QoMMMa8.log'):
         shutil.copy(basedir + '/QoMMMa8.log', basedir + '/QoMMMa8.log_')
@@ -960,6 +966,7 @@ if __name__ == "__main__":
         
         # The growth phase commences.
         gsmutil.gsmlog('        /// Growing the string... ///       ', basedir)
+        
         all_nodes = []
         is_grown = False
         while is_grown == False:
@@ -1168,7 +1175,7 @@ if __name__ == "__main__":
        
                     # Lastly, check if the current node is lower in energy than the previous node.
                     # If so, then the stationary point (SP) has been found and the main part of the growth phase is over.
-                    SP_found = gsmutil.SE_check_delE(old_frontier_dir, frontier_dir)
+                    SP_found = gsmutil.SE_check_delE(old_frontier_dir, frontier_dir, current_nodes)
 
                     # If the number of nodes becomes greater than the maximum allowed number of nodes, then the calculation is ended.
                     if ((current_nodes == max_nodes) and (SP_found == False)):
@@ -1233,10 +1240,11 @@ if __name__ == "__main__":
                 # Growth phase complete!
                 gsmutil.gsmlog('The growth phase is complete! There is now a total (including reactant) of: ' + str(current_nodes) + '   nodes...', basedir)
                 is_grown = True
-     
+        
         # The optimisation phase commences.
         # In the optimisation phase, the single- and double-ended variant reduce to the same procedure.
         gsmutil.gsmlog('        /// Optimising the string... ///       ', basedir)
+       
         is_optimised = False
         reparam_counter = 0
         while is_optimised == False:
@@ -1266,10 +1274,8 @@ if __name__ == "__main__":
             # If all are converged, then the optimisation-phase is complete.
             # Otherwise, reparameterise the string and optimise all nodes again.
             is_converged = gsmutil.check_convergence(all_nodes, current_nodes, basedir)
-            ###################################################
-            import sys; sys.exit ######## TEMPORARY ###########
-            ###################################################
-            if (all(is_converged) and (reparam_counter > 0)) is True: # we should at least reparameterise once due to nodes later in the string being not evenly spaced...
+
+            if (all(is_converged) and (reparam_counter > 0)) is True: # we should at least reparameterise once due to nodes not being evenly spaced...
                 gsmutil.gsmlog('The optimisation phase is complete!', basedir)
                 is_optimised = True
             else:
@@ -1278,7 +1284,7 @@ if __name__ == "__main__":
 
                 # First, generate the new qommma.in files.
                 gsmutil.reparam_opt(all_nodes, current_nodes, basedir)
-                
+
                 # Now, reparameterise every node.
                 for counter,dir in enumerate(all_nodes):
                     if not ("nodeR" or "nodeP") in dir:
@@ -1292,25 +1298,41 @@ if __name__ == "__main__":
                             exec(open(inpf).read())
                         except:
                             gsmutil.gsmend('Could not open input file for node: ' + inpf + '  This may be due to error in user input file, or maybe it was not generated? Check for necessary inputs and its formats, see manual', basedir)
+                            
+                        # The directory 'qmmm_*' is created at TMPDIR. Typically, this will be a scratch directory on a node.
+                        try:
+                            dirs = os.environ['TMPDIR'] + '/qmmm_'
+                            dirs = dirs + str(os.getpid()) + '_' + str(counter)
+                            if os.path.exists(dirs):
+                                shutil.rmtree(dirs)
+                            os.mkdir(dirs)
+                        except:
+                            qomutil.qomlog('Either Variable TMPDIR is not set or Could not be able to create temporary directory ' + dirs, usrdir)
+                            sys.exit()
+                        os.chdir(dirs)
+                        
+                        # Copy over the current geometries...
+                        source = dir + '/jobfiles'
+                        destination = dirs
+                        shutil.copy(source + '/geom_expl1.xyz', destination + '/geom_expl1.xyz')
+                        shutil.copy(source + '/geom1.xyz', destination + '/geom1.xyz')
                         
                         # Now, generate the new fortinput file.
                         try:
                             fortinp(dir)
                         except:
-                            pass
-                            
-                        # Finally, reparameterise the given node.
+                            gsmutil.gsmend('Error while creating input file (fortinput or converg.data) for QoMMMa, check for necessary input and its format, see manual', basedir)
+                                            
+                        # Reparameterise the given node.
                         try:
                             os.system(qommmadir + '/bin/gsm_reparam.x')
                         except:
-                            gsmutil.gsmend('Could not reparameterise the string, as gsm_reparam.x failed.', cwd, basedir) 
+                            gsmutil.gsmend('Could not reparameterise the string, as gsm_reparam.x failed.', dir, basedir) 
                         
-                        # Lastly, copy over the new geometry file and clean up.
-                        source = dir + '/jobfiles'
+                        # Lastly, copy over the new geometry file and clean-up.
+                        source = dirs
                         destination = dir
-                        geom_s = source + '/geom1.xyz'
-                        geom_d = destination + '/init_geom1.xyz'
-                        shutil.copy(geom_s, geom_d)
+                        shutil.copy(source + '/geom1.xyz', destination + '/init_geom1.xyz')
         
         # We're all finished! (for now...)
         gsmutil.gsmlog('The growing string method is complete!', basedir)        

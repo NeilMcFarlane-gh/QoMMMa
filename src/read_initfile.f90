@@ -207,6 +207,9 @@ else if (ncon_prim .gt. 0) then
 			stop
 		end if
 		read(unit=8,fmt=*) dummy
+		print *, '_____________'
+		print *, SIZE(cnscoeff_p,2)
+		print *, '_____________'
 		do i=1,cns_n_coeff_p(j)
 			read(unit=8,fmt=*) cnscoeff_p(j,i), (cnsat_p(j,i,k),k=1,4)
 		end do

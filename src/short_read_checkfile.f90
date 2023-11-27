@@ -48,10 +48,13 @@ do img_num=1,nimg
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) coordtype
 	
+	! Trust radius for optimisation
+	read(unit=8,fmt=*) dummy
+	read(unit=8,fmt=*) trust_radius
+	
 	! If DLC are used, the primitive internal coordinate type
 	read(unit=8,fmt=*) dummy
 	read(unit=8,fmt=*) primtype
-
 
 	! Number and overall type of constraints
 

@@ -36,7 +36,7 @@ do img_num=1,nimg
 			 j=3*(i-1)+1
 			 xl(j:j+2)=x(k:k+2)+vec
 		  end do
-		  
+
 		! Copies coordinates of link atoms into full link atoms coordinate array
 		  fullxl(img_num,:)=xl(:)
 		end if

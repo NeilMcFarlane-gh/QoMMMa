@@ -12,9 +12,11 @@ do i=1, nq
 	k = (3 * (opt(i)-1)) + 1
 	xopt(j:j+2) = x(k:k+2)
 end do
+j = (3 * (nq-1)) + 1
 do i=1, nl
-	j = (3 * nq) + i
-	xopt(j:j+2) = xl(i:i+2)
+	k = (3 * (i-1)) + 1
+	j = j + 3
+	xopt(j:j+2) = xl(k:k+2)
 end do
 
 ! Now calculate the primitive internal coordinates.

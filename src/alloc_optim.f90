@@ -27,8 +27,11 @@ if (ncon_cart.gt.0) then
     & ncnsat(ncon_cart),cnsidl(ncon_cart),cnsen(ncon_cart),cnsg(ncon_cart), & 
     & fullcnsen(nimg,ncon_cart),fullcnsg(nimg,ncon_cart),fullcnsval(nimg,ncon_cart))
 else if (ncon_prim.gt.0) then
-	allocate(cnsat_p(ncon_prim,maxcnsat_dlc,4),cnscoeff_p(ncon_prim,maxcnsat_dlc),cns_n_coeff_p(ncon_prim), &
-	& dq_pos_p(disp_prim), dq_p(disp_prim), dq_at_p(disp_prim,4))
+	allocate(cnsat_p(ncon_prim,maxcnsat_dlc,4),cnscoeff_p(ncon_prim,maxcnsat_dlc),cns_n_coeff_p(ncon_prim))
+end if
+	
+if (disp_prim.gt.0) then
+	allocate(dq_pos_p(disp_prim), dq_p(disp_prim), dq_at_p(disp_prim,4))
 end if
 
 ! Assign values for convergence tests 
@@ -45,6 +48,8 @@ else
    toldxmax=toldxmax_org*2
    toldxrms=toldxrms_org*2
 end if
+
+trust_radius = 1.0
 
 return
 

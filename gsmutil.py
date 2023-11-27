@@ -242,7 +242,7 @@ def SE_get_tangent(frontier_dir, driving_coords, usrdir):
                 zero_count += 1
         
         if (zero_count == 2): # Bond
-            tangent.append(0.05 * direction) # Angstroms...
+            tangent.append(0.1 * direction) # Angstroms...
         elif (zero_count == 1): # Angle
             tangent.append(0.0872665 * direction) # Radians (5 deg)...
         elif (zero_count == 0): # Dihedral torsion
@@ -282,7 +282,7 @@ def SE_get_final_tangent(current_nodes, driving_coords, usrdir):
                 zero_count += 1
         
         if (zero_count == 2): # Bond
-            tangent.append(0.05 * direction)# * current_nodes) # Angstroms...
+            tangent.append(0.1 * direction)# * current_nodes) # Angstroms...
         elif (zero_count == 1): # Angle
             tangent.append(0.0872665 * direction)# * current_nodes) # Radians (5 deg)...
         elif (zero_count == 0): # Dihedral torsion
@@ -383,7 +383,7 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
             first_node_disp_n = False
         if "maxcycle" in line:
-            inp_data[line_num] = 'maxcycle=5\n'
+            inp_data[line_num] = 'maxcycle=15\n'
             first_node_maxcyc = False
         if "gsmphase" in line: 
             inp_data[line_num] = "gsmphase='growth'\n"
@@ -413,7 +413,7 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             file.write("gsmtype='se_gsm'\n")
         if first_node_maxcyc == True:
             file.write('\n')
-            file.write('maxcycle=15\n')
+            file.write('maxcycle=5\n')
         if first_node_ncon == True:
             file.write('\n')
             file.write("ncon_prim=" + str(1) + '\n')            
@@ -489,7 +489,7 @@ def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, driving_coords,
             if "disp_prim" in line:
                 inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
             if "maxcycle" in line:
-                inp_data[line_num] = 'maxcycle=5\n'
+                inp_data[line_num] = 'maxcycle=15\n'
             if "gsmphase" in line: 
                 inp_data[line_num] = "gsmphase='growth'\n"
             if "gsmtype" in line:
@@ -499,7 +499,7 @@ def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, driving_coords,
         with open(inpf_d, 'w') as file:
             file.writelines(inp_data)
     
-def SE_check_delE(old_frontier_dir, frontier_dir):
+def SE_check_delE(old_frontier_dir, frontier_dir, current_nodes):
     """
     
     // Function which checks the difference in energy between the current and previous frontier nodes. //
@@ -511,6 +511,8 @@ def SE_check_delE(old_frontier_dir, frontier_dir):
         String of the old frontier node directory.
     frontier_dir : string
         String of the current frontier node directory.
+    current_nodes : integer
+        The current number of nodes, including the reactant directory.
 
     """
     
@@ -536,7 +538,7 @@ def SE_check_delE(old_frontier_dir, frontier_dir):
     
     # Now, evaluate the difference and decide if a stationary point has been surpassed.
     del_E = cur_E - old_E
-    if del_E < 0.0:
+    if ((del_E < 0.0) and (current_nodes > 8)):
         SP_found = True
     else:
         SP_found = False
@@ -871,7 +873,7 @@ def gen_input_opt(node_dirs, tangent_list, tangent_prims_list, usrdir):
                 if "disp_prim" in line:
                     inp_data[line_num] = "disp_prim=0\n"
                 if "maxcycle" in line:
-                    inp_data[line_num] = 'maxcycle=50\n'
+                    inp_data[line_num] = 'maxcycle=25\n'
                 if "gsmphase" in line: 
                     inp_data[line_num] = "gsmphase='opt'\n"
                 if "gsmtype" in line:
@@ -931,7 +933,7 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
     """
     
     # To equally respace the nodes, the tangent between reactant and product nodes must first be obtained.
-    nodeR_dir = node_dirs[1]
+    nodeR_dir = node_dirs[0]
     nodeP_dir = node_dirs[-1]
 
     # Read the primitive definitions and values for the reactant node.
@@ -965,13 +967,26 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
     for i in range(0,n_prims):
         p1 = prims_r[i]
         p2 = prims_p[i]
-        p = p1 - p2
-        if (abs(p) > 0.01):
+        p = p2 - p1
+
+        # Store the type of primitive internal coordinate.
+        temp_prim = prim_list_r[i].split()
+        zero_count = 0
+        for prim in temp_prim:
+            if int(prim) == 0:
+                zero_count += 1
+        
+        # Populate total_tangent appropriately.
+        ################################################################
+        if (zero_count == 0) or (zero_count == 1): # TEMPORARY TEST FIX#
+            total_tangent.append(0.0)
+        ################################################################
+        elif (abs(p) > 0.1):
             total_tangent.append(p)  
         else:
             total_tangent.append(0.0)
         total_tangent_prims.append(prim_list_r[i])
-        
+ 
     # Initialise the starting point for the primitive internal coordinates which the reparameterisation will occur across.
     # This array is maintained as the generation of qommma.in files proceeds.
     starting_prims = prims_r
@@ -989,11 +1004,16 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
             os.chdir(dir_i)
             with open("prims", 'r') as pr:
                     n_prims = int(pr.readline())
-                    for i in range(1,n_prims):
+                    for i in range(0,n_prims):
                         prims_i.append(float(pr.readline()))
-                        
+           
             # Generate the primitive internal coordinates from reparameterisation.
-            reparam_prims = starting_prims + (total_tangent / total_nodes)
+            reparam_prims = []
+            for i in range(0,n_prims):
+                reparam_prims.append(starting_prims[i] + (total_tangent[i] / total_nodes))
+                
+            # Update starting prims...
+            starting_prims = reparam_prims
             
             # Now, compare the actual primitives (prims_i) and the primitives generated by reparameterisation (reparam_prims).
             # If the difference between them is large enough, then include in the reparameterisation.
@@ -1002,11 +1022,11 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
             for i in range(0,n_prims):
                 p1 = prims_i[i]
                 p2 = reparam_prims[i]
-                p = p1 - p2
-                if (abs(p) > 0.01):
+                p = p2 - p1
+                if (abs(p) > 0.01) and (abs(total_tangent[i]) > 0.0):
                     tangent_prims_list.append(prim_list_r[i])
-                    tangent_list.append(p) 
-                        
+                    tangent_list.append(p)    
+     
             # Prepare the new input prim_constrain_lst for the given qommma.in using the tangent and the primitive internal coordinates.
             # In this case, there is no step to be taken because we are in the optimisation phase.
             prim_displacement_lst = []
@@ -1030,6 +1050,8 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
                     inp_data[line_num] = "prim_displacement_lst=" + str(prim_displacement_lst) + '\n'
                 if "disp_prim" in line:
                     inp_data[line_num] = "disp_prim=" + str(len(tangent_list)) + '\n'
+                if "ncon_prim" in line:
+                    inp_data[line_num] = "ncon_prim=" + str(0) + '\n'
             with open(inpf_d, 'w') as file:
                 file.writelines(inp_data) 
         

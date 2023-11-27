@@ -37,8 +37,9 @@ real(dp) :: qea,qeb,ea,eb,oea,oeb
 real(dp), parameter :: hart_kcal = 627.5095d0
 real(dp), parameter :: stpmax_dlc = 0.1
 real(dp), parameter :: stpmax_cart = 0.1
-integer(i4b), parameter :: maxcnsat_cart = 10 ! maximum constraint of 10 atoms
-integer(i4b), parameter :: maxcnsat_dlc = 10  ! maximum constraint of 10 primitive internal coordindates
+real(dp) :: trust_radius
+integer(i4b), parameter :: maxcnsat_cart = 1000 ! maximum constraint of 10 atoms
+integer(i4b), parameter :: maxcnsat_dlc = 1000  ! maximum constraint of 10 primitive internal coordindates
 											  ! In principle, we could constrain any number, but keep it simple.
 
 ! These parts apply to the dispersion calculation in disp_corr()

@@ -14,7 +14,7 @@ contains
 	!               prim_list   : 2D array containing the details of each primitive internal coordinate in the form ([1,2],[2,3], etc..).
 
 	implicit none
-	integer(i4b) :: atom_num, to_generate(atom_num)
+	integer(i4b) :: atom_num, to_generate(atom_num), i
 	integer(i4b), allocatable :: prim_list_temp(:,:), prim_list(:,:)
 	
 	! The list of primitive internal coordinates is rather simple to define when every atom is connected to every atom.
@@ -25,7 +25,7 @@ contains
 
 	! The global integer, nprim, is also initialised here.
 	nprim = SIZE(prim_list,1)
-
+	
 	end subroutine define_prims_TC
 	
 	subroutine define_prims_full(atom_num, to_generate, coords, prim_list) 
@@ -53,7 +53,7 @@ contains
 	! In order to get the appropriate coordinates, save an array which gives the list of indices for which primitives are to be generated accompanied with numerical order indices.
 	indices_save(:,1) = to_generate(:)
 	indices_save(:,2) = (/(i,i=1,atom_num,1)/)
-
+	
 	! This algorithm starts very similarly to define_prims_TC, where every atom is connected to every atom.
 	! Then, the distances between every atom can be calculated so that the bonding can be established.
 	TC_list = COMBINATIONS_2_DUPE(to_generate, atom_num)
@@ -83,16 +83,22 @@ contains
 		r = ATOM_DISTANCE(coords_1, coords_2)
 		distances(i) = r
 	end do
-	
-	! Establish the array of neighbours to each atom. This is defined in (init)_geom1.xyz.
+
+	! Establish the array of neighbours to each atom (not including link atoms). This is defined in (init)_geom1.xyz.
 	neighbours = 0
-	do i=1, SIZE(to_generate)
+	do i=1, (SIZE(to_generate) - nl)
 		temp_indice = to_generate(i)
-		neighbours(i,:) = bonds(temp_indice,:)
+		neighbours(i,:) = bonds(temp_indice,:)		
+	end do
+	
+	! Now, manually add the link atoms to the neighbours array.
+	! Note that for the following arrays, the link atom indice is described by the MM-side atom indice.
+	do i=1, nl
+		neighbours(nq+i,1) = links(i,2)
 	end do
 
 	! Due to the fact that the number of primitive internal coordinates is unknown at initial execution, the algorithm must be performed twice.
-	! Indeed, this is not computationally efficient, but this avoids problems with memory allocation.
+	! This is not computationally efficient, but this avoids problems with memory allocation.
 	do kk=1, 2
 		! The primitive counter is reset.
 		prim_counter = 1

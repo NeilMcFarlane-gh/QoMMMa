@@ -12,7 +12,7 @@ disp=0
 maxcycle=200
 maxcycle_grow=5 #for GSM
 
-max_nodes=20 #for SE-GSM
+max_nodes=30 #for SE-GSM
 
 # output option
 qomout='None'
@@ -138,4 +138,14 @@ qmorca_job='/opt/nce/packages/global/barthaf/orca/4.1.2/orca'
 cha_mul=[0,1]
 extra_basis='None'
 orca_head='None'
+
+#######
+# XTB #
+#######
+# xTB path
+qmorca_job='/usr/local/chem/xtb-6.4.1/share/xtb'
+
+# xTB keys
+cha_mul=[0,1]
+
 

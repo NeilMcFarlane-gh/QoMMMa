@@ -24,7 +24,7 @@ contains
 	if (.not. ALLOCATED(Gmat)) allocate(Gmat(n_prims, n_prims))
 	Gmat(:,:) = 0.0
 	Gmat = MATMUL(Bmat_p, TRANSPOSE(Bmat_p))
-	
+
 	! By definition, the G matrix must have a determinant of zero. 
 	! This criteria is checked to mitigate errors down the line.
 	deter = DETERMINANT(Gmat, n_prims)
@@ -95,7 +95,7 @@ contains
 		print *, 'Error; the eigendecomposition of the G matrix has gone wrong...'
 		stop
 	end if	
-	
+
 	! Lastly, create arrays for U and R.
 	U_vector_counter = 1
 	R_vector_counter = 1
@@ -109,7 +109,7 @@ contains
 			U_vector_counter = U_vector_counter + 1
 		end if
 	end do
-
+	
 	end subroutine diag_Gmat
 	
 	
@@ -332,76 +332,7 @@ contains
 	hess_dlc = MATMUL(TRANSPOSE(U_V_mat), MATMUL(hess, U_V_mat))
 
 	end subroutine gen_hess_prim_to_DLC
-	
-	
-	subroutine DLC_to_cart_old(atom_num, n_dlc, n_prims, dS, dlc, x_1, x_2, Bmat_dlc)
-	! Here, the DLC are converted to cartesian coordinates via an iterative procedure.
-	! This is used at the end of an optimisation cycle to restore the cartesian coordinates for the next gradient evaluation.
-	! A note on notation: changes in dlc are often called 'dS' here as 'S' is another notation widely used for DLC.
-	!
-	! ARGUMENTS:    atom_num : Integer which represents the total number of atoms to be delocalised.
-	!               n_dlc    : Integer which represents the number of delocalised internal coordinates (by definition, 3N-6).
-	!               n_prims  : Integer which represents the total number of primitive internal coordinates.
-	!				dS       : 1D array containing the change in DLC for which cartesians are to be solved for.
-	!				dlc      : 1D array containing the delocalised internal coordinate set.
-	!               x_1      : 1D array containing all the cartesian coordinates of the system prior to the change in DLC.
-	!               x_1      : 1D array containing all the cartesian coordinates of the system following the change in DLC.
-	!               Bmat_dlc : 2D array which contains the DLC Wilson B matrix.
-	
-	implicit none
-	integer(i4b) :: k, atom_num, n_prims, n_dlc
-	integer(i4b), parameter :: resolution = 500
-	real(dp) :: dS_norm_save, dS_norm, dS_norm_init
-	real(dp) :: x_1(3 * atom_num), x_2(3 * atom_num), dx(3 * atom_num)
-	real(dp) :: dx_step(3 * atom_num), dx_temp(3 * atom_num), temp_x(3 * atom_num), dx_save(3 * atom_num)
-	real(dp) :: BT_inv(n_dlc, (3 * atom_num)), Bmat_dlc(n_dlc, (3 * atom_num)), Gmat_dlc(n_dlc, n_dlc)
-	real(dp) :: init_dlc(n_dlc), init_dS(n_dlc), target_dlc(n_dlc), dS(n_dlc)
-	real(dp) :: dS_temp(n_dlc), dlc(n_dlc), dS_save(n_dlc)
-	
-    ! The expression B(transpose) * G(inverse) is initialised as it is used to convert between coordinate systems.
-	Gmat_dlc = MATMUL(Bmat_dlc, TRANSPOSE(Bmat_dlc))
-	BT_inv = MATMUL(SVD_INVERSE(Gmat_dlc, n_dlc, n_dlc), Bmat_dlc)
-	
-	! Stashing the initial and target values.
-	init_dS(:) = dS(:)
-	init_dlc(:) = dlc(:)
-	target_dlc(:) = dlc(:) + init_dS(:)
 
-	! In the original implementation by Baker, the transformation procedure is iterative using the equation above.
-	! However, this procedure is rather unstable when it comes to large changes in DLC, or near 180 dihedral angles.
-	! In the research group of P. Ayers, they use a procedure of calculating a number cartesian coordinates and comparing to DLC.
-	! The cartesian set closest to the target DLC is then taken as the new coordinates.
-	! In this implementation, the algorithm is inspired by this method where a 'resolution' is defined.
-	! This resolution defines how many small steps in cartesians are made to find the DLC: higher resolution implies more accurate DLC.
-	! While this method is not as accurate or fast as the original implementation, it is much more stable.
-	dx_step = dx / resolution
-	do k=1, resolution
-		if (k == 1) then
-			dx_temp = dx_step
-			temp_x = dx_temp + x_1
-			call maintain_DLC(atom_num, n_dlc, temp_x)
-			dS_temp = target_dlc - dlc
-			dS_norm_save = NORM2(dS_temp)
-			dx_save = dx_temp
-			dS_save = dS_temp
-		else
-			dx_temp = dx_temp + dx_step
-			temp_x = dx_temp + x_1
-			call maintain_DLC(atom_num, n_dlc, temp_x)
-			dS_temp = target_dlc - dlc
-			dS_norm = NORM2(dS_temp)
-			if (dS_norm .lt. dS_norm_save) then
-				dx_save = dx_temp
-				dS_save = dS_temp
-				dS_norm_save = dS_norm
-			end if
-		end if
-	end do
-
-	! The new DLC set (which should be close to init_dlc) and the new cartesian coordinates are saved.
-	x_2 = x_1 + dx_save
-	
-	end subroutine DLC_to_cart_old
 	
 	subroutine DLC_to_cart(atom_num, n_dlc, n_prims, dq, q, x_1, x_2, INFO)
 	! Here, the primitive internal coordinates are converted to cartesian coordinates using an iterative procedure.
@@ -420,7 +351,7 @@ contains
 	integer(i4b) :: atom_num, n_dlc, n_prims, i, k, iter_counter, counter
 	real(dp) :: dq(n_dlc), q(n_dlc), q_2(n_dlc), x_1(3 * atom_num), x_2(3 * atom_num), init_x_1(3 * atom_num), init_init_dq(n_dlc)
 	real(dp) :: BT_inv(n_dlc, (3 * atom_num)), temp_vec1(n_dlc), temp_vec2(n_dlc), temp_real, saved_best_x(3 * atom_num)
-	real(dp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2, old_dlc(n_dlc), temp_norm, scale_by
+	real(dp) :: dq_actual(n_dlc), check(n_dlc), temp_check, xyz_rms_1, xyz_rms_2, old_dlc(n_dlc), temp_norm
 	real(dp) :: init_dq(n_dlc), target_q(n_dlc), dx(3 * atom_num), Gmat_dlc(n_dlc,n_dlc), saved_best_dlc(n_dlc)
 	real(dp), allocatable :: temp_q(:)
 	logical :: convergence, is_cons
@@ -440,12 +371,11 @@ contains
 	xyz_rms_2 = 0
 	INFO = 0
 	init_x_1(:) = x_1(:)
-	init_dq(:) = dq(:)
+	init_dq(:) = dq(:) * trust_radius
 	init_init_dq(:) = init_dq(:)
 	old_dlc(:) = dlc(:)
 	target_q(:) = dlc(:) + init_dq(:)
 	iter_counter = 0
-	scale_by = 1.0
 
 	! Checking if there are any constraints...
 	is_cons = .False.
@@ -480,21 +410,21 @@ contains
 		
         ! The change in primitive internals for the next iteration is evaluated.
 		dq(:) = 0.0
-		dq = target_q - dlc
+		dq = (target_q - dlc)
 
 		! Now, the three exit conditions should be checked...
 		! The first ending condition for this transformation is when the root-mean-square change in cartesians is less than 10^-6.
         ! The second ending condition for this transformation is when the difference in root-mean-square change in cartesians between iteration i and i+1 is less than 10^-12.
         ! The third ending condition for this transformation is when the difference between the target DLC and the calculated DLC is less than 10^-6.
 		check = target_q - dlc
-		if (ABS(xyz_rms_2) < 1E-06) then
+		if (ABS(xyz_rms_2) < 1E-04) then
 			convergence = .TRUE.
-		else if (ABS(xyz_rms_2 - xyz_rms_1) < 1E-12) then
+		else if (ABS(xyz_rms_2 - xyz_rms_1) < 1E-8) then
 			convergence = .TRUE.
 		end if
 		do i=1, SIZE(check)
 			temp_check = check(i)
-			if (ABS(temp_check) < 1E-12) then
+			if (ABS(temp_check) < 1E-8) then
 				convergence = .TRUE.
 			end if
 		end do
@@ -509,7 +439,7 @@ contains
 		if (iter_counter == 10000) then
 			print *, "Error; could not solve cartesians from the change in delocalised internal coordinates. &
 			& The change in delocalised internal coordinates was probably too large. &
-			& Saving the most first evaluation as it's probably the best guess."
+			& Saving the first evaluation as it's probably the best guess."
 			INFO = 1
 			dlc = saved_best_dlc
 			x_1(:) = saved_best_x(:)

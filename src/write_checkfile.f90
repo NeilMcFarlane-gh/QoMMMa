@@ -77,6 +77,8 @@ do img_num=1,nimg
 	write(unit=8,fmt='(2I6, F10.2)') gsmphase
 	write(unit=8,fmt='(A)') "Then the coordinate selection for optimisation"
 	write(unit=8,fmt='(2I6, F10.2)') coordtype
+	write(unit=8,fmt='(A)') "Then the trust radius for optimisation"
+	write(unit=8,fmt='(F10.2)') trust_radius
 	write(unit=8,fmt='(A)') "If DLC are used, the type of primitive internal coordinates used to generate the DLC"
 	write(unit=8,fmt='(2I6, F10.2)') primtype
 	write(unit=8,fmt='(A)') "Then the number of cartesian constraints and the type (1=Harmonic or 2=tanh)"

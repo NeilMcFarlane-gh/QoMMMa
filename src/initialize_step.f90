@@ -78,9 +78,11 @@ if (disp_prim .gt. 0) then
 		k = (3 * (opt(i)-1)) + 1
 		xopt(j:j+2) = x(k:k+2)
 	end do
+	j = (3 * (nq-1)) + 1
 	do i=1, nl
-		j = (3 * nq) + i
-		xopt(j:j+2) = xl(i:i+2)
+		k = (3 * (i-1)) + 1
+		j = j + 3
+		xopt(j:j+2) = xl(k:k+2)
 	end do
 	call calc_prims(nopt, nprim, prims, opt, xopt, prim_list)
 	call prims_to_cart(nopt, nprim, complete_dq, prims, xopt, newx, Bmat_p, prim_list)
