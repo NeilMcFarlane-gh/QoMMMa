@@ -1,0 +1,32 @@
+Before to start QoMMMa8 read the following;
+
+1. To run normal QoMMMa8 job you need only 3 files;
+	Initial geometry files with the name as init_geom*.xyz, where * represents image number.
+	QoMMMa input file, which containes all the necessary inputs for QoMMMa job. See model_input, input_explanation, QoMMMa8.pdf.
+	Job submission script. QoMMMa job with Jaguar should be submitted in Jaguar queue, so use bash, see model script qomjob in this directory. For QoMMMa job with Gaussian or Molpro use qsub, see model script gqomjob.
+
+2. To run Frequency calculation use Gaussian. If you want to do a single frequency calculation for a particular image(s), again input geometry should be named as init_geom*.xyz, and set maxcycle=0. If you want to do projected frequency for particular image then use prj_freq key and maxcycle=1 (since it needs qm/mm gradients).
+
+3. If you want to do frequecny calculation for a system containing more than one link atoms, the link atom detials given through link key should be given as increasing order with respect to QM atom. (This is needed for Hessian correction with respect to link atoms in qomfreq.py).
+
+4. The necessary model examples are given in QoMMMa8.pdf, model_input, input_explanation.
+
+5. Many options were set as default, these options could be changed through qommma input file. see default.in file in qommma8/qommma/lib directory. 
+
+6. Initially you may need to set tmp directory in bashrc file. To set tmp directory open .bashrc file and include the following;
+
+# setup of temporary directory
+export TMPDIR=/tmp/XXXXX
+test -d $TMPDIR || mkdir $TMPDIR
+
+save and exit. Note you have to put your login id instead of XXXXX. Then use source .bashrc
+
+7. While giving QM atoms list through qm key use small letter for second letter if your atom label consist of two letters (this is needed only for Frequency calculation). For example FE, CL,HE are not good. Fe, Cl, He are correct.
+
+8. Now you can able to give QM atoms list through qm_lst key also. Advantage of this option is you don't have to give atom name, just give atom lables as string. See QoMMMa.pdf. Important thing is in init_geom1.xyz file, atoms name should be given as described in above point (Atoms name with two character, we have to be carefull).
+
+9. Now QoMMMa job itself will create log file (QoMMMa8.log), so you DON'T have to give output file name in QoMMMa job submission script. it is always good to look this file in the beginning and end of QoMMMa calculation.
+
+10. Now SCS-LMP2 is possible in QoMMMa. To use this option include 'scsgrd=1' inqmkey. Note,scs-lmp2 is available in Molpro2006.2 and only with density fitted methods. So you have to use denisty fitted basis sets and df-hf option, along with df-lmp2.
+
+11. In grendel, parallel Gaussian is possible, For this you have to use gau_head option to include few extra Gaussian keys to use more processots/nodes (see grendel web page). If you want to use different nodes then you have to change qmgau_job as 'g03l', instead of 'g03' (see default.in' and QoMMMa.pdf).
