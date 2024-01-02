@@ -143,7 +143,7 @@ orca_head='None'
 # XTB #
 #######
 # xTB path
-qmorca_job='/usr/local/chem/xtb-6.4.1/share/xtb'
+qmxtb_job='xtb'
 
 # xTB keys
 cha_mul=[0,1]

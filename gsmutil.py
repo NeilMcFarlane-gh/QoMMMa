@@ -383,7 +383,7 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
             first_node_disp_n = False
         if "maxcycle" in line:
-            inp_data[line_num] = 'maxcycle=15\n'
+            inp_data[line_num] = 'maxcycle=30\n'
             first_node_maxcyc = False
         if "gsmphase" in line: 
             inp_data[line_num] = "gsmphase='growth'\n"
@@ -413,7 +413,7 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             file.write("gsmtype='se_gsm'\n")
         if first_node_maxcyc == True:
             file.write('\n')
-            file.write('maxcycle=5\n')
+            file.write('maxcycle=30\n')
         if first_node_ncon == True:
             file.write('\n')
             file.write("ncon_prim=" + str(1) + '\n')            
@@ -489,7 +489,7 @@ def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, driving_coords,
             if "disp_prim" in line:
                 inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
             if "maxcycle" in line:
-                inp_data[line_num] = 'maxcycle=15\n'
+                inp_data[line_num] = 'maxcycle=30\n'
             if "gsmphase" in line: 
                 inp_data[line_num] = "gsmphase='growth'\n"
             if "gsmtype" in line:
@@ -873,7 +873,7 @@ def gen_input_opt(node_dirs, tangent_list, tangent_prims_list, usrdir):
                 if "disp_prim" in line:
                     inp_data[line_num] = "disp_prim=0\n"
                 if "maxcycle" in line:
-                    inp_data[line_num] = 'maxcycle=25\n'
+                    inp_data[line_num] = 'maxcycle=75\n'
                 if "gsmphase" in line: 
                     inp_data[line_num] = "gsmphase='opt'\n"
                 if "gsmtype" in line:

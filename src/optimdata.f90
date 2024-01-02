@@ -39,8 +39,8 @@ real(dp), parameter :: stpmax_dlc = 0.1
 real(dp), parameter :: stpmax_cart = 0.1
 real(dp) :: trust_radius
 integer(i4b), parameter :: maxcnsat_cart = 1000 ! maximum constraint of 10 atoms
-integer(i4b), parameter :: maxcnsat_dlc = 1000  ! maximum constraint of 10 primitive internal coordindates
-											  ! In principle, we could constrain any number, but keep it simple.
+integer(i4b), parameter :: maxcnsat_dlc = 1000  ! maximum constraint of 1000 primitive internal coordindates
+											  ! In principle, we could constrain any number, but set an upper limit
 
 ! These parts apply to the dispersion calculation in disp_corr()
 

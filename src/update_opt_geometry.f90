@@ -243,13 +243,13 @@ else if (coordtype .eq. 1) then
 			is_cons = .True.
 		end if
 
-		if (Nstep .le. 100) then
+		if (Nstep .le. 200) then
 			!###################
 			! Steepest descent.#
 			!###################
 			
 			! Evaluate the step in DLC.
-			ChgeS = optg_dlc * (-1) * trust_radius
+			ChgeS = optg_dlc * (-0.7)
 
 			! Now, if there are any constraints, given elements of the DLC should not change.
 			if (is_cons .eqv. .True.) then
@@ -271,15 +271,6 @@ else if (coordtype .eq. 1) then
 			! The new DLC and, more importantly, cartesian coordinates can now be evaluated.
 			temp_x(:) = xopt(:)
 			call DLC_to_cart(nopt, ndlc, nprim, ChgeS, dlc, xopt, newx, INFO)
-			
-			! Change the trust radius (if necessary)...
-			!if (INFO .eq. 1) then
-			!	trust_radius = trust_radius / 2
-			!else if (INFO .eq. 0) then
-			!	if (trust_radius .lt. 2) then
-			!		trust_radius = trust_radius * 1.5
-			!	end if
-			!end if
 			
 			! Lastly, calculate the new primitive internal coordinates.
 			call calc_prims(nopt, nprim, prims, opt, newx, prim_list)

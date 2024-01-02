@@ -557,6 +557,13 @@ def qminitial(usrdir, cwd):
                 if os.path.exists(usrdir + '%s%s%d%s'%('/', qmjob_prefix, imn, '_B.chk')):
                     shutil.copy(usrdir + '%s%s%d%s'%('/', qmjob_prefix, imn, '_B.chk'), dst)
                     qomutil.qomlog('initial Gaussian check file was taken from user directory for MECP state B of image :' + str(imn), usrdir) 
+                    
+    # xTB job is prepared.               
+    # Note that MECP and frequency calculations are not possible in the current implementation of xTB within QoMMMa. 
+    elif qmcode.lower() == 'xtb':
+        if qmkey.strip() == 'None':
+            qomutil.qomlog( 'No basis set or level of theory required for xTB!', usrdir)
+            # Note: implement check file equivalent for xTB??
              
     # Orca job is prepared.               
     # Different operations are performed if doing a minimum energy crossing point calculation.             
@@ -670,7 +677,7 @@ def qmmm(usrdir, cwd, cln):
             elif qmcode.lower() == 'xtb':
                 # Note that MECP and frequency calculations are not possible in the current implementation of xTB within QoMMMa.
                 from xtbutil import qmxtbmain
-                qmxtbmain(imn, cwd, usrdir, qmjob_prefix, nqm, nlink, cln, cha_mul)
+                qmxtbmain(imn, cwd, usrdir, qmjob_prefix, qmxtb_job, nqm, nlink, cln, cha_mul)
           
             # From geom*.xyz, the file geom_expl*.xyz is created.
             os.chdir(cwd)

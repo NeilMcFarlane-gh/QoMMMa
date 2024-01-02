@@ -113,7 +113,7 @@ def gauinp(imn, cwd, qmjob_prefix, qmkey, cha_mul, extra_basis, gau_head, extra_
         fd.write(extra_basis.lstrip())
         fd.write('\n')
     
-    # The number of atoms with point charges as well as some numbers (??) are written to the input file.
+    # The electrostatic potential to be calculated is written to the input file.
     fd.write(str(numresp))
     fd.write(str(2).rjust(3))
     fd.write(str(20).rjust(4))
