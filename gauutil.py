@@ -700,13 +700,13 @@ def spe_gauout(fi, usrdir):
         if not line:break
         
         # The self energy of the charges is saved which represents the electrostatic interaction between point charges.
-        if line[:29] == ' Self energy of the charges =':
-            pointE = float(line.split()[6])
+        #if line[:29] == ' Self energy of the charges =':
+        #    pointE = float(line.split()[6])
         
         # Once the SCF is done, the energy is extracted, and the true energy is calculated by subtracting the point charge energy from the SCF energy.
         elif line[:9] == ' SCF Done':
             totE = float(line.split()[4])
-            ene = totE - pointE
+            ene = totE# - pointE
             fd = open(usrdir + '/SPE_jobs/SPE_energies', 'a')
             fd.write(str(fi) + ':       ' + str(ene))
             fd.write('\n')

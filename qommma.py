@@ -574,8 +574,21 @@ def qminitial(opt_dir):
     elif qmcode.lower() == 'xtb':
         try:
             if qmkey.strip() == 'None':
-                qomutil.qomlog('NOTE: No basis set or level of theory required for xTB. No worries then!', opt_dir)
-                # NOTE: implement check file copy equivalent for xTB??
+                qomutil.qomlog('NOTE: No input for qmkey, but remember that no basis set or level of theory is required for xTB. No worries then!', opt_dir)
+            else:
+                qomutil.qomlog('NOTE: qmkey selection: ' + str(qmkey) + ' has been ignored since it is not required for xTB.', opt_dir)
+
+            # For every image (if using the nudged elastic band, that is), appropriate files are copied to run the xTB jobs.  
+            # For xTB, this is probably not really necessary, but nice to have.   
+            imn = 0 
+            for i in range(nimg):
+                imn = imn + 1
+                dst = cwd + ('%s%d'%('/image', imn))
+                if os.path.exists(opt_dir + '/xtbrestart'):
+                    shutil.copy(opt_dir + + '/xtbrestart', dst)
+                    qomutil.qomlog('initial xTB restart file was copied from user directory for image :' + str(imn), opt_dir)
+                if job.lower() ==' mecp':
+                    pass
         except:
             qomutil.qomend('FATAL ERROR: initial xTB files could not be created. This may be due to problems in input files or version of QM code. Check the files in /jobfiles/.', cwd, opt_dir)
              
@@ -614,7 +627,6 @@ def qmmm(cln, opt_dir):
         3. Using Fortran code (see Fortran code for more details), perform a QoMMMa optimisation.
         4a. Check convergence, and if achieved, move program files to user directory and end the QoMMMa program.
         4b. Check convergence, and if not achieved, the MM microiterative optimisation will follow, and create/rearrange files and return to 1.
-        5. If the option of a frequency calculation is selected, start the frequency calculation.
         
     // This cycle continues until convergence is achieved or the maximum number of cycles has been reached. //
     
@@ -622,6 +634,9 @@ def qmmm(cln, opt_dir):
     ---------- 
     cln : integer
         The current QoMMMa cycle number.
+    opt_dir : string
+        The directory to be optimised.
+
 
     """
       
@@ -690,8 +705,11 @@ def qmmm(cln, opt_dir):
             # NOTE: MECP and frequency calculations are not possible in the current implementation of xTB within QoMMMa.
             elif qmcode.lower() == 'xtb':
                 try:
-                    from xtbutil import qmxtbmain
-                    qmxtbmain(imn, cwd, opt_dir, qmjob_prefix, qmxtb_job, nqm, nlink, cln, cha_mul)   
+                    if job.lower() != 'mecp':
+                        from xtbutil import qmxtbmain
+                        qmxtbmain(imn, cwd, opt_dir, qmjob_prefix, qmxtb_job, nqm, nlink, cln, cha_mul)   
+                    elif job.lower() == 'mecp':
+                        pass
                 except:
                     qomutil.qomend('FATAL ERROR: problem with QM gradient extraction (xTB) at step :' + str(cln), cwd, opt_dir)    
                       
@@ -978,6 +996,7 @@ def QoMMMa_DE_gsm():
 
         # If any additional primitive internal coordinates were requested in qommma.in, then these are added to prim_defs now.
         global additional_prims
+        additional_prims=[]
         prim_num, prim_defs = gsmutil.additional_prims(additional_prims, prim_num, prim_defs, usrdir) 
 
         # Initially, the frontier nodes are the reactant and product nodes.
@@ -1011,7 +1030,7 @@ def QoMMMa_DE_gsm():
             tangent, tangent_prims = gsmutil.DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir)
 
             # Now create two new qommma.in files for these new nodes and copy the geometries of the previous nodes over.
-            gsmutil.DE_add_nodes(frontier_dirs, new_dirs, tangent, usrdir, to_add=2)
+            gsmutil.DE_add_nodes(frontier_dirs, new_dirs, tangent, tangent_prims, usrdir, to_add=2)
 
             # Update the frontier directories to represent the new nodes.
             frontier_dirs = []
@@ -1214,8 +1233,8 @@ def QoMMMa_SE_gsm():
     
         # If any additional primitive internal coordinates were specified, then these are added to prim_defs now.
         global additional_prims
-        additional_prims=[] # NOTE: Temporary test fix as additional_prims is not working??
-        #prim_num, prim_defs = gsmutil.additional_prims(additional_prims, prim_num, prim_defs, usrdir) 
+        additional_prims=[]
+        prim_num, prim_defs = gsmutil.additional_prims(additional_prims, prim_num, prim_defs, usrdir) 
 
         # For the first cycle, the frontier node is the reactant node.
         frontier_dir = nodeR_dir
@@ -1405,11 +1424,20 @@ def QoMMMa_SE_gsm():
     gsmutil.gsmlog('The growing string method is complete!', usrdir)
 
     # Following the growing string method, the user has the option to perform a series of single point energy calculations on the pathway.
-    # NOTE: for now, this only works with Gaussian.
     if spe_pathway == 1:
         gsmutil.gsmlog('Now performing the SPE calculations along the pathway.', usrdir)
         gsmutil.gsmlog('The program used for this is ' + spe_qmcode + ', and the level of theory is ' + spe_qmkey, usrdir)
         QoMMMa_pathway_SPE(all_nodes)       
+
+def QoMMMa_scan():
+    """
+    
+    // Function which runs a series of constrained optimsations. //
+    
+    Arguments
+    ----------
+
+    """    
 
 def QoMMMa_pathway_SPE(dirs):
     """
@@ -1425,9 +1453,11 @@ def QoMMMa_pathway_SPE(dirs):
 
     """ 
 
-    # First, move previous SPE analysis runs and make new directory.
+    # If any directories from previous SPE jobs are found, these are copied and retained.
     dir_spe = os.path.join(usrdir, 'SPE_jobs/')
     if (os.path.isdir(dir_spe)):
+         if os.path.exists(usrdir + '/SPE_jobs_'):
+                shutil.rmtree(usrdir + '/SPE_jobs_''/' + file + '_')
         shutil.copytree(usrdir + '/SPE_jobs', usrdir + '/SPE_jobs_')
         shutil.rmtree(usrdir + '/SPE_jobs')
         gsmutil.gsmlog('Note, previous SPE jobs directory was moved to SPE_jobs_; before submitting next QoMMMa job if you need this file rename it since it will be deleted', usrdir)
@@ -1472,7 +1502,6 @@ def QoMMMa_pathway_SPE(dirs):
     os.rename(dir_spe + 'node_1_jobfile.in', dir_spe + 'node_R_jobfile.in')
     os.rename(dir_spe + 'node_1_jobfile.log', dir_spe + 'node_R_jobfile.log')
 
-
 ################
 # MAIN PROGRAM #
 ################
@@ -1485,6 +1514,8 @@ if __name__ == "__main__":
     for file in os.listdir(usrdir):
         dir = os.path.join(usrdir, file)
         if ((os.path.isdir(dir)) and ('node' in file) and ('nodeP' not in file) and ('nodeR' not in file) and ('_' not in file)):
+            if os.path.exists(usrdir + '/' + file + '_'):
+                shutil.rmtree(usrdir + '/' + file + '_')
             shutil.copytree(usrdir + '/' + file, usrdir + '/' + file + '_')
             shutil.rmtree(usrdir + '/' + file)
             gsmutil.gsmlog('Note, node directories from previous GSM QoMMMa runs have been moved to /nodei_; before submitting next QoMMMa job if you need this directory rename it since it will be deleted', usrdir)

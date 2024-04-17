@@ -77,10 +77,10 @@ def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
     
     # First, read in the primitive internal coordinates from the frontier node directories.
     # These should have already been checked to be the same definition so maths can be performed on them.
-    prims_r = []
-    prim_list_r = []
-    prims_p = []
-    prim_list_p = []
+    prims_i = []
+    prim_list_i = []
+    prims_j = []
+    prim_list_j = []
     for indice,dir in enumerate(frontier_dirs):
         os.chdir(dir)
         with open("prims", 'r') as pr, open("prim_list", 'r') as pr_ls:
@@ -88,11 +88,11 @@ def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
             pr_ls.readline()
             for i in range(1,n_prims):
                 if (indice == 1):
-                    prims_r.append(float(pr.readline()))
-                    prim_list_r.append(pr_ls.readline())
+                    prims_i.append(float(pr.readline()))
+                    prim_list_i.append(pr_ls.readline())
                 elif (indice == 2):
-                    prims_p.append(float(pr.readline()))
-                    prim_list_p.append(pr_ls.readline())
+                    prims_j.append(float(pr.readline()))
+                    prim_list_j.append(pr_ls.readline())
                     
     # Now, the tangent can be calculated simply as the difference between these primitive internal coordinates.
     tangent_temp = []
@@ -104,15 +104,33 @@ def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
     if (total_nodes - current_nodes) > 1:
         stepsize = 1./float(total_nodes - current_nodes)
     else:
-        stepsize = 0.5
+        stepsize = 0.5 # for the central node, if using an odd number of nodes.
     tangent_temp *= stepsize
         
     # If a given primitive is below a certain threshold, then it is set to zero and hence not constrained in the Fortran optimisation.
-    for i in tangent_temp:
-        if (i < 1E-3):
+    # If a given primitive is below a certain threshold, then it is set to zero and hence not constrained in the Fortran optimisation.
+    for i in range(0,n_prims):
+        # Store the tangent and primitive associated with it.
+        temp_tan = tangent_temp[i]
+        temp_prim = prim_list_i[i].split()
+                
+        # Store the type of primitive internal coordinate.
+        zero_count = 0
+        for prim in temp_prim:
+            if int(prim) == 0:
+                zero_count += 1
+
+        # Setting appropriate element to zero.        
+        if (abs(i) < 1E-2):
             tangent_temp[i] = 0.0  
+
+        ################################################################################
+        # TEMPORARY TEST FIX - means that valence and dihedral angles are not included.#
+        ################################################################################
+        if (zero_count == 0) or (zero_count == 1):
+            tangent_temp[i] = 0.0
             
-    # Lastly, we should remove components of the tangent which are zero and save the relevant primitive definitions corresponding to the tangents.
+     # We should remove components of the tangent which are zero and save the relevant primitive definitions corresponding to the tangents.
     tangent = []
     tangent_prims = []
     for counter,tang in enumerate(tangent_temp):
@@ -122,7 +140,7 @@ def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
         
     return tangent, tangent_prims
     
-def DE_add_nodes(frontier_dirs, new_frontier_dirs, tangent, usrdir, to_add=2):
+def DE_add_nodes(frontier_dirs, new_frontier_dirs, tangent, tangent_prims, usrdir, to_add=2):
     """
     
     // Function which creates two (or one) new qommma.in files which essentially represent two (or one) new frontier nodes. //
@@ -136,35 +154,189 @@ def DE_add_nodes(frontier_dirs, new_frontier_dirs, tangent, usrdir, to_add=2):
         List of the two (or one) new frontier node directories which are about to be added.
     tangent : list
         The primitive internal coordinate tangent which is used to define the geometry and constraints applied to the new nodes.
+    tangent_prims : list
+        The primitive internal coordinate definititions for the tangent which is used to define the geometry and constraints applied to the new nodes.
     usrdir : string
         The user directory.
     to_add : kwarg
         Integer which represents whether 2 (normal node addition) or 1 (final central node) are to be added to the string.
 
     """
-    
-    # NOTE: lots of work to be done here. Needs to be updated to be of the same format as SE_add_node defined below.
-    # Also needs to account for how many nodes are to be added.
 
     # First, copy over the qommma.in and geometry files from the previous frontier nodes to the new frontier nodes.
     source = frontier_dirs[1]
-    inpf_s = source + '/qommma.in'
-    geom_s = source + '/geom.xyz'
+    inpf_s_i = source + '/qommma.in'
+    geom_s_i = source + '/geom1.xyz'
     destination = new_frontier_dirs[1]
-    inpf_d = destination + '/qommma.in'
-    geom_d = destination + '/geom.xyz'  
-    shutil.copy(source, destination)        
+    inpf_d_i = destination + '/qommma.in'
+    geom_d_i = destination + '/geom1.xyz'  
+    shutil.copy(inpf_s_i, inpf_d_i)  
+    shutil.copy(geom_s_i, geom_d_i)        
     if (to_add == 2):
         source = frontier_dirs[2]
-        inpf_s = source + '/qommma.in'
-        geom_s = source + '/geom.xyz'
+        inpf_s_j = source + '/qommma.in'
+        geom_s_j = source + '/geom1.xyz'
         destination = new_frontier_dirs[2]
-        inpf_d = destination + '/qommma.in'
-        geom_d = destination + '/geom.xyz'  
-        shutil.copy(source, destination)
+        inpf_d_j = destination + '/qommma.in'
+        geom_d_j = destination + '/geom1.xyz'  
+        shutil.copy(inpf_s_j, inpf_d_j)  
+        shutil.copy(geom_s_j, geom_d_j)   
+
+    # Now, prepare the primitive internal coordinate displacements for qommma.in.
+    prim_displacement_lst_i = []
+    for indice,coord in enumerate(tangent_prims):
+        dq = tangent[indice]
+        to_append = (dq,) + (coord[0:4],)
+        prim_displacement_lst_i.append(to_append)
+    if (to_add==2):
+        prim_displacement_lst_j = prim_displacement_lst_i.copy()
+        for i in range(len(prim_displacement_lst_j)):
+            prim_displacement_lst_j[i][0] = prim_displacement_lst_j[i][0] * (-1)
+
+    # Now, prepare the new input prim_constrain_lst (which is the same if two new nodes are added) for qommma.in using the tangent and the primitive driving coordinates.
+    prim_constrain_lst = []
+    prim_constrain_lst_sub = []
+    for indice,coord in enumerate(tangent_prims):
+        to_append = coord[0:4]
+        prim_constrain_lst_sub.append(to_append)
+    prim_constrain_lst.append(prim_constrain_lst_sub)
+
+    # Now, prepare the primitive internal coordinate linear combination coefficients.
+    prim_coeff_lst_i = []
+    prim_coeff_lst_sub = []
+    for coeff in tangent:
+        prim_coeff_lst_sub.append(coeff)  
+    prim_coeff_lst_i.append(prim_coeff_lst_sub)
+    if (to_add==2):
+        prim_coeff_lst_j = prim_coeff_lst_i.copy()
+        for i in range(len(prim_coeff_lst_j)):
+            prim_coeff_lst_j[i] =  prim_coeff_lst_j[i] * (-1)
+            
     
-    # Now, the new qommma.in files in the new directories are modified to include the new tangent.
-    # to-do.....
+    # Now, the new qommma.in file in the new directories are modified to include the new tangent, the max number of steps, and the gsmphase.
+    first_node_cons = True
+    first_node_coeff = True
+    first_node_disp = True
+    first_node_disp_n = True
+    first_node_type = True
+    first_node_ncon = True
+    first_node_phase = True
+    first_node_maxcyc = True
+    with open(inpf_d_i, 'r') as file:
+        inp_data = file.readlines()
+    for line_num,line in enumerate(inp_data):
+        if "prim_constrain_lst" in line:
+            inp_data[line_num] = "prim_constrain_lst=" + str(prim_constrain_lst) + '\n'
+            first_node_cons = False
+        if "prim_coeff_lst" in line:
+            inp_data[line_num] = "prim_coeff_lst=" + str(prim_coeff_lst_i) + '\n'
+            first_node_coeff = False
+        if "prim_displacement_lst" in line:
+            inp_data[line_num] = "prim_displacement_lst=" + str(prim_displacement_lst_i) + '\n'
+            first_node_disp = False
+        if "disp_prim" in line:
+            inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
+            first_node_disp_n = False
+        if "maxcycle" in line:
+            inp_data[line_num] = 'maxcycle=5\n'
+            first_node_maxcyc = False
+        if "gsmphase" in line: 
+            inp_data[line_num] = "gsmphase='growth'\n"
+            first_node_phase = False
+        if "gsmtype" in line:
+            inp_data[line_num] = "gsmtype='se_gsm'\n"
+            first_node_type = False
+        if "ncon_prim" in line:
+            inp_data[line_num] = "ncon_prim=" + str(1) + '\n'
+            first_node_ncon = False
+    with open(inpf_d, 'w') as file:
+        file.writelines(inp_data)
+        if first_node_coeff == True:
+            file.write('\n')
+            file.write("prim_coeff_lst=" + str(prim_coeff_lst_i) + '\n')
+        if first_node_disp == True:
+            file.write('\n')
+            file.write("prim_displacement_lst=" + str(prim_displacement_lst_i) + '\n')
+        if first_node_disp_n == True:
+            file.write('\n')
+            file.write("disp_prim=" + str(len(tangent)) + '\n')
+        if first_node_cons == True:
+            file.write('\n')
+            file.write("prim_constrain_lst=" + str(prim_constrain_lst) + '\n')
+        if first_node_type == True:
+            file.write('\n')
+            file.write("gsmtype='se_gsm'\n")
+        if first_node_maxcyc == True:
+            file.write('\n')
+            file.write('maxcycle=5\n')
+        if first_node_ncon == True:
+            file.write('\n')
+            file.write("ncon_prim=" + str(1) + '\n')            
+        if first_node_phase == True:
+            file.write('\n')
+            file.write("gsmphase='growth'\n")
+    if (to_add==2):
+        first_node_cons = True
+        first_node_coeff = True
+        first_node_disp = True
+        first_node_disp_n = True
+        first_node_type = True
+        first_node_ncon = True
+        first_node_phase = True
+        first_node_maxcyc = True
+        with open(inpf_d_j, 'r') as file:
+            inp_data = file.readlines()
+        for line_num,line in enumerate(inp_data):
+            if "prim_constrain_lst" in line:
+                inp_data[line_num] = "prim_constrain_lst=" + str(prim_constrain_lst) + '\n'
+                first_node_cons = False
+            if "prim_coeff_lst" in line:
+                inp_data[line_num] = "prim_coeff_lst=" + str(prim_coeff_lst_j) + '\n'
+                first_node_coeff = False
+            if "prim_displacement_lst" in line:
+                inp_data[line_num] = "prim_displacement_lst=" + str(prim_displacement_lst_j) + '\n'
+                first_node_disp = False
+            if "disp_prim" in line:
+                inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
+                first_node_disp_n = False
+            if "maxcycle" in line:
+                inp_data[line_num] = 'maxcycle=5\n'
+                first_node_maxcyc = False
+            if "gsmphase" in line: 
+                inp_data[line_num] = "gsmphase='growth'\n"
+                first_node_phase = False
+            if "gsmtype" in line:
+                inp_data[line_num] = "gsmtype='de_gsm'\n"
+                first_node_type = False
+            if "ncon_prim" in line:
+                inp_data[line_num] = "ncon_prim=" + str(1) + '\n'
+                first_node_ncon = False
+        with open(inpf_d, 'w') as file:
+            file.writelines(inp_data)
+            if first_node_coeff == True:
+                file.write('\n')
+                file.write("prim_coeff_lst=" + str(prim_coeff_lst_j) + '\n')
+            if first_node_disp == True:
+                file.write('\n')
+                file.write("prim_displacement_lst=" + str(prim_displacement_lst_j) + '\n')
+            if first_node_disp_n == True:
+                file.write('\n')
+                file.write("disp_prim=" + str(len(tangent)) + '\n')
+            if first_node_cons == True:
+                file.write('\n')
+                file.write("prim_constrain_lst=" + str(prim_constrain_lst) + '\n')
+            if first_node_type == True:
+                file.write('\n')
+                file.write("gsmtype='de_gsm'\n")
+            if first_node_maxcyc == True:
+                file.write('\n')
+                file.write('maxcycle=5\n')
+            if first_node_ncon == True:
+                file.write('\n')
+                file.write("ncon_prim=" + str(1) + '\n')            
+            if first_node_phase == True:
+                file.write('\n')
+                file.write("gsmphase='growth'\n")   
             
 def DE_reparam_g(node_dirs, current_nodes, total_nodes, usrdir):   
     """
@@ -304,23 +476,10 @@ def SE_get_final_tangent(current_nodes, driving_coords, usrdir):
         elif (zero_count == 0): # Dihedral torsion
             tangent.append(0.0872665 * direction)# * current_nodes) # Radians (5 deg)...
     
-    ######################################################################
-    # TEMPORARY TEST FIX - simply makes the reaction pathway symmetrical.#
-    ######################################################################
+    # Make the reaction pathway symmetrical.
     total_new = current_nodes
     return tangent, total_new
-    
-    # Now the different bit, decide how many new nodes (2-4) are to be added given the number of nodes currently on the string. 
-    if current_nodes <= 5:
-        total_new = 2
-        return tangent, total_new
-    elif current_nodes <= 7:
-        total_new = 3
-        return tangent, total_new   
-    else:
-        total_new = 4
-        return tangent, total_new              
-    
+              
 def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir):
     """
     
@@ -718,12 +877,10 @@ def get_tangents_opt(node_dirs, usrdir, driving_coords = None):
                     prim_list_j.append(pr_ls.readline()) 
 
             # Now, the tangent can be calculated simply as the difference between these primitive internal coordinates.
-            tangent_temp = []
-            for i in range(0,n_prims):
-                p1 = prims_i[i]
-                p2 = prims_j[i]
-                p = p2 - p1
-                tangent_temp.append(p)
+        tangent_temp = []
+        for p1, p2 in zip(prims_i, prims_j):
+            p = p1 - p2
+            tangent_temp.append(p)
             
             # If a given primitive is below a certain threshold, then it is set to zero and hence not constrained in the Fortran optimisation.
             for i in range(0,n_prims):
