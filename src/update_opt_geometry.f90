@@ -249,7 +249,7 @@ else if (coordtype .eq. 1) then
 			!###################
 			
 			! Evaluate the step in DLC.
-			ChgeS = optg_dlc * (-0.7)
+			ChgeS = optg_dlc * (-1)
 
 			! Now, if there are any constraints, given elements of the DLC should not change.
 			if (is_cons .eqv. .True.) then

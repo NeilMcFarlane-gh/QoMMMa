@@ -585,3 +585,187 @@ def mecp_gaumain(imn, cwd, usrdir, qmjob_prefix, qmgau_job, nqm, nlink, cln, qmk
         os.remove('%s%d'%('mulliken', imn))
     except:
         qomend('Error while extracting results from Gaussian output files at cycle : ' + str(cln) + ' for image : ' + str(imn), cwd, usrdir)
+
+def spe_gauinp(imn, cwd, qmjob_prefix, spe_qmkey, cha_mul, extra_basis, gau_head, extra_guess, pc_filename, geom_filename):
+    """
+    
+    // Function which creates the input file required for a single point energy Gaussian job. //
+    // This function is called in spe_gaumain when a single point energy analysis of a pathway has been requested. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    spe_qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul : list
+        The charge and multiplicity given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    gau_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+    extra_guess : string
+        If the guess keyword is used, then it can be input.
+    pc_filename : string
+        Filename of the point charge containing file.
+    geom_filename : string
+        Filename of the QM region geometry file.
+
+    """
+    
+    # The Gaussian input file is created for the image.
+    fd = open(('%s%d%s'%(qmjob_prefix, imn, '.in')), 'w') 
+
+    # The variable gau_head is written to the input file, which contains details for assigning memory and processors.
+    if gau_head.lower() != 'none':
+        fd.write(gau_head.strip())  
+        fd.write('\n')
+    
+    # Using a series of if and else statements, the qmkey (level of theory) is written to the input file.
+    # In addition, the method of mixing the guess wavefunction is written along with some other important Gaussian parameters.
+    if spe_qmkey.lower() != 'none':
+        jobkey = '# ' + spe_qmkey + ' Nosymm'
+    else:
+        jobkey = '# B3LYP/6-31G Nosymm'
+    fd.write(jobkey)
+    fd.write('\n')
+    fd.write('\n')
+  
+    # A placeholder title card is written to the input file.
+    fd.write('TITLE')
+    fd.write('\n')
+    fd.write('\n')
+    
+    # The charge and multiplicity of the system is written to the input file.
+    fd.write(str(cha_mul[0]).rjust(3))  
+    fd.write(str(cha_mul[1]).rjust(5))  
+    fd.write('\n')
+ 	  
+    # The cartesian coordinates of the QM region are written to the input file.
+    f = open(geom_filename, 'r') 
+    for line in f:
+        fd.write(line)
+    f.close()
+    fd.write('\n')
+  
+    # The point charge array is written to the input file.
+    #f = open(pc_filename, 'r') 
+    #for line in f:
+    #    if line.strip() != '&pointch':
+    #        if line.strip() != '&':
+    #            line=line.split()
+    #            fd.write(line[1].rjust(9))
+    #            fd.write(line[2].rjust(13))
+    #            fd.write(line[3].rjust(13))
+    #            fd.write(line[0].rjust(10))
+    #            fd.write('\n')
+    #f.close()
+    #fd.write('\n')
+    
+    # If a mixed bases set description is used, then it is written to the input file.
+    if extra_basis.lower() != 'none':
+        fd.write(extra_basis.lstrip())
+        fd.write('\n')
+
+def spe_gauout(fi, usrdir):
+    """
+    
+    // Function which extracts the energy from a single point energy Gaussian output file. //
+    // It will add the energy to a file containing all other single point energy calculations for the pathway. //
+    
+    Arguments
+    ----------
+    fi : string
+        Gaussian job output file name.
+    usrdir : string
+        The user directory.
+
+    """
+  
+    # Check if the file SPE_energies exists, and if not, create it.
+    if not os.path.exists(usrdir + '/SPE_jobs/SPE_energies'):
+        fd = open(usrdir + '/SPE_jobs/SPE_energies', 'w')
+        fd.close()
+
+    # The Gaussian output file is opened.
+    f = open(fi, 'r')
+
+    # While loop iterates through the whole Gaussian output file.
+    while 1:
+        line = f.readline()
+        if not line:break
+        
+        # The self energy of the charges is saved which represents the electrostatic interaction between point charges.
+        if line[:29] == ' Self energy of the charges =':
+            pointE = float(line.split()[6])
+        
+        # Once the SCF is done, the energy is extracted, and the true energy is calculated by subtracting the point charge energy from the SCF energy.
+        elif line[:9] == ' SCF Done':
+            totE = float(line.split()[4])
+            ene = totE - pointE
+            fd = open(usrdir + '/SPE_jobs/SPE_energies', 'a')
+            fd.write(str(fi) + ':       ' + str(ene))
+            fd.write('\n')
+            fd.close()
+
+def spe_gaumain(imn, cwd, usrdir, qmjob_prefix, qmgau_job, nqm, nlink, spe_qmkey, cha_mul, extra_basis, gau_head, extra_guess, pc_filename, geom_filename):
+    """
+    
+    // Function which combines the functions in this file for execution of a Gaussian job for a single point energy analysis of a reaction pathway. //
+    // It will prepare the input file, run the Gaussian job, and then extract the results from the output. //
+    
+    Arguments
+    ----------
+    imn : integer
+        If using the nudged elastic band, this is the image number.
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+    qmjob_prefix : string
+        A prefix used to label the QM job input file.
+    qmgau_job : string
+        The path to the Gaussian program.
+    nqm : integer
+        Number of QM atoms.
+    nlink : integer
+        Number of link atoms.
+    spe_qmkey : string
+        Can either be None or the user input level of theory.
+    cha_mul : list
+        The charge and multiplicity given in the format of a list of two numbers (i.e., cha_mul = [0,1]).
+    extra_basis : string
+        User-specified basis set.
+    gau_head : string
+        Contains the details for assigning memory and number of processors for a QM job.
+    extra_guess : string
+        If the guess keyword is used, then it can be input.
+    pc_filename : string
+        Filename of the point charge containing file.
+    geom_filename : string
+        Filename of the QM region geometry file.
+
+    """
+   
+    # The Gaussian input file is created.
+    try:
+        spe_gauinp(imn, cwd, qmjob_prefix, spe_qmkey, cha_mul, extra_basis, gau_head, extra_guess, pc_filename, geom_filename)	
+    except:
+        qomend('FATAL ERROR: creating Gaussian job files for SPE calculations. Check if the Gaussian input files were successfully generated in SPE_jobs.', cwd, usrdir)
+    
+    # The Gaussian job is performed.    
+    try:
+        os.system(qmgau_job + ' ' + ('%s%d%s'%(qmjob_prefix, imn, '.in')))
+    except:
+        qomend('FATAL ERROR: running Gaussian job during SPE calculations. Check the Gaussian input files generated in SPE_jobs.', cwd, usrdir)
+    
+    # The results from the Gaussian job are extracted and rearranged.
+    try:
+        fi = '%s%d%s'%(qmjob_prefix, imn, '.log')
+        spe_gauout(fi, usrdir)	
+    except:
+        qomend('FATAL ERROR: reading Gaussian job output from SPE calculations. Check the Gaussian output files generated in SPE_jobs.', cwd, usrdir) 

@@ -11,6 +11,9 @@ import shutil
 import sys
 import math
 
+# Local imports.
+import qommma
+
 def gsmlog(s, usrdir):
     """
     
@@ -52,34 +55,7 @@ def gsmend(s, usrdir):
     
     # Ending QoMMMa GSM job.
     sys.exit()
-    
-def read_gsm_inp(usrdir, gsmtype):
-    """
-    
-    // Function which reads the user-specified file gsm.in. //
-    // This file contains details which are only required by the growing string method. //
-    
-    Arguments
-    ----------
-    usrdir : string
-        The user directory.
-    gsmtype :
-        Integer which represents which mode of GSM is being used (1 for double-ended, and 2 for single-ended).
 
-    """
-    
-    # Reading the data from the input file...
-    try:
-        exec(open(usrdir + '/gsm.in').read())
-    except:
-        gsmend('Could not open GSM input file, which is required to run the growing string method.', usrdir)
-        sys.exit()
-
-    if gsmtype.lower() == 'de_gsm':
-        return total_nodes
-    elif gsmtype.lower() == 'se_gsm':
-        return max_nodes, driving_coords
-    
 def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
     """
     
@@ -100,6 +76,7 @@ def DE_get_tangent(frontier_dirs, current_nodes, total_nodes, usrdir):
     """
     
     # First, read in the primitive internal coordinates from the frontier node directories.
+    # These should have already been checked to be the same definition so maths can be performed on them.
     prims_r = []
     prim_list_r = []
     prims_p = []
@@ -166,6 +143,9 @@ def DE_add_nodes(frontier_dirs, new_frontier_dirs, tangent, usrdir, to_add=2):
 
     """
     
+    # NOTE: lots of work to be done here. Needs to be updated to be of the same format as SE_add_node defined below.
+    # Also needs to account for how many nodes are to be added.
+
     # First, copy over the qommma.in and geometry files from the previous frontier nodes to the new frontier nodes.
     source = frontier_dirs[1]
     inpf_s = source + '/qommma.in'
@@ -186,7 +166,6 @@ def DE_add_nodes(frontier_dirs, new_frontier_dirs, tangent, usrdir, to_add=2):
     # Now, the new qommma.in files in the new directories are modified to include the new tangent.
     # to-do.....
             
-    
 def DE_reparam_g(node_dirs, current_nodes, total_nodes, usrdir):   
     """
     
@@ -206,8 +185,45 @@ def DE_reparam_g(node_dirs, current_nodes, total_nodes, usrdir):
 
     """
     
+    # NOTE: need to code this...
     #returns nothing, but makes new files for the reparameterisation and calls fortran code to update the geometry.
+
+def DE_initialise_prims(prim_list_R, prim_list_P, usrdir):
+    """
     
+    // Function which reads the set of primitive internal coordinates from the nodeR and nodeP directories which describe the reaction pathway. //
+    // This function is used in the set-up of the double-ended GSM. //
+    
+    Arguments
+    ----------
+    prim_list_R : string
+        Directory to the file prim_list in the reactant node directory.
+    prim_list_P : string
+        Directory to the file prim_list in the product node directory.
+    usrdir : string
+        The user directory.
+
+    """
+    
+    # NOTE: need to fix so that it reads both reactant and product primitives, and then makes sure that they are the same.
+    # If they are not the same, then end the program and suggest either running nodeR and nodeP with xyz additional primitives.
+    # Or, suggest that they use total connectivity instead.
+
+    # Opening the file...
+    with open(prim_list_R, 'r') as r_f:
+        # First, read the number of primitive internal coordinates from the top of the file.
+        prim_num = int(r_f.readline())
+        
+        # Now, read all the primitive internal coordinate definitions.
+        prim_defs = []
+        for i in range(0,prim_num):
+            temp_lst = []
+            temp_str = r_f.readline()
+            temp_lst = temp_str.split()
+            prim_defs.append(temp_lst)
+    
+    return prim_num, prim_defs   
+
 def SE_get_tangent(frontier_dir, driving_coords, usrdir):
     """
     
@@ -383,7 +399,7 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
             first_node_disp_n = False
         if "maxcycle" in line:
-            inp_data[line_num] = 'maxcycle=30\n'
+            inp_data[line_num] = 'maxcycle=5\n'
             first_node_maxcyc = False
         if "gsmphase" in line: 
             inp_data[line_num] = "gsmphase='growth'\n"
@@ -413,7 +429,7 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             file.write("gsmtype='se_gsm'\n")
         if first_node_maxcyc == True:
             file.write('\n')
-            file.write('maxcycle=30\n')
+            file.write('maxcycle=5\n')
         if first_node_ncon == True:
             file.write('\n')
             file.write("ncon_prim=" + str(1) + '\n')            
@@ -421,7 +437,6 @@ def SE_add_node(frontier_dir, new_frontier_dir, tangent, driving_coords, usrdir)
             file.write('\n')
             file.write("gsmphase='growth'\n")        
        
-
 def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, driving_coords, usrdir):
     """
     
@@ -489,7 +504,7 @@ def SE_add_final_nodes(frontier_dir, new_frontier_dirs, tangent, driving_coords,
             if "disp_prim" in line:
                 inp_data[line_num] = "disp_prim=" + str(len(tangent)) + '\n'
             if "maxcycle" in line:
-                inp_data[line_num] = 'maxcycle=30\n'
+                inp_data[line_num] = 'maxcycle=5\n'
             if "gsmphase" in line: 
                 inp_data[line_num] = "gsmphase='growth'\n"
             if "gsmtype" in line:
@@ -574,44 +589,11 @@ def SE_initialise_prims(prim_list_R, usrdir):
             prim_defs.append(temp_lst)
     
     return prim_num, prim_defs
-    
-def DE_initialise_prims(prim_list_R, prim_list_P, usrdir):
-    """
-    
-    // Function which reads the set of primitive internal coordinates from the nodeR and nodeP directories which describe the reaction pathway. //
-    // This function is used in the set-up of the double-ended GSM. //
-    
-    Arguments
-    ----------
-    prim_list_R : string
-        Directory to the file prim_list in the reactant node directory.
-    prim_list_P : string
-        Directory to the file prim_list in the product node directory.
-    usrdir : string
-        The user directory.
 
-    """
-    
-    # Opening the file...
-    with open(prim_list_R, 'r') as r_f:
-        # First, read the number of primitive internal coordinates from the top of the file.
-        prim_num = int(r_f.readline())
-        
-        # Now, read all the primitive internal coordinate definitions.
-        prim_defs = []
-        for i in range(0,prim_num):
-            temp_lst = []
-            temp_str = r_f.readline()
-            temp_lst = temp_str.split()
-            prim_defs.append(temp_lst)
-    
-    return prim_num, prim_defs   
-    
 def additional_prims(add_prims, prim_num, prim_defs, usrdir):
     """
     
     // Function which adds any additional primitive internal coordinate definitions to the global definitions. //
-    // At the moment, they must be defined with the numbering scheme starting at 1. //
     
     Arguments
     ----------
@@ -744,8 +726,6 @@ def get_tangents_opt(node_dirs, usrdir, driving_coords = None):
                 tangent_temp.append(p)
             
             # If a given primitive is below a certain threshold, then it is set to zero and hence not constrained in the Fortran optimisation.
-            # Also ensure that for the single-ended growing string method that the initial driving coordinates are always included.
-            driving_stored = [False] * len(driving_coords)
             for i in range(0,n_prims):
                 # Store the tangent and primitive associated with it.
                 temp_tan = tangent_temp[i]
@@ -757,21 +737,8 @@ def get_tangents_opt(node_dirs, usrdir, driving_coords = None):
                     if int(prim) == 0:
                         zero_count += 1
                 
-                # Check if it is a driving coordinate.
-                for counter_driv, driv in enumerate(driving_coords):
-                    driving = driv[0:4]
-                    difference = []
-                    is_driving = False
-                    for i1, i2 in zip(driv, temp_prim):
-                        diff = int(i1) - int(i2)
-                        difference.append(diff)
-                    if (all(v == 0 for v in difference)): # driving coordinate found, exiting loop.
-                        is_driving = True
-                        driving_stored[counter_driv] = True
-                        break
-                
                 # Setting appropriate element to zero.
-                if (abs(temp_tan) < 1E-2) and (is_driving == False):
+                if (abs(temp_tan) < 1E-2):
                     tangent_temp[i] = 0.0  
    
                 ################################################################################
@@ -787,17 +754,6 @@ def get_tangents_opt(node_dirs, usrdir, driving_coords = None):
                 if abs(tang) > 0.0:
                     tangent.append(tang)
                     tangent_prims.append(prim_list_i[counter])      
-                    
-            # Now, add the driving coordinates if they were missed.
-            for counter_driv,driv_boolean in enumerate(driving_stored):
-                if driv_boolean == False:
-                    driving_i = driving_coords[counter_driv]
-                    driving_ii = str(driving_i[0:4])
-                    driving_ii.replace("(","")
-                    driving_ii.replace(")","")
-                    driving_ii.replace(",","")
-                    tangent.append(0.0)
-                    tangent_prims.append(driving_ii)
                     
             # Lastly, append both the tangent and the list of relevant primitives to tangent_list and tangent_prims_list.
             tangent_list.append(tangent)
@@ -873,7 +829,7 @@ def gen_input_opt(node_dirs, tangent_list, tangent_prims_list, usrdir):
                 if "disp_prim" in line:
                     inp_data[line_num] = "disp_prim=0\n"
                 if "maxcycle" in line:
-                    inp_data[line_num] = 'maxcycle=75\n'
+                    inp_data[line_num] = 'maxcycle=15\n'
                 if "gsmphase" in line: 
                     inp_data[line_num] = "gsmphase='opt'\n"
                 if "gsmtype" in line:
@@ -977,11 +933,7 @@ def reparam_opt(node_dirs, total_nodes, usrdir):
                 zero_count += 1
         
         # Populate total_tangent appropriately.
-        ################################################################
-        if (zero_count == 0) or (zero_count == 1): # TEMPORARY TEST FIX#
-            total_tangent.append(0.0)
-        ################################################################
-        elif (abs(p) > 0.1):
+        if (zero_count == 2):
             total_tangent.append(p)  
         else:
             total_tangent.append(0.0)

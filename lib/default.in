@@ -12,7 +12,9 @@ disp=0
 maxcycle=200
 maxcycle_grow=5 #for GSM
 
-max_nodes=30 #for SE-GSM
+max_nodes=20 #for SE-GSM
+
+hesoptmm=0
 
 # output option
 qomout='None'
@@ -36,6 +38,8 @@ prim_constrain_lst='None'
 prim_coeff_lst='None'
 prim_displacement_lst='None'
 prim_add_lst='None'
+prim_num=0
+additional_prims='None'
 newcha_lst='None'
 newcha='''
 0
@@ -81,6 +85,15 @@ qmjob_prefix='qomqmjob'
 
 # options for QM job
 qmkey='none'
+
+total_nodes=0
+driving_coords='None'
+
+scantype='None'
+
+spe_pathway=0
+spe_qmcode='Gaussian'
+spe_qmkey='B3LYP/6-31G'
 
 ##########
 # Jaguar #

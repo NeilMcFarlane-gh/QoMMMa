@@ -46,6 +46,7 @@ def xtbpc(imn, cwd, qmjob_prefix):
                 fd.write(line[1].rjust(13))
                 fd.write(line[2].rjust(13))
                 fd.write(line[3].rjust(13)) 
+                fd.write('      99')
                 fd.write('\n')
     f.close()
     fd.close()
@@ -274,7 +275,7 @@ def qmxtbmain(imn, cwd, usrdir, qmjob_prefix, qmxtb_job, nqm, nlink, cln, cha_mu
     # The xTB job is performed.
     # Note that in xTB, the spin is specified by alpha electrons - beta electrons so (cha_mul[1] - 1) represents the spin.
     try:
-        os.system(qmxtb_job + ' ' + ('%s%d%s'%('xtb_geom', imn, '.xyz')) + ' --grad --pop --gfn 2 --chrg ' + str(cha_mul[0]) + ' --uhf ' + str(cha_mul[1] - 1) + ' -I ' + ('%s%d%s'%(qmjob_prefix, imn, '.pcem')))
+        os.system(qmxtb_job + ' ' + ('%s%d%s'%('xtb_geom', imn, '.xyz')) + ' --grad --pop --gfn 2 --chrg ' + str(cha_mul[0]) + ' --uhf ' + str(cha_mul[1] - 1) + ' -I ' + ('%s%d%s'%(qmjob_prefix, imn, '.pcem')))# + ' --norestart')
     except:
         qomend('Error while running xTB job at cycle: ' + str(cln) + ' image :' + str(imn), cwd, usrdir)
     

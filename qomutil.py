@@ -51,22 +51,28 @@ def qomend(s, cwd, usrdir):
     # The function asctime from the module time is used to record when the program is ended.
     hlp = asctime()
     qomlog(s + '\n' + '  QoMMMa job ends at ' + str(hlp), usrdir)
-    
-    # The jobfiles from the failed QoMMMa run are retained for diagnostic purposes.
-    # If the jobfiles directory is found from a previous QoMMMa run, then it is copied and renamed to jobfiles_old.
-    if os.path.exists(usrdir + '/jobfiles'):
-        if os.path.exists(usrdir + '/jobfiles_old'):
-            shutil.rmtree(usrdir + '/jobfiles_old')
-        shutil.copytree(usrdir + '/jobfiles', usrdir + '/jobfiles_old') 
-        shutil.rmtree(usrdir + '/jobfiles')
-        qomlog('Note, jobfiles directory is renamed as jobfiles_old if you want to keep this directory rename it with different name before submitting next QoMMMa job', usrdir)
-    shutil.copytree(cwd, usrdir + '/jobfiles')
-    shutil.rmtree(cwd) 
+
+    # Save files for diagnostic purposes.
+    qomsave(cwd, usrdir)
     
     # Ending QoMMMa job.
     sys.exit()
     
 def qomsave(cwd, usrdir):
+    """
+    
+    // Function which saves the files from a QoMMMa run for diagnostic purposes. //
+    // It will also retain the files from one previous run of QoMMMa, but other previous runs will be deleted. //
+    
+    Arguments
+    ----------
+    cwd : string
+        The current working directory.
+    usrdir : string
+        The user directory.
+
+    """
+
     # The jobfiles from the QoMMMa run are retained for diagnostic purposes.
     # If the jobfiles directory is found from a previous QoMMMa run, then it is copied and renamed to jobfiles_old.
     if os.path.exists(usrdir + '/jobfiles'):
@@ -74,7 +80,7 @@ def qomsave(cwd, usrdir):
             shutil.rmtree(usrdir + '/jobfiles_old')
         shutil.copytree(usrdir + '/jobfiles', usrdir + '/jobfiles_old') 
         shutil.rmtree(usrdir + '/jobfiles')
-        qomlog('Note, jobfiles directory is renamed as jobfiles_old if you want to keep this directory rename it with different name before submitting next QoMMMa job', usrdir)
+        qomlog('NOTE: jobfiles directory is renamed as jobfiles_old if you want to keep this directory rename it with different name before submitting next QoMMMa job', usrdir)
     shutil.copytree(cwd, usrdir + '/jobfiles')
     if not os.path.exists(usrdir + '/geom1.xyz'):
         shutil.copy(usrdir + '/jobfiles/geom1.xyz', usrdir + '/geom1.xyz')
@@ -611,7 +617,7 @@ def cons_write_prim(cons, coeffs, ncon, usrdir):
     
     # The file fortinput is opened.
     fd = open('fortinput', 'a')
-
+    
     for i in range(ncon):
         # The constraint details are written to fortinput.
         fd.write('The number of scaling coefficients for constraint number ' + str(i+1) + ' is...')

@@ -10,7 +10,8 @@ import shutil
     
 # Local imports.
 from qomutil import qomend, qomlog   
-    
+
+
 def initial(nimg, cwd, qommmadir):
     """
     
