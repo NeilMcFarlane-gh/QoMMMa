@@ -1,17 +1,15 @@
 
 # Project Title
 
-A brief description of what this project does and who it's for.
+QoMMMa is an additive QM/MM package maintained within the Harvey group at KU Leuven. It uses Tinker for any MM-side calculations, and QM-side calculations can be performed with a variety of quantum chemistry codes including: Gaussian, ORCA, xTB, Jaguar, and Molpro. The source code is written in Fortran90, and Python3 is used as a scripting language to wrap the source code and generate job files for the QM and MM packages.
+
+QoMMMa can perform QM/MM optimisations, reaction pathway optimisations (with nudged elastic band, adiabatic mapping, and growing string method), and frequency analyses. As a code, it is continuously a work-in-progress, but the techniques described above *should* have functionality.
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Usage](#usage)
-- [Features](#features)
 - [Examples](#examples)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
 - [Citations](#citations)
 
 ## Installation
@@ -43,22 +41,6 @@ Instructions on how to use the software, including code examples and explanation
 # Example code
 ```
 
-### Command-Line Interface (CLI)
-
-Explanation and examples of how to use the CLI (if applicable).
-
-```bash
-# Example CLI usage
-```
-
-## Features
-
-A list of features and functionalities provided by the software.
-
-- Feature 1
-- Feature 2
-- Feature 3
-
 ## Examples
 
 Provide examples of how to use the software, including input data and expected output.
@@ -66,24 +48,6 @@ Provide examples of how to use the software, including input data and expected o
 ```python
 # Example code with input and output
 ```
-
-## Contributing
-
-Guidelines for contributing to the project.
-
-1. Fork the repository
-2. Create a new branch (`git checkout -b feature/YourFeature`)
-3. Commit your changes (`git commit -am 'Add new feature'`)
-4. Push to the branch (`git push origin feature/YourFeature`)
-5. Create a new Pull Request
-
-## License
-
-This project is licensed under the [License Name](LICENSE) - see the [LICENSE](LICENSE) file for details.
-
-## Contact
-
-Project Maintainer - [Your Name](mailto:your.email@example.com)
 
 ## Citations
 
