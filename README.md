@@ -45,37 +45,38 @@ You will then need to change the QOMMMA variable in the file qommma, to reflect 
 
 ## Usage
 
-Instructions on how to use the software, including code examples and explanations.
-
-```python
-# Example code
-```
+To-do...
 
 ## Examples
 
-Provide examples of how to use the software, including input data and expected output.
-
-```python
-# Example code with input and output
-```
+To-do...
 
 ## Citations
 
-If you use this software in your research, please cite it as follows:
+If you use this software in your research, please cite the following articles:
 
 ```
-@article{YourCitation,
-  author    = {Author Name and Author Name},
-  title     = {Project Title},
-  journal   = {Journal Name},
-  year      = {202X},
-  volume    = {X},
-  number    = {X},
-  pages     = {X--X},
-  doi       = {XX.XXXX/XXXXX},
-}
+@Article{B314768A,
+author ="Harvey, Jeremy N.",
+title  ="Spin-forbidden CO ligand recombination in myoglobin",
+journal  ="Faraday Discuss.",
+year  ="2004",
+volume  ="127",
+issue  ="0",
+pages  ="165-177",
+publisher  ="The Royal Society of Chemistry",
+doi  ="10.1039/B314768A",
 ```
 
 ```
-BibTeX or other citation formats as applicable
+@Article{D3CP05772K,
+author ="McFarlane, Neil R. and Harvey, Jeremy N.",
+title  ="Exploration of biochemical reactivity with a QM/MM growing string method",
+journal  ="Phys. Chem. Chem. Phys.",
+year  ="2024",
+volume  ="26",
+issue  ="7",
+pages  ="5999-6007",
+publisher  ="The Royal Society of Chemistry",
+doi  ="10.1039/D3CP05772K",
 ```
