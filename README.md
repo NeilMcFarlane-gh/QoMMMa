@@ -12,26 +12,36 @@ QoMMMa can perform QM/MM optimisations, reaction pathway optimisations (with nud
 - [Examples](#examples)
 - [Citations](#citations)
 
-## Installation
-
-Detailed instructions on how to install and set up the project.
-
 ### Prerequisites
 
-- List of prerequisites (e.g., Python version, packages)
-- How to install these prerequisites
+To install QoMMMa, you need a Fortran90 compiler such as gfortran or ifort (please note that the makefiles in the installation procedure are in gfortran format, so if you wish to use another compiler, these should be changed appropriately).
+To run QoMMMa, you need any version of Python3.
+To run QM calculations, you will need *at least* one of the options for the QM calculation, which are:
+* xTB
+* Gaussian
+* ORCA
+* Molpro
+* Jaguar
+
+## Installation
+
+To install QoMMMa, starting in the QoMMMa directory, use the following bash commands:
 
 ```bash
-# Example commands to install prerequisites
+cd src
+make
+cd freq
+make
+cd ../tinker
+./qommma_compile.make
+./qommma_library.make
+./qommma_link.make
+cp analyze_qommma.x ../../bin/analyze_grad
+cp minimize_qommma.x ../../bin/minimize
+cd ../../
 ```
 
-### Installing
-
-Step-by-step guide on how to install the project.
-
-```bash
-# Example commands to install your project
-```
+You will then need to change the QOMMMA variable in the file qommma, to reflect the installed directory directory.
 
 ## Usage
 
