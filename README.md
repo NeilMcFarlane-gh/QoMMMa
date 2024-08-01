@@ -1,5 +1,5 @@
 
-# Project Title
+![logo](logo.png)
 
 QoMMMa is an additive QM/MM package maintained within the Harvey group at KU Leuven. It uses Tinker for any MM-side calculations, and QM-side calculations can be performed with a variety of quantum chemistry codes including: Gaussian, ORCA, xTB, Jaguar, and Molpro. The source code is written in Fortran90, and Python3 is used as a scripting language to wrap the source code and generate job files for the QM and MM packages.
 
